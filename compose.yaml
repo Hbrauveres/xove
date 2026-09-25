@@ -1,7 +1,7 @@
 services:
   web:
     build: ./web
-    container_name: xove-web
+    container_name: xove-${APP_ENV:-prod}-web
     restart: unless-stopped
     networks:
       - web
