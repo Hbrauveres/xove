@@ -6,6 +6,14 @@ services:
     networks:
       - web
 
+  api:
+    build: ./api
+    container_name: xove-${APP_ENV:-prod}-api
+    restart: unless-stopped
+    mem_limit: 512m
+    networks:
+      - web
+
 networks:
   web:
     external: true
