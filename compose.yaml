@@ -1,0 +1,11 @@
+services:
+  web:
+    build: ./web
+    container_name: xove-web
+    restart: unless-stopped
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
