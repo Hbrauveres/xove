@@ -1,0 +1,13 @@
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.onAir {
+  box-shadow: 0 0 0 2px var(--ground), 0 0 0 4px var(--tally);
+}

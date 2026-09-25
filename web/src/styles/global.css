@@ -1,0 +1,90 @@
+/*
+ * Design tokens. The app is deliberately dark-only: it's a room for watching
+ * screens, so the chrome stays out of the way of whatever is on stage.
+ */
+:root {
+  color-scheme: dark;
+
+  --ground: #0d1117;
+  --surface: #151b24;
+  --surface-raised: #1c2430;
+  --line: #273140;
+  --text: #e7ebf1;
+  --text-muted: #8b96a8;
+  --text-faint: #5d6778;
+
+  /* Accent = the broadcast tally light: amber means "you are on air". */
+  --tally: #f2a93b;
+  --tally-ink: #1a1206;
+  --tally-soft: rgba(242, 169, 59, 0.14);
+
+  /* Semantic colors, separate from the accent. */
+  --live: #ef4b4b;
+  --ok: #3fbf7f;
+  --warn: #e0b341;
+
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2.25rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --gutter: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-wrap: balance;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tally);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
