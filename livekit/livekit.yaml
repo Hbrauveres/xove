@@ -1,0 +1,20 @@
+# LiveKit server config. No secrets here: the API key and secret come from
+# the LIVEKIT_KEYS environment variable (see compose.yaml and .env).
+
+# Signaling (WebSocket). Only Caddy talks to this port, over the Docker network.
+port: 7880
+
+rtc:
+  # Fallback for networks that block UDP: WebRTC over TCP.
+  tcp_port: 7881
+  # All UDP media on one port (UDP mux) instead of a 50000-60000 range.
+  udp_port: 7882
+  # Ask a STUN server for the VPS's public IP, so browsers get an address they can reach.
+  use_external_ip: true
+
+room:
+  # Close a room 5 minutes after the last person leaves.
+  empty_timeout: 300
+
+logging:
+  level: info

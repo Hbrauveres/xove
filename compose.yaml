@@ -25,6 +25,22 @@ services:
       - web
       - internal
 
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    container_name: xove-${APP_ENV:-prod}-livekit
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+    mem_limit: 512m
+    networks:
+      - web
+
   db:
     image: postgres:17-alpine
     container_name: xove-${APP_ENV:-prod}-db
