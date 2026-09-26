@@ -25,7 +25,7 @@ export function AppHeader({ me, connection, onlineCount, onSignOut, isAdmin = fa
         <span className={styles.wordmark}>
           xovê<span className={styles.dot}>.</span>
         </span>
-        <span className={styles.domain}>xove.hbrauveres.dev</span>
+        <span className={styles.domain}>xove.app</span>
       </div>
 
       <div className={styles.meta}>
