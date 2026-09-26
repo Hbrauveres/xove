@@ -1,4 +1,4 @@
-import type { AccessRequestView, Me, MemberView } from "./types";
+import type { AccessRequestView, Me, MemberView, ScreenState } from "./types";
 
 /** An error the API answered with. `message` is safe to show to the user. */
 export class ApiError extends Error {
@@ -62,6 +62,12 @@ export const api = {
   logout: () => request<void>("POST", "/api/auth/logout"),
   requestAccess: (message: string) =>
     request<void>("POST", "/api/access-requests", { message: message.trim() || null }),
+
+  screen: {
+    current: () => request<ScreenState>("GET", "/api/screen"),
+    take: () => request<ScreenState>("POST", "/api/screen/take"),
+    release: () => request<ScreenState>("POST", "/api/screen/release"),
+  },
 
   admin: {
     pendingRequests: () => request<AccessRequestView[]>("GET", "/api/admin/access-requests"),
