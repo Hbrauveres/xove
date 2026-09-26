@@ -7,7 +7,7 @@ const ERRORS: Record<string, string> = {
   "email-not-verified": "Your Google account's email isn't verified, so it can't be used here.",
 };
 
-/** The front door: what Kryora Live is, and one way in. */
+/** The front door: what Xovê is, and one way in. */
 export function HomePage() {
   const [params] = useSearchParams();
   const error = params.get("error");
@@ -16,7 +16,7 @@ export function HomePage() {
     <main className={styles.wrap}>
       <section className={styles.card} aria-labelledby="home-title">
         <p className={styles.brand}>
-          kryora<span className={styles.dot}>.</span>
+          xovê<span className={styles.dot}>.</span>
         </p>
         <h1 id="home-title" className={styles.title}>
           One screen.
