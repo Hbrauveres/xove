@@ -1,0 +1,3 @@
+# Fake secrets used only by the LiveKit token tests; not real credentials.
+c8b9c81fe38cece01fea8e70c980e7d692d29e8c:api/src/test/java/dev/hbrauveres/xove/livekit/LiveKitControllerTest.java:generic-api-key:36
+c8b9c81fe38cece01fea8e70c980e7d692d29e8c:api/src/test/java/dev/hbrauveres/xove/livekit/LiveKitTokensTest.java:generic-api-key:20

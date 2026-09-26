@@ -48,7 +48,7 @@ export function AdminPage() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <span className={styles.brand}>
-          xovê<span className={styles.dot}>.</span> <span className={styles.section}>admin</span>
+          kryora<span className={styles.dot}>.</span> <span className={styles.section}>admin</span>
         </span>
         <Link to="/room" className={styles.back}>
           Back to the room
