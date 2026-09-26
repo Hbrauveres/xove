@@ -55,7 +55,7 @@ const jitter = (base: StreamStats): StreamStats => ({
   latencyMs: Math.round(base.latencyMs * (0.8 + Math.random() * 0.45)),
 });
 
-export function useMockSession(): Session {
+export function useMockSession(me: Friend = ME): Session {
   const [friends, setFriends] = useState<Friend[]>(FRIENDS);
   const [share, setShare] = useState<ShareState>(() => ({
     sharerId: "bruno",
@@ -107,9 +107,9 @@ export function useMockSession(): Session {
     return () => window.clearInterval(timer);
   }, [share]);
 
-  const people = useMemo(() => [ME, ...friends], [friends]);
+  const people = useMemo(() => [me, ...friends], [me, friends]);
   const sharer = share ? people.find((p) => p.id === share.sharerId) ?? null : null;
-  const isMeSharing = share?.sharerId === ME.id;
+  const isMeSharing = share?.sharerId === me.id;
 
   const simulate = useMemo(
     () => ({
@@ -118,7 +118,7 @@ export function useMockSession(): Session {
         if (candidate) beginShare(candidate.id, Math.random() < 0.5 ? "editor" : "game");
       },
       friendTakesFromMe: () => {
-        if (shareRef.current?.sharerId !== ME.id) return;
+        if (shareRef.current?.sharerId !== me.id) return;
         const candidate = pick(friends.filter((f) => f.online));
         if (candidate) beginShare(candidate.id, "game");
       },
@@ -144,7 +144,7 @@ export function useMockSession(): Session {
   );
 
   return {
-    me: ME,
+    me,
     people,
     share,
     stats,
@@ -152,8 +152,8 @@ export function useMockSession(): Session {
     connection,
     isMeSharing,
     sharer,
-    startSharing: () => beginShare(ME.id, "desktop"),
-    takeScreen: () => beginShare(ME.id, "desktop"),
+    startSharing: () => beginShare(me.id, "desktop"),
+    takeScreen: () => beginShare(me.id, "desktop"),
     stopSharing: endShare,
     simulate,
   };

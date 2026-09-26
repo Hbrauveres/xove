@@ -27,7 +27,8 @@ export function MockScreenCanvas({ scene, label }: Props) {
     const start = performance.now();
 
     const draw = (now: number) => {
-      const t = (now - start) / 1000;
+      // rAF timestamps can be slightly earlier than `start`; never let time go negative
+      const t = Math.max(0, (now - start) / 1000);
       if (scene === "editor") drawEditor(ctx, t);
       else if (scene === "game") drawGame(ctx, t);
       else drawDesktop(ctx, t);
