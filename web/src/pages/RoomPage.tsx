@@ -4,7 +4,6 @@ import { useAuth } from "../auth/AuthProvider";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { ShareControls } from "../components/controls/ShareControls";
 import { AppHeader } from "../components/layout/AppHeader";
-import { MockPanel } from "../components/mock/MockPanel";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
 import { useRoomSession } from "../hooks/useRoomSession";
@@ -27,7 +26,7 @@ export function RoomPage({ pollMs }: Props = {}) {
     [me?.name, me?.email],
   );
   const session = useRoomSession(meAsFriend, pollMs);
-  const onlineCount = session.people.filter((p) => p.online).length;
+  const onlineCount = session.people.length;
 
   const handleSignOut = async () => {
     await signOut();
@@ -49,17 +48,18 @@ export function RoomPage({ pollMs }: Props = {}) {
           <Stage
             share={session.share}
             sharer={session.sharer}
-            stats={session.stats}
+            screen={session.screen}
             isMeSharing={session.isMeSharing}
             connection={session.connection}
-            onStartSharing={session.take}
+            onStartSharing={session.startSharing}
           />
           <ShareControls
             sharer={session.sharer}
             isMeSharing={session.isMeSharing}
-            onStart={session.take}
-            onTake={session.take}
+            onStart={session.startSharing}
+            onTake={session.startSharing}
             onStop={session.stop}
+            busy={session.busy}
           />
           {session.error && (
             <p className={styles.error} role="alert">
@@ -71,7 +71,6 @@ export function RoomPage({ pollMs }: Props = {}) {
         <aside className={styles.side}>
           <ViewerList people={session.people} meId={session.me.id} sharerId={session.share?.sharerId ?? null} />
           <ActivityFeed events={session.activity} people={session.knownPeople} meId={session.me.id} />
-          <MockPanel simulate={session.simulate} />
         </aside>
       </div>
     </div>

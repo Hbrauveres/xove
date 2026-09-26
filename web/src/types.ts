@@ -1,4 +1,4 @@
-/** A person allowed into the app. In the real app this comes from Google login. */
+/** A person in the room. `id` is their LiveKit identity ("user-42"), or "me". */
 export type Friend = {
   id: string;
   name: string;
@@ -7,15 +7,23 @@ export type Friend = {
   online: boolean;
 };
 
-/** What the mock screen draws. The real app shows a LiveKit video track instead. */
-export type ScreenScene = "editor" | "game" | "desktop";
-
 /** The one screen slot. Null means nobody is sharing. */
 export type ShareState = {
   sharerId: string;
   startedAt: number;
-  scene: ScreenScene;
 } | null;
+
+/** A LiveKit track, reduced to what the stage needs: put it in a <video>/<audio> and take it out. */
+export type MediaTrack = {
+  attach(element: HTMLMediaElement): HTMLMediaElement;
+  detach(element: HTMLMediaElement): HTMLMediaElement;
+};
+
+/** Someone's shared screen, as received from LiveKit. */
+export type ScreenTracks = {
+  video?: MediaTrack;
+  audio?: MediaTrack;
+};
 
 /** Numbers the real app would read from LiveKit's track stats. */
 export type StreamStats = {
@@ -38,4 +46,4 @@ export type ActivityEvent = {
   targetId?: string;
 };
 
-export type ConnectionState = "connected" | "reconnecting";
+export type ConnectionState = "connecting" | "connected" | "reconnecting" | "disconnected";

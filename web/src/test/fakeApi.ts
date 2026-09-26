@@ -43,6 +43,12 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
       body: { holder: server.screenHolder, mine: server.screenHolder?.userId === MY_USER_ID },
     });
     if (key === "GET /api/screen") return screenState();
+    if (key === "POST /api/livekit/token") {
+      return {
+        status: 200,
+        body: { url: "wss://rtc.test", room: "xove", identity: `user-${MY_USER_ID}`, token: "test-token" },
+      };
+    }
     if (key === "POST /api/screen/take") {
       if (server.screenHolder?.userId !== MY_USER_ID) {
         const since = new Date().toISOString();

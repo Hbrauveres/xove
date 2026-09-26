@@ -41,3 +41,11 @@ export type ScreenState = {
   /** True when the holder is the person asking. */
   mine: boolean;
 };
+
+/** POST /api/livekit/token: where and how to join the video room. */
+export type LiveKitAccess = {
+  url: string;
+  room: string;
+  identity: string;
+  token: string;
+};
