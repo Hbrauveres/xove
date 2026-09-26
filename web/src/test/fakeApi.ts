@@ -46,7 +46,7 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     if (key === "POST /api/livekit/token") {
       return {
         status: 200,
-        body: { url: "wss://rtc.test", room: "xove", identity: `user-${MY_USER_ID}`, token: "test-token" },
+        body: { url: "wss://rtc.test", room: "kryora", identity: `user-${MY_USER_ID}`, token: "test-token" },
       };
     }
     if (key === "POST /api/screen/take") {

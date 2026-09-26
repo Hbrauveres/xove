@@ -23,9 +23,9 @@ export function AppHeader({ me, connection, onlineCount, onSignOut, isAdmin = fa
     <header className={styles.header}>
       <div className={styles.brand}>
         <span className={styles.wordmark}>
-          xovê<span className={styles.dot}>.</span>
+          kryora<span className={styles.dot}>.</span>
         </span>
-        <span className={styles.domain}>xove.hbrauveres.dev</span>
+        <span className={styles.domain}>kryora.live</span>
       </div>
 
       <div className={styles.meta}>
