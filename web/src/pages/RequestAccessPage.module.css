@@ -1,0 +1,164 @@
+.wrap {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding-block: 48px;
+  padding-inline: var(--gutter);
+  background: var(--ground);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.brand {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+}
+
+.dot {
+  color: var(--tally);
+}
+
+.title {
+  font-size: clamp(1.75rem, 6vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.copy {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.optional {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 84px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.textarea:focus-visible {
+  outline: 2px solid var(--tally);
+  outline-offset: 1px;
+}
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.counter {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.error {
+  margin: 0;
+  color: var(--live);
+  font-size: var(--text-sm);
+}
+
+.waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  align-self: flex-start;
+  border-radius: 999px;
+  background: var(--tally-soft);
+  color: var(--tally);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.accountText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.accountLabel {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.accountEmail {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}

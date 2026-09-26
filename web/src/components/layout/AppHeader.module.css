@@ -97,3 +97,13 @@
     display: none;
   }
 }
+
+.adminLink {
+  color: var(--tally);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.adminLink:hover {
+  text-decoration: underline;
+}

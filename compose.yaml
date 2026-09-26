@@ -1,11 +1,72 @@
 services:
   web:
     build: ./web
-    container_name: xove-web
+    container_name: xove-${APP_ENV:-prod}-web
     restart: unless-stopped
     networks:
       - web
 
+  api:
+    build: ./api
+    container_name: xove-${APP_ENV:-prod}-api
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - web
+      - internal
+
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    container_name: xove-${APP_ENV:-prod}-livekit
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+    mem_limit: 512m
+    networks:
+      - web
+
+  db:
+    image: postgres:17-alpine
+    container_name: xove-${APP_ENV:-prod}-db
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - internal
+
 networks:
   web:
     external: true
+  internal: {}
+
+volumes:
+  db_data:
