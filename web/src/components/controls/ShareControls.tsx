@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Friend } from "../../types";
 import { Button } from "../ui/Button";
-import { SourcePicker } from "./SourcePicker";
 import { TakeoverConfirm } from "./TakeoverConfirm";
 import styles from "./ShareControls.module.css";
 
@@ -11,15 +10,17 @@ type Props = {
   onStart: () => void;
   onTake: () => void;
   onStop: () => void;
+  /** A request is on its way: buttons wait. */
+  busy?: boolean;
 };
 
-type Step = "idle" | "confirmTakeover" | "picking";
+type Step = "idle" | "confirmTakeover";
 
 /**
  * The one control that matters: share, take over, or stop.
- * Taking the screen from someone asks first, then opens the source picker.
+ * Taking the screen from someone asks first; then the browser's own picker opens.
  */
-export function ShareControls({ sharer, isMeSharing, onStart, onTake, onStop }: Props) {
+export function ShareControls({ sharer, isMeSharing, onStart, onTake, onStop, busy = false }: Props) {
   const [step, setStep] = useState<Step>("idle");
   const someoneElseSharing = sharer !== null && !isMeSharing;
 
@@ -28,10 +29,9 @@ export function ShareControls({ sharer, isMeSharing, onStart, onTake, onStop }: 
     if (step === "confirmTakeover" && !someoneElseSharing) setStep("idle");
   }, [step, someoneElseSharing]);
 
-  const finishPicking = () => {
+  const confirmTakeover = () => {
     setStep("idle");
-    if (someoneElseSharing) onTake();
-    else onStart();
+    onTake();
   };
 
   return (
@@ -46,15 +46,15 @@ export function ShareControls({ sharer, isMeSharing, onStart, onTake, onStop }: 
         </p>
 
         {isMeSharing ? (
-          <Button variant="danger" onClick={onStop}>
+          <Button variant="danger" onClick={onStop} disabled={busy}>
             Stop sharing
           </Button>
         ) : someoneElseSharing ? (
-          <Button variant="ghost" onClick={() => setStep("confirmTakeover")} disabled={step !== "idle"}>
+          <Button variant="ghost" onClick={() => setStep("confirmTakeover")} disabled={busy || step !== "idle"}>
             Take the screen
           </Button>
         ) : (
-          <Button onClick={() => setStep("picking")} disabled={step !== "idle"}>
+          <Button onClick={onStart} disabled={busy}>
             Share my screen
           </Button>
         )}
@@ -63,12 +63,10 @@ export function ShareControls({ sharer, isMeSharing, onStart, onTake, onStop }: 
       {step === "confirmTakeover" && sharer && (
         <TakeoverConfirm
           sharerName={sharer.name}
-          onConfirm={() => setStep("picking")}
+          onConfirm={confirmTakeover}
           onCancel={() => setStep("idle")}
         />
       )}
-
-      {step === "picking" && <SourcePicker onPick={finishPicking} onCancel={() => setStep("idle")} />}
     </section>
   );
 }

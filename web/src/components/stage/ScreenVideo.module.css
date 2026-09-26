@@ -1,0 +1,9 @@
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Screens come in any shape: show all of it, letterboxed. */
+  object-fit: contain;
+  background: #000;
+}

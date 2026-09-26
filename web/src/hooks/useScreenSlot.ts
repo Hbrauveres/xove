@@ -11,8 +11,9 @@ export type ScreenSlot = {
   /** Message from the last failed take/release, safe to show. */
   error: string | null;
   busy: boolean;
-  take: () => Promise<void>;
-  release: () => Promise<void>;
+  /** Resolve true when the API accepted. */
+  take: () => Promise<boolean>;
+  release: () => Promise<boolean>;
 };
 
 /** The shared screen slot, owned by the API: polls it, and takes or releases it. */
@@ -48,9 +49,11 @@ export function useScreenSlot(pollMs: number = SCREEN_POLL_MS): ScreenSlot {
       setError(null);
       try {
         setState(await call());
+        return true;
       } catch (e) {
         setError(e instanceof ApiError ? e.message : "Something went wrong. Try again.");
         void refresh();
+        return false;
       } finally {
         setBusy(false);
       }

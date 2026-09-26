@@ -11,6 +11,13 @@ type Props = {
   isAdmin?: boolean;
 };
 
+const CONNECTION_LABEL: Record<ConnectionState, string> = {
+  connecting: "Connecting…",
+  connected: "Connected",
+  reconnecting: "Reconnecting…",
+  disconnected: "Video offline",
+};
+
 export function AppHeader({ me, connection, onlineCount, onSignOut, isAdmin = false }: Props) {
   return (
     <header className={styles.header}>
@@ -27,7 +34,7 @@ export function AppHeader({ me, connection, onlineCount, onSignOut, isAdmin = fa
           role="status"
         >
           <span className={styles.statusDot} aria-hidden="true" />
-          {connection === "connected" ? "Connected" : "Reconnecting…"}
+          {CONNECTION_LABEL[connection]}
         </span>
         <span className={styles.count}>{onlineCount} here</span>
         <span className={styles.user}>

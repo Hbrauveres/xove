@@ -1,4 +1,4 @@
-import type { AccessRequestView, Me, MemberView, ScreenState } from "./types";
+import type { AccessRequestView, LiveKitAccess, Me, MemberView, ScreenState } from "./types";
 
 /** An error the API answered with. `message` is safe to show to the user. */
 export class ApiError extends Error {
@@ -68,6 +68,8 @@ export const api = {
     take: () => request<ScreenState>("POST", "/api/screen/take"),
     release: () => request<ScreenState>("POST", "/api/screen/release"),
   },
+
+  liveKitToken: () => request<LiveKitAccess>("POST", "/api/livekit/token"),
 
   admin: {
     pendingRequests: () => request<AccessRequestView[]>("GET", "/api/admin/access-requests"),
