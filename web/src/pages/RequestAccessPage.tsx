@@ -36,7 +36,7 @@ export function RequestAccessPage() {
     <main className={styles.wrap}>
       <section className={styles.card}>
         <p className={styles.brand}>
-          kryora<span className={styles.dot}>.</span>
+          xovê<span className={styles.dot}>.</span>
         </p>
 
         {me.status === "PENDING" ? <Waiting /> : <AskForAccess me={me} onSent={refresh} />}
@@ -82,7 +82,7 @@ function AskForAccess({ me, onSent }: { me: Me; onSent: () => Promise<void> }) {
       <p className={styles.copy}>
         {declined
           ? "The owner declined your last request. If you think that was a mistake, you can ask again with a note."
-          : "Kryora Live is invite only. Ask for access and the owner will get your request."}
+          : "Xovê is invite only. Ask for access and the owner will get your request."}
       </p>
 
       <form className={styles.form} onSubmit={submit}>

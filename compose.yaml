@@ -1,17 +1,14 @@
-# Project name: prefixes the database volume and network (not the folder name).
-name: kryora-live-${APP_ENV:-prod}
-
 services:
   web:
     build: ./web
-    container_name: kryora-live-${APP_ENV:-prod}-web
+    container_name: xove-${APP_ENV:-prod}-web
     restart: unless-stopped
     networks:
       - web
 
   api:
     build: ./api
-    container_name: kryora-live-${APP_ENV:-prod}-api
+    container_name: xove-${APP_ENV:-prod}-api
     restart: unless-stopped
     mem_limit: 512m
     environment:
@@ -33,7 +30,7 @@ services:
 
   livekit:
     image: livekit/livekit-server:v1.13.7
-    container_name: kryora-live-${APP_ENV:-prod}-livekit
+    container_name: xove-${APP_ENV:-prod}-livekit
     command: --config /etc/livekit.yaml
     restart: unless-stopped
     environment:
@@ -49,7 +46,7 @@ services:
 
   db:
     image: postgres:17-alpine
-    container_name: kryora-live-${APP_ENV:-prod}-db
+    container_name: xove-${APP_ENV:-prod}-db
     restart: unless-stopped
     mem_limit: 256m
     environment:

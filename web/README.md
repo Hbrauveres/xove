@@ -1,4 +1,4 @@
-# Kryora Live — web
+# Xovê — web
 
 React 19 + TypeScript frontend, built with Vite.
 
