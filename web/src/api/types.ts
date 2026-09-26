@@ -26,3 +26,18 @@ export type MemberView = {
   avatarUrl: string | null;
   admin: boolean;
 };
+
+/** Who holds the screen slot. `since` is an ISO timestamp. */
+export type ScreenHolder = {
+  userId: number;
+  name: string | null;
+  avatarUrl: string | null;
+  since: string;
+};
+
+/** GET /api/screen, and what take/release answer with. */
+export type ScreenState = {
+  holder: ScreenHolder | null;
+  /** True when the holder is the person asking. */
+  mine: boolean;
+};
