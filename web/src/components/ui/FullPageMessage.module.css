@@ -1,0 +1,8 @@
+.wrap {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding-inline: var(--gutter);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

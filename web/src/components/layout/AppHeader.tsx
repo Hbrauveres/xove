@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import type { ConnectionState, Friend } from "../../types";
 import { Avatar } from "../ui/Avatar";
 import styles from "./AppHeader.module.css";
@@ -7,16 +8,17 @@ type Props = {
   connection: ConnectionState;
   onlineCount: number;
   onSignOut: () => void;
+  isAdmin?: boolean;
 };
 
-export function AppHeader({ me, connection, onlineCount, onSignOut }: Props) {
+export function AppHeader({ me, connection, onlineCount, onSignOut, isAdmin = false }: Props) {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
         <span className={styles.wordmark}>
           xovê<span className={styles.dot}>.</span>
         </span>
-        <span className={styles.domain}>live.hbrauveres.dev</span>
+        <span className={styles.domain}>xove.hbrauveres.dev</span>
       </div>
 
       <div className={styles.meta}>
@@ -32,6 +34,11 @@ export function AppHeader({ me, connection, onlineCount, onSignOut }: Props) {
           <Avatar person={me} size={28} />
           <span className={styles.userName}>{me.name}</span>
         </span>
+        {isAdmin && (
+          <Link to="/admin" className={styles.adminLink}>
+            Admin
+          </Link>
+        )}
         <button type="button" className={styles.signOut} onClick={onSignOut}>
           Sign out
         </button>
