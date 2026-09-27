@@ -1,5 +1,6 @@
 services:
   web:
+    image: ghcr.io/hbrauveres/xove-web:${IMAGE_TAG:-local}
     build: ./web
     container_name: xove-${APP_ENV:-prod}-web
     restart: unless-stopped
@@ -7,6 +8,7 @@ services:
       - web
 
   api:
+    image: ghcr.io/hbrauveres/xove-api:${IMAGE_TAG:-local}
     build: ./api
     container_name: xove-${APP_ENV:-prod}-api
     restart: unless-stopped

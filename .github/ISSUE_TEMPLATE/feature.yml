@@ -1,0 +1,35 @@
+name: Feature
+description: Something Xovê should do. It becomes a spec before any code.
+title: "feat: "
+labels: ["type: feature"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: The need
+      description: What's missing or painful today, from the user's point of view. No solution yet.
+      placeholder: When the sharer closes the tab, everyone else is stuck on "Loading…" until someone takes over.
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: Who it's for
+      placeholder: Viewers in the room; the next person who wants to share.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: How we'd know it's done
+      description: First ideas for acceptance criteria. The spec makes them precise and testable.
+      placeholder: "- The stage frees itself within 10 s of the sharer leaving"
+  - type: textarea
+    id: out
+    attributes:
+      label: Not part of this
+      description: What this deliberately doesn't cover.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes, links, screenshots

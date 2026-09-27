@@ -1,78 +1,224 @@
-name: CI
+# Commit checks: stages 1–3 of the pipeline, on every commit.
+#
+#   1 · Build               api and web Docker images, saved as artifacts
+#   2 · Validate build      start db + api + web from those images, wait until healthy
+#   3 · Unit tests          api (JUnit + Testcontainers) and web (Vitest)
+#   3 · Vulnerability scan  Trivy on both images and the web dependencies
+#   3 · SAST                Semgrep on the source code
+#
+# Runs on every push to any branch except main, so a branch is checked commit by
+# commit, before and after a pull request exists. A pull request's required checks
+# are these same runs (GitHub matches checks by commit). The stage release
+# (stage.yml) calls this workflow first on main.
+# Full explanation: docs/pipeline.md
+
+name: Commit checks
 
 on:
-  pull_request:
-    branches: [develop, main]
   push:
-    branches: [develop, main]
+    branches-ignore: [main]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}-${{ github.event_name }}
+  # A new commit on a branch cancels the older run; runs for main always finish.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  IMAGE_PREFIX: ghcr.io/hbrauveres/xove
+  TRIVY_IMAGE: aquasec/trivy:0.74.0
+  SEMGREP_IMAGE: semgrep/semgrep:1.177.0
 
 jobs:
-  web-build:
-    name: Web · Build
+  # ---------------------------------------------------------------- stage 1
+  build:
+    name: 1 · Build (${{ matrix.service }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
+    strategy:
+      matrix:
+        service: [api, web]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Type-check (tsc)
-        run: npx tsc -b
-      - name: Production bundle (vite build)
-        run: npx vite build
 
-  web-test:
-    name: Web · Test
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the ${{ matrix.service }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service }}
+          pull: true
+          tags: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:ci
+          outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Keep the image for the next stages
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: ${{ runner.temp }}/${{ matrix.service }}.tar
+          retention-days: 3
+
+  # ---------------------------------------------------------------- stage 2
+  validate:
+    name: 2 · Validate build
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      # Throwaway values: this stack lives for a minute inside the runner.
+      APP_ENV: ci
+      IMAGE_TAG: ci
+      POSTGRES_DB: xove
+      POSTGRES_USER: xove
+      POSTGRES_PASSWORD: ci-only-password
+      GOOGLE_CLIENT_ID: ci-placeholder
+      GOOGLE_CLIENT_SECRET: ci-placeholder
+      ADMIN_EMAILS: ""
+      LIVEKIT_URL: ""
+      LIVEKIT_API_KEY: ""
+      LIVEKIT_API_SECRET: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/images
+
+      - name: Load the images
+        run: for f in "$RUNNER_TEMP"/images/*.tar; do docker load -i "$f"; done
+
+      - name: Start db, api and web
+        run: |
+          docker network create web
+          docker compose up -d --no-build db api web
+
+      - name: Wait until healthy
+        run: ops/healthcheck.sh 150
+
+      - name: Check that the API refuses anonymous requests
+        run: docker compose exec -T api sh -c 'wget -S -qO- http://localhost:8080/api/me 2>&1 | grep -q " 401"'
+
+      - name: Show logs
+        if: failure()
+        run: docker compose logs --tail 200
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
+
+  # ---------------------------------------------------------------- stage 3
+  unit-tests-api:
+    name: 3 · Unit tests (api)
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: JUnit + Testcontainers
+        run: ./mvnw -B verify
+
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-reports
+          path: api/target/surefire-reports
+          retention-days: 7
+
+  unit-tests-web:
+    name: 3 · Unit tests (web)
+    needs: validate
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
+
       - name: Install dependencies
         run: npm ci
-      - name: Unit tests (Vitest)
+
+      - name: Vitest
         run: npm test
 
-  api-build:
-    name: API · Build
+  vuln-scan:
+    name: 3 · Vulnerability scan
+    needs: validate
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: api
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-      - name: Compile and package the jar
-        run: ./mvnw -B -DskipTests package
 
-  api-test:
-    name: API · Test
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/images
+
+      - name: Today's date (the vulnerability database is cached per day)
+        id: date
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.date.outputs.day }}
+          restore-keys: trivy-db-
+
+      - name: Scan the images and the web dependencies
+        # HIGH and CRITICAL only, and only when a fixed version exists: those are
+        # the ones we can act on. Every target is scanned before the job fails.
+        run: |
+          trivy() {
+            docker run --rm \
+              -v "$RUNNER_TEMP/images:/images:ro" \
+              -v "$GITHUB_WORKSPACE:/src:ro" \
+              -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+              "$TRIVY_IMAGE" "$@" \
+              --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+              --ignorefile /src/.trivyignore --no-progress
+          }
+          status=0
+          for service in api web; do
+            echo "::group::image $service"
+            trivy image --input "/images/$service.tar" || status=1
+            echo "::endgroup::"
+          done
+          echo "::group::web dependencies (package-lock.json)"
+          trivy fs --scanners vuln /src/web || status=1
+          echo "::endgroup::"
+          exit "$status"
+
+  sast:
+    name: 3 · SAST
+    needs: validate
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: api
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-      - name: Tests (JUnit + Testcontainers Postgres)
-        run: ./mvnw -B test
+
+      - name: Semgrep
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -w /src "$SEMGREP_IMAGE" \
+            semgrep scan --metrics=off --error \
+            --config p/default --config p/java --config p/typescript \
+            --config p/react --config p/secrets --config p/dockerfile

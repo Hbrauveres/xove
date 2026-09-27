@@ -1,0 +1,21 @@
+# Weekly pull requests that bump outdated dependencies. The pipeline tests each one,
+# so a green PR is safe to merge. Grouped per ecosystem to keep the noise down.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /api
+    schedule: { interval: weekly }
+    groups: { maven: { patterns: ["*"] } }
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    groups: { npm: { patterns: ["*"] } }
+
+  - package-ecosystem: docker
+    directories: [/api, /web]
+    schedule: { interval: weekly }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
