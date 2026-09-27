@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectionState as LkState, Room, RoomEvent, Track, type Participant } from "livekit-client";
 import { ApiError, api } from "../api/client";
+import type { SharingConnection } from "../api/types";
 import type { ActivityEvent, ConnectionState, ScreenTracks } from "../types";
 
 export type RoomPerson = { identity: string; name: string };
@@ -16,8 +17,11 @@ export type LiveKitRoom = {
   /** Joins and leaves seen since this page connected. */
   presence: ActivityEvent[];
   error: string | null;
-  /** Opens the browser's screen picker. Resolves false if the person cancelled. */
-  startScreenShare: () => Promise<boolean>;
+  /**
+   * Opens the browser's screen picker. Resolves with the connection and track
+   * that are now sharing, or null if the person cancelled.
+   */
+  startScreenShare: () => Promise<SharingConnection | null>;
   stopScreenShare: () => Promise<void>;
 };
 
@@ -118,18 +122,23 @@ export function useLiveKitRoom(): LiveKitRoom {
     const room = roomRef.current;
     if (!room) {
       setError("Not connected to the video server yet.");
-      return false;
+      return null;
     }
     try {
       setError(null);
       await room.localParticipant.setScreenShareEnabled(true, { audio: true, selfBrowserSurface: "exclude" });
       sync();
-      return room.localParticipant.isScreenShareEnabled;
+      const local = room.localParticipant;
+      if (!local.isScreenShareEnabled) return null;
+      return {
+        participantSid: local.sid,
+        trackSid: local.getTrackPublication(Track.Source.ScreenShare)?.trackSid,
+      };
     } catch (e) {
       // Closing the browser's picker is a choice, not an error.
-      if (e instanceof DOMException && e.name === "NotAllowedError") return false;
+      if (e instanceof DOMException && e.name === "NotAllowedError") return null;
       setError("Couldn't start sharing your screen.");
-      return false;
+      return null;
     }
   }, [sync]);
 

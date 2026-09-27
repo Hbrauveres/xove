@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
-import type { ScreenState } from "../api/types";
+import type { ScreenState, SharingConnection } from "../api/types";
 
 /** How often every open room asks the API who is sharing. LiveKit events replace this later. */
 export const SCREEN_POLL_MS = 2000;
@@ -11,8 +11,8 @@ export type ScreenSlot = {
   /** Message from the last failed take/release, safe to show. */
   error: string | null;
   busy: boolean;
-  /** Resolve true when the API accepted. */
-  take: () => Promise<boolean>;
+  /** Resolve true when the API accepted. The connection lets the API free the slot when it leaves. */
+  take: (connection?: SharingConnection) => Promise<boolean>;
   release: () => Promise<boolean>;
 };
 
@@ -61,7 +61,7 @@ export function useScreenSlot(pollMs: number = SCREEN_POLL_MS): ScreenSlot {
     [refresh],
   );
 
-  const take = useCallback(() => run(api.screen.take), [run]);
+  const take = useCallback((connection?: SharingConnection) => run(() => api.screen.take(connection)), [run]);
   const release = useCallback(() => run(api.screen.release), [run]);
 
   return { state, error, busy, take, release };

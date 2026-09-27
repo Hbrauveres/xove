@@ -23,6 +23,14 @@ describe("api client", () => {
     expect(server.calls.at(-1)!.headers["X-XSRF-TOKEN"]).toBeUndefined();
   });
 
+  it("says which connection and track are sharing when taking the screen", async () => {
+    const server = installFakeApi();
+
+    await api.screen.take({ participantSid: "PA_me", trackSid: "TR_screen" });
+
+    expect(server.calls.at(-1)!.body).toEqual({ participantSid: "PA_me", trackSid: "TR_screen" });
+  });
+
   it("sends an empty message as null", async () => {
     const server = installFakeApi();
     await api.requestAccess("   ");

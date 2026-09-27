@@ -124,6 +124,20 @@ describe("room: sharing", () => {
     expect(take?.headers["X-XSRF-TOKEN"]).toBe("abc123");
   });
 
+  it("sends the connection and track ids when taking the screen", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+    expect(await screen.findByText("You are sharing")).toBeInTheDocument();
+    const take = server.calls.find((c) => c.method === "POST" && c.path === "/api/screen/take");
+    expect(take?.body).toEqual({ participantSid: "PA_me", trackSid: "TR_my_screen" });
+  });
+
   it("does nothing if the picker is closed without choosing", async () => {
     const server = installFakeApi({ me: member });
     renderRoom();

@@ -69,7 +69,12 @@ export class Room {
   disconnected = false;
 
   readonly localParticipant = {
+    sid: "PA_me",
     isScreenShareEnabled: false,
+    getTrackPublication: (source: string) =>
+      source === Track.Source.ScreenShare && this.localParticipant.isScreenShareEnabled
+        ? { trackSid: "TR_my_screen" }
+        : undefined,
     /** Tests set this to "cancel" to play someone closing the browser's picker. */
     nextPicker: "share" as "share" | "cancel",
     setScreenShareEnabled: vi.fn(async (enabled: boolean) => {

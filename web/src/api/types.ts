@@ -42,6 +42,12 @@ export type ScreenState = {
   mine: boolean;
 };
 
+/** Which LiveKit connection and screen track a share comes from, sent when taking the screen. */
+export type SharingConnection = {
+  participantSid: string;
+  trackSid?: string;
+};
+
 /** POST /api/livekit/token: where and how to join the video room. */
 export type LiveKitAccess = {
   url: string;
