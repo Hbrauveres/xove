@@ -46,7 +46,7 @@ flowchart LR
 
 | # | Job | What it does | Fails when |
 | --- | --- | --- | --- |
-| 1 | **Build (api)**, **Build (web)** | Builds each Docker image from its `Dockerfile` (the Java build and the React build happen inside). Layers are cached between runs. Each image is saved as an artifact for the next stages | The code doesn't compile, TypeScript has type errors, the Docker build breaks |
+| 1 | **Build (api)**, **Build (web)** | Builds each Docker image from its `Dockerfile` (the Java build and the React build happen inside). Layers are cached between runs, except that the web image rebuilds Caddy from source on the latest Go once a day (the build gets today's date as `REFRESH`). Each image is saved as an artifact for the next stages | The code doesn't compile, TypeScript has type errors, the Docker build breaks |
 | 2 | **Validate build** | Loads both images and starts db, api and web with Compose, exactly as a server would. Waits for the API health endpoint and the web page, and checks that the API refuses anonymous requests (401) | An image doesn't start, a migration fails, the app crashes on boot, security isn't wired |
 | 3 | **Unit tests (api)** | `./mvnw verify`: JUnit with a real PostgreSQL from Testcontainers | Any test fails (reports are attached to the run) |
 | 3 | **Unit tests (web)** | `npm ci` and `npm test` (Vitest) | Any test fails |

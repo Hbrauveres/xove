@@ -26,7 +26,7 @@ What to look for:
 | api | `Started XoveApiApplication`, Flyway `Migrating schema`, `Google login failed: …` (the reason a sign-in was refused), stack traces |
 | livekit | `starting LiveKit server` with the public IP it found, participant joins and leaves |
 | db | `database system is ready to accept connections` |
-| web | nginx access log: one line per request |
+| web | Caddy access log: one JSON line per request |
 
 ## Common problems
 

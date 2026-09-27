@@ -26,7 +26,7 @@ flowchart LR
   F -->|video| L[LiveKit<br/>media server]
 ```
 
-- **Web:** React 19 + TypeScript, built with Vite, served by nginx
+- **Web:** React 19 + TypeScript, built with Vite, served by Caddy (built from source)
 - **API:** Java 21 + Spring Boot 4, PostgreSQL 17 with Flyway migrations
 - **Video:** a self-hosted LiveKit server (WebRTC SFU)
 - **Delivery:** GitHub Actions builds, validates, scans and publishes Docker images; servers run them with Docker Compose

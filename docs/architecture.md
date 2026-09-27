@@ -6,7 +6,7 @@
 flowchart LR
   B[Browser<br/>React app] -->|HTTPS 443| P[Reverse proxy<br/>TLS + routing]
   P -->|/api/*| A[API<br/>Spring Boot]
-  P -->|everything else| W[web<br/>nginx + static build]
+  P -->|everything else| W[web<br/>Caddy + static build]
   A -->|JDBC, private network| D[(PostgreSQL)]
   B -->|WSS 443, signaling| P
   P -->|signaling| L[LiveKit]
@@ -15,7 +15,7 @@ flowchart LR
 
 | Component | What it does | Tech |
 | --- | --- | --- |
-| **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by nginx |
+| **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
 | **api** | Login, sessions, access requests, admin actions, the screen slot, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
 | **db** | Users, access requests, sessions | PostgreSQL 17, schema managed by Flyway |
 | **livekit** | Receives each shared screen once and forwards it to every viewer | LiveKit server (a WebRTC SFU) |
