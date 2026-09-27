@@ -87,6 +87,81 @@ class ScreenSlotTest {
         assertThat(slot.current()).isEmpty();
     }
 
+    // --- LiveKit reports (spec 0038) ---
+
+    private static final SharingConnection ANA_LAPTOP = new SharingConnection("PA_laptop", "TR_screen1");
+
+    @Test
+    void theSharingConnectionLeavingFreesTheSlot() {
+        slot.take(ANA, "Ana", null, ANA_LAPTOP);
+
+        assertThat(slot.connectionLeft(ANA, "PA_laptop")).isTrue();
+        assertThat(slot.current()).isEmpty();
+    }
+
+    @Test
+    void anotherConnectionOfTheHolderLeavingKeepsTheSlot() {
+        slot.take(ANA, "Ana", null, ANA_LAPTOP);
+
+        assertThat(slot.connectionLeft(ANA, "PA_phone")).isFalse();
+        assertThat(slot.current().orElseThrow().userId()).isEqualTo(ANA);
+    }
+
+    @Test
+    void someoneElseLeavingKeepsTheSlot() {
+        slot.take(ANA, "Ana", null, ANA_LAPTOP);
+
+        assertThat(slot.connectionLeft(BRUNO, "PA_laptop")).isFalse();
+        assertThat(slot.screenUnpublished(BRUNO, "PA_bruno", "TR_screen1")).isFalse();
+        assertThat(slot.current().orElseThrow().userId()).isEqualTo(ANA);
+    }
+
+    @Test
+    void leavingWhenNobodySharesDoesNothing() {
+        assertThat(slot.connectionLeft(ANA, "PA_laptop")).isFalse();
+        assertThat(slot.screenUnpublished(ANA, "PA_laptop", "TR_screen1")).isFalse();
+        assertThat(slot.current()).isEmpty();
+    }
+
+    @Test
+    void theSharedTrackBeingUnpublishedFreesTheSlot() {
+        slot.take(ANA, "Ana", null, ANA_LAPTOP);
+
+        assertThat(slot.screenUnpublished(ANA, "PA_laptop", "TR_screen1")).isTrue();
+        assertThat(slot.current()).isEmpty();
+    }
+
+    @Test
+    void aLateUnpublishOfAnEarlierShareKeepsTheNewOne() {
+        slot.take(ANA, "Ana", null, ANA_LAPTOP);
+        slot.release(ANA);
+        slot.take(ANA, "Ana", null, new SharingConnection("PA_laptop", "TR_screen2"));
+
+        assertThat(slot.screenUnpublished(ANA, "PA_laptop", "TR_screen1")).isFalse();
+        assertThat(slot.current().orElseThrow().userId()).isEqualTo(ANA);
+    }
+
+    @Test
+    void takingAgainWhileHoldingUpdatesTheConnection() {
+        slot.take(ANA, "Ana", null, ANA_LAPTOP);
+        slot.take(ANA, "Ana", null, new SharingConnection("PA_laptop", "TR_screen2"));
+
+        assertThat(slot.screenUnpublished(ANA, "PA_laptop", "TR_screen1")).isFalse();
+        assertThat(slot.screenUnpublished(ANA, "PA_laptop", "TR_screen2")).isTrue();
+    }
+
+    @Test
+    void withoutConnectionIdsAnyReportAboutTheHolderFreesTheSlot() {
+        slot.take(ANA, "Ana", null);
+
+        assertThat(slot.connectionLeft(ANA, "PA_whatever")).isTrue();
+        assertThat(slot.current()).isEmpty();
+
+        slot.take(ANA, "Ana", null);
+        assertThat(slot.screenUnpublished(ANA, "PA_whatever", "TR_whatever")).isTrue();
+        assertThat(slot.current()).isEmpty();
+    }
+
     /** A clock the test can move forward. */
     private static final class MutableClock extends Clock {
         private Instant now;

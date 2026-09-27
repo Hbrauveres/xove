@@ -4,7 +4,8 @@
 
 Each task is small enough for one commit, leaves the build green, and says which requirements it serves and how it's verified. Tick a task only when its verification passes.
 
-- [ ] **T1** — `ScreenSlot` keeps the sharing connection (`participantSid`, `trackSid`, optional) next to the holder; `take(…)` accepts them; new `connectionLeft(…)` and `screenUnpublished(…)` free only on a match, fall back to the person when no ids are stored, and ignore a late event after a restarted share · covers FR-1, FR-2, FR-3 · verify: `ScreenSlotTest` (new cases) and `./mvnw test`
+- [x] **T1** — `ScreenSlot` keeps the sharing connection (`participantSid`, `trackSid`, optional) next to the holder; `take(…)` accepts them; new `connectionLeft(…)` and `screenUnpublished(…)` free only on a match, fall back to the person when no ids are stored, and ignore a late event after a restarted share · covers FR-1, FR-2, FR-3 · verify: `ScreenSlotTest` (new cases) and `./mvnw test`
+  - Done: new `SharingConnection` record; `ScreenSlot.take(…, connection)`, `connectionLeft` and `screenUnpublished` with id matching and the no-ids fallback; 8 new `ScreenSlotTest` cases.
 - [ ] **T2** — `POST /api/screen/take` accepts the optional body `{ participantSid, trackSid }`; `GET /api/screen` never shows them · covers FR-1, FR-2 · verify: `ScreenControllerTest` (with body, without body, ids absent from the response)
 - [ ] **T3** — `LiveKitWebhookVerifier`: HS256 with the secret, `iss` = key, time window with small skew, `sha256` claim = hash of the raw body · covers FR-4 · verify: `LiveKitWebhookVerifierTest` (valid, missing, wrong secret, wrong key, expired, body changed)
 - [ ] **T4** — `LiveKitWebhookController` at `POST /api/livekit/webhook` (raw body → verify → `participant_left` / `track_unpublished` → slot), open in `SecurityConfig` without login or CSRF, one log line per freed slot · covers FR-1, FR-2, FR-3, FR-4 · verify: `LiveKitWebhookControllerTest` for AC-1 to AC-7
