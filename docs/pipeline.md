@@ -7,7 +7,7 @@ Xovê's CI/CD runs on GitHub Actions. It turns every change into a Docker image 
 | Pipeline | File | Runs on | Stages |
 | --- | --- | --- | --- |
 | **Commit checks** | [`ci.yml`](../.github/workflows/ci.yml) | Every push to any branch except `main` | 1 · Build → 2 · Validate → 3 · Tests and scans |
-| **Stage release** | [`stage.yml`](../.github/workflows/stage.yml) | Every push to `main` (a merged pull request) | The same commit checks, then 4 · Publish → 5 · Deploy stage → 6 · Cleanup on failure, and an email on any failure |
+| **Stage release** | [`stage.yml`](../.github/workflows/stage.yml) | Every push to `main` (a merged pull request) | The same commit checks, then 4 · Publish → 5 · Deploy stage → 6 · Cleanup on failure, and a Discord message with the result |
 | **Production release** | `release.yml` (planned) | A version tag `v*` | Promote the tested images → deploy production |
 
 The commit checks are one reusable workflow: the stage release calls it instead of repeating it, so "what a commit must pass" is defined in one place.
@@ -97,7 +97,7 @@ Renaming a job changes its check name. When that happens, update the branch rule
 
 To retry a flaky job: open the run and click **Re-run failed jobs** (or `gh run rerun <run-id> --failed`).
 
-**Failure email.** When a stage release fails at any point (checks, publish or deploy), its last job, **Email on failure**, sends an email over SMTP with the commit, which stage failed, and a link to the run. Commit checks on branches don't email: you're watching those as you push.
+**Discord notifications.** Every stage release ends with **Notify Discord**, which posts to a Discord channel through a webhook: success (which `sha-…` is live), failure or cancellation, the commit, each stage's result and links to the run and to staging. It never pings anyone (mentions are disabled), and it only warns in the run if the webhook secret is missing. Commit checks on branches don't notify: you're watching those as you push.
 
 ## Vulnerability policy
 
@@ -118,8 +118,7 @@ Stored in the repository's Actions secrets (Settings → Secrets and variables �
 | `DEPLOY_KNOWN_HOSTS` | Deploy stage | The server's host key, so the runner is sure it reaches the real server |
 | `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER` | Deploy stage | Where and as whom to connect |
 | `STAGE_COOKIE` | Deploy stage | Lets the post-deploy check pass the staging gate |
-| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` | Email on failure | The mailbox that sends alerts (SMTP over TLS on port 465) |
-| `ALERT_TO` | Email on failure | Who receives them |
+| `DISCORD_WEBHOOK_URL` | Notify Discord | Webhook of the channel that receives pipeline results. Anyone with it can post there, so it's a secret |
 | `GITHUB_TOKEN` | Publish, deploy, cleanup | Created by GitHub for each run; used to push and delete images |
 
 ## Adding a stage or a job
