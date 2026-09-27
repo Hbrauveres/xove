@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,10 +32,12 @@ public class ScreenController {
         return ScreenState.of(slot, me.getId());
     }
 
+    /** The body says which LiveKit connection and track the share comes from; it's optional. */
     @PostMapping("/take")
-    public ScreenState take(@AuthenticationPrincipal OidcUser google) {
+    public ScreenState take(@AuthenticationPrincipal OidcUser google,
+                            @RequestBody(required = false) SharingConnection connection) {
         User me = currentUser.member(google);
-        slot.take(me.getId(), me.getName(), me.getAvatarUrl());
+        slot.take(me.getId(), me.getName(), me.getAvatarUrl(), connection);
         return ScreenState.of(slot, me.getId());
     }
 
