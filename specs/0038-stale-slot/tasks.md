@@ -18,7 +18,8 @@ Each task is small enough for one commit, leaves the build green, and says which
   - Done: new `RoomPage.test.tsx` case (AC-8); no code change needed; the test fails when the feed text is broken on purpose.
 - [x] **T7** — `compose.yaml`: LiveKit config as a `LIVEKIT_CONFIG` block with the webhook, `livekit` joins `internal`; delete `livekit/livekit.yaml` · covers FR-1, FR-2, FR-5 · verify: local run of the real LiveKit v1.13.7 with the API from this branch: LiveKit starts, and a `room_started` webhook reaches the API and passes the signature check (API log, 200)
   - Done: `compose.yaml` holds the LiveKit config in `LIVEKIT_CONFIG` with the webhook to `http://api:8080/api/livekit/webhook`; `livekit` joins `internal`; `livekit/livekit.yaml` deleted; the controller logs accepted events (debug) and refused ones (warn). Local run with LiveKit v1.13.7: `room_started`, `participant_joined`, `participant_left` accepted; an unsigned request got 401.
-- [ ] **T8** — Docs: `docs/architecture.md` (room rule, endpoints, remove "Known limitation", layout), `docs/decisions.md` #24, `docs/operations.md` (webhook logs) · verify: the pages describe the new behaviour; no `livekit.yaml` left in `git grep`
+- [x] **T8** — Docs: `docs/architecture.md` (room rule, endpoints, remove "Known limitation", layout), `docs/decisions.md` #24, `docs/operations.md` (webhook logs) · verify: the pages describe the new behaviour; no `livekit.yaml` left in `git grep`
+  - Done: architecture (diagram, rule 6, webhooks paragraph, endpoints, layout), operations (log lines, troubleshooting), getting-started (dev LiveKit has no webhooks), decisions #24; the diagram renders.
 - [ ] **T9** — Review every AC (`/review`) · verify: no gaps left
 - [ ] **T10** — After merge, manual AC-9 on staging with two browsers: Ana shares, closes her tab; within 10 s Bruno sees "Nobody is sharing right now" and "Ana stopped sharing" · covers FR-5, FR-6 · verify: result written in the PR
 

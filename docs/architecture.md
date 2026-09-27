@@ -45,9 +45,8 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-livekit/livekit.yaml  LiveKit server configuration (no secrets)
 ops/                  deploy and health check scripts
-compose.yaml          how the services run together
+compose.yaml          how the services run together, including LiveKit's config
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml)
 docs/                 this wiki
 ```
@@ -89,11 +88,14 @@ sequenceDiagram
   S->>L: connect with the token
   Note over S: clicks "Share my screen", picks a window
   S->>L: publish screen track
-  S->>A: POST /api/screen/take
+  S->>A: POST /api/screen/take (its connection and track ids)
   V->>A: GET /api/screen (every 2 s)
   A-->>V: holder = sharer
   L-->>V: screen track
   Note over V: plays the holder's track on the stage
+  Note over S: closes the tab
+  L->>A: webhook participant_left (signed)
+  A-->>V: holder = none on the next poll
 ```
 
 The rules the room follows:
@@ -103,10 +105,11 @@ The rules the room follows:
 3. **Stop:** the Stop button or the browser's own bar stops the video and releases the slot. Only the holder can release it.
 4. **Reload while sharing:** the page sees it holds the slot but sends nothing, and releases it.
 5. **Everyone else** polls the slot every 2 seconds and plays the holder's screen track from LiveKit. The sharer sees a notice instead of their own screen.
+6. **Sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API frees the slot when it's about the connection or screen track that is sharing. A closed tab frees the stage within a few seconds; a lost connection as soon as LiveKit gives up on it (tens of seconds). Only one connection per person: opening the room on a second device disconnects the first. Spec: [`specs/0038-stale-slot`](../specs/0038-stale-slot/spec.md).
 
 The slot lives in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart frees it.
 
-**Known limitation:** if a sharer closes the tab or loses connection, nothing releases the slot until someone takes over. The planned fix is LiveKit webhooks telling the API when a participant leaves.
+**LiveKit webhooks.** LiveKit posts every room event to `http://api:8080/api/livekit/webhook` over the private network, signed with the API key's secret (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, and only acts on `participant_left` and `track_unpublished` (screen share). LiveKit's config lives in `compose.yaml` (`LIVEKIT_CONFIG`), because the webhook needs the API key and LiveKit's YAML can't read environment variables.
 
 ## Data model
 
@@ -134,9 +137,10 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `GET /api/admin/members` | Admin | Members |
 | `DELETE /api/admin/members/{id}` | Admin | Removes a member and ends all their sessions |
 | `GET /api/screen` | Member | `{ holder: { userId, name, avatarUrl, since } or null, mine }` |
-| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it) |
+| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Optional body `{ participantSid, trackSid }`: the LiveKit connection and screen track the share comes from; never shown to anyone |
 | `POST /api/screen/release` | Member | Frees the slot; 409 if it isn't yours |
 | `POST /api/livekit/token` | Member | `{ url, room, identity, token }` to join the video room |
+| `POST /api/livekit/webhook` | LiveKit (signature, no login) | Room events; frees the slot when the sharing connection leaves or its screen track stops. 401 on a bad signature |
 
 Errors follow RFC 9457 (problem details); the web app shows their `detail` field.
 
