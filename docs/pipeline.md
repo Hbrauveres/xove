@@ -106,7 +106,7 @@ The scan blocks on HIGH and CRITICAL vulnerabilities that have a fixed version, 
 1. **Upgrade.** Bump the library, or rebuild on a newer base image. For a library that comes with Spring Boot, override its version property in `api/pom.xml` (for example `<tomcat.version>`) until Spring Boot ships the fix, with a comment saying when to remove it.
 2. **If there's no way to upgrade yet** and the vulnerability doesn't affect Xovê, add its ID to `.trivyignore` with a comment: why it doesn't apply, and a date to check again. Never ignore without a reason and a date.
 
-Dependabot (`.github/dependabot.yml`) opens weekly pull requests for Maven, npm, Docker base images and the actions themselves. Each one goes through this same pipeline, so a green Dependabot PR is safe to merge.
+Dependabot (`.github/dependabot.yml`) opens weekly pull requests for Maven, npm, Docker base images and the actions themselves. Each one goes through this same pipeline, so a green Dependabot PR is safe to merge. A new version waits 7 days before Dependabot proposes it (security updates don't wait), and every action in the workflows is pinned to a full commit SHA with its version in a comment (`@<sha> # v4.4.0`), so a moved tag can't change what runs; Dependabot updates the SHA and the comment together. Semgrep enforces both.
 
 ## Secrets the pipeline uses
 
