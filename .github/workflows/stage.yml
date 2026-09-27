@@ -1,0 +1,190 @@
+# Stage release: every push to main (a merged pull request).
+#
+#   Checks                  stages 1–3, the same workflow every commit runs (ci.yml)
+#   4 · Publish images      push to GitHub Container Registry as sha-<commit>
+#   5 · Deploy stage        the VPS pulls them; it rolls back by itself if unhealthy
+#   6 · Remove failed images   only when publish worked but the deploy didn't
+#   Email on failure        any failure above sends an email over SMTP
+#
+# Full explanation: docs/pipeline.md
+
+name: Stage release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage-release
+  # Merges are released one at a time, in order; none is cancelled.
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/hbrauveres/xove
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/ci.yml
+
+  # ---------------------------------------------------------------- stage 4
+  publish:
+    name: 4 · Publish images
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.push.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/images
+
+      - name: Load the images
+        run: for f in "$RUNNER_TEMP"/images/*.tar; do docker load -i "$f"; done
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag with the commit and push
+        id: push
+        run: |
+          tag="sha-${GITHUB_SHA::12}"
+          for service in api web; do
+            docker tag "$IMAGE_PREFIX-$service:ci" "$IMAGE_PREFIX-$service:$tag"
+            docker push "$IMAGE_PREFIX-$service:$tag"
+          done
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Published \`$tag\` for api and web." >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------- stage 5
+  deploy-stage:
+    name: 5 · Deploy stage
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      TAG: ${{ needs.publish.outputs.tag }}
+    steps:
+      - name: Set up the deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy (the VPS rolls back by itself if the new version isn't healthy)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        # The key only runs ops/deploy.sh on the VPS; "deploy <sha>" is its argument.
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA"
+
+      - name: Check staging from the internet
+        env:
+          STAGE_COOKIE: ${{ secrets.STAGE_COOKIE }}
+        run: |
+          curl -fsS --retry 5 --retry-delay 3 --retry-all-errors \
+            --cookie "xove_stage=$STAGE_COOKIE" \
+            https://stage.xove.app/api/health
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mark these images as the ones on stage
+        run: |
+          for service in api web; do
+            docker buildx imagetools create -t "$IMAGE_PREFIX-$service:stage" "$IMAGE_PREFIX-$service:$TAG"
+          done
+          echo "Staging now runs \`$TAG\`." >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------- stage 6
+  cleanup:
+    name: 6 · Remove failed images
+    needs: [publish, deploy-stage]
+    if: failure() && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    env:
+      TAG: ${{ needs.publish.outputs.tag }}
+      OWNER: ${{ github.repository_owner }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Delete this commit's images from the registry
+        # Staging already rolled back to the previous version (ops/deploy.sh);
+        # this removes the images that failed, so nobody deploys them by mistake.
+        run: |
+          for service in api web; do
+            ids=$(gh api --paginate "/users/$OWNER/packages/container/xove-$service/versions" \
+              --jq ".[] | select(.metadata.container.tags | index(\"$TAG\")) | .id")
+            for id in $ids; do
+              gh api -X DELETE "/users/$OWNER/packages/container/xove-$service/versions/$id"
+              echo "deleted xove-$service:$TAG (version $id)"
+            done
+          done
+          echo "Deploy of \`$TAG\` failed: staging was rolled back and the images were removed." >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------- notify
+  notify:
+    name: Email on failure
+    needs: [checks, publish, deploy-stage, cleanup]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send the failure email (SMTP)
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          CHECKS: ${{ needs.checks.result }}
+          PUBLISH: ${{ needs.publish.result }}
+          DEPLOY: ${{ needs.deploy-stage.result }}
+        run: |
+          {
+            echo "From: Xove pipeline <$SMTP_USER>"
+            echo "To: $ALERT_TO"
+            echo "Subject: [xove] Stage release failed at ${GITHUB_SHA::7}"
+            echo "Date: $(date -R)"
+            echo "MIME-Version: 1.0"
+            echo "Content-Type: text/plain; charset=UTF-8"
+            echo
+            echo "The stage release for commit ${GITHUB_SHA::12} failed."
+            echo
+            echo "Checks:  $CHECKS"
+            echo "Publish: $PUBLISH"
+            echo "Deploy:  $DEPLOY"
+            echo
+            echo "If the deploy failed, staging was already rolled back to the previous version."
+            echo
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > mail.txt
+          curl --fail --silent --show-error --ssl-reqd \
+            --url "smtps://$SMTP_HOST:465" \
+            --user "$SMTP_USER:$SMTP_PASSWORD" \
+            --mail-from "$SMTP_USER" --mail-rcpt "$ALERT_TO" \
+            --upload-file mail.txt

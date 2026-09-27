@@ -1,0 +1,27 @@
+# Weekly pull requests that bump outdated dependencies. The pipeline tests each one,
+# so a green PR is safe to merge. Grouped per ecosystem to keep the noise down.
+# A new version waits 7 days before it's proposed, so a compromised release has
+# time to be caught and pulled (security updates don't wait).
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /api
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups: { maven: { patterns: ["*"] } }
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups: { npm: { patterns: ["*"] } }
+
+  - package-ecosystem: docker
+    directories: [/api, /web]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }

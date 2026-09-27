@@ -1,0 +1,48 @@
+name: Bug
+description: Something that doesn't work as it should.
+title: "fix: "
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in on staging as a member
+        2. Share a window
+        3. Close the tab
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: Where
+      options:
+        - Staging
+        - Production
+        - Local
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`sha-…` from `ops/deploy.sh status`, or the release tag."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, console, screenshots
+      description: Browser console, `docker compose logs`. Remove any secret or personal data first.
+      render: text
