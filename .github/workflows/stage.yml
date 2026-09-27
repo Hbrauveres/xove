@@ -174,7 +174,7 @@ jobs:
 
           icon() {
             case "$1" in
-              success) echo "✅" ;; failure) echo "❌" ;; cancelled) echo "⚪" ;; *) echo "➖" ;;
+              success) echo "✅" ;; failure) echo "❌" ;; cancelled) echo "⚪" ;; *) echo "⏭️" ;;
             esac
           }
 
