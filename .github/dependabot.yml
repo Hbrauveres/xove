@@ -20,8 +20,16 @@ updates:
     directories: [/api, /web]
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
+    # Java and Node stay on their LTS lines; moving to the next LTS is a
+    # deliberate change, not a Dependabot bump.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
+    groups: { github-actions: { patterns: ["*"] } }
