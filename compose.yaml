@@ -14,8 +14,6 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     environment:
-      # Rollback drill (Step 1 Part 6): reverted right after.
-      SPRING_PROFILES_ACTIVE: ${APP_ENV:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
