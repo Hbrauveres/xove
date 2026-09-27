@@ -32,12 +32,13 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 - **Never push to `main` directly.** Branch names `feat/`, `fix/`, `docs/`, `ci/`, `chore/`; conventional commits (`feat(api): …`). PRs are squash-merged, so the PR title must be a conventional commit too.
 - Tests come with every change. API: `cd api && ./mvnw test`. Web: `cd web && npm test && npm run build`.
 - Keep `docs/` in step with the code in the same PR.
+- Keep this `CLAUDE.md` in step too: update it in the same PR whenever a fact here changes (test counts, commands, workflow, rules).
 - The vulnerability scan blocks HIGH/CRITICAL findings that have a fix. Fix by upgrading; `.trivyignore` only with a reason and a recheck date.
 - Production releases are tags `vX.Y.Z` (SemVer, starting at `v0.1.0`) on a commit of `main` that already runs on staging. Only Henrique creates tags; the tag is the approval.
 
 ## Useful facts
 
-- Test counts at the last checkpoint: API 63, web 41.
+- Test counts at the last checkpoint: API 90, web 45 (2026-09-27, spec 0038).
 - Staging: `stage.xove.app` (behind an extra gate). Production: `xove.app` (placeholder until launch).
 - Images: `ghcr.io/hbrauveres/xove-api`, `ghcr.io/hbrauveres/xove-web`, tagged `sha-<12 chars of the commit>`.
 - On the server, `ops/deploy.sh status | deploy <sha> | rollback` in the environment's checkout.

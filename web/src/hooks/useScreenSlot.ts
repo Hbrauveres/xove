@@ -12,7 +12,7 @@ export type ScreenSlot = {
   error: string | null;
   busy: boolean;
   /** Resolve true when the API accepted. The connection lets the API free the slot when it leaves. */
-  take: (connection?: SharingConnection) => Promise<boolean>;
+  take: (connection: SharingConnection) => Promise<boolean>;
   release: () => Promise<boolean>;
 };
 
@@ -61,7 +61,7 @@ export function useScreenSlot(pollMs: number = SCREEN_POLL_MS): ScreenSlot {
     [refresh],
   );
 
-  const take = useCallback((connection?: SharingConnection) => run(() => api.screen.take(connection)), [run]);
+  const take = useCallback((connection: SharingConnection) => run(() => api.screen.take(connection)), [run]);
   const release = useCallback(() => run(api.screen.release), [run]);
 
   return { state, error, busy, take, release };

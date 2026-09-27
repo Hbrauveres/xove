@@ -20,7 +20,8 @@ Each task is small enough for one commit, leaves the build green, and says which
   - Done: `compose.yaml` holds the LiveKit config in `LIVEKIT_CONFIG` with the webhook to `http://api:8080/api/livekit/webhook`; `livekit` joins `internal`; `livekit/livekit.yaml` deleted; the controller logs accepted events (debug) and refused ones (warn). Local run with LiveKit v1.13.7: `room_started`, `participant_joined`, `participant_left` accepted; an unsigned request got 401.
 - [x] **T8** — Docs: `docs/architecture.md` (room rule, endpoints, remove "Known limitation", layout), `docs/decisions.md` #24, `docs/operations.md` (webhook logs) · verify: the pages describe the new behaviour; no `livekit.yaml` left in `git grep`
   - Done: architecture (diagram, rule 6, webhooks paragraph, endpoints, layout), operations (log lines, troubleshooting), getting-started (dev LiveKit has no webhooks), decisions #24; the diagram renders.
-- [ ] **T9** — Review every AC (`/review`) · verify: no gaps left
+- [x] **T9** — Review every AC (`/review`) · verify: no gaps left
+  - Done: spec-reviewer found every FR/AC covered (AC-9 manual). Fixed after review: take requires both ids (FR-7, AC-10, no fallback), guard for a signed event without a name, note on AC-7, `CLAUDE.md` counts.
 - [ ] **T10** — After merge, manual AC-9 on staging with two browsers: Ana shares, closes her tab; within 10 s Bruno sees "Nobody is sharing right now" and "Ana stopped sharing" · covers FR-5, FR-6 · verify: result written in the PR
 
 ## Coverage

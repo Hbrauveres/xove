@@ -149,6 +149,16 @@ class LiveKitWebhookControllerTest {
         assertThat(holder()).isEqualTo(ana.getId());
     }
 
+    @Test
+    void acceptsASignedEventWithoutANameAndChangesNothing() throws Exception {
+        anaShares();
+
+        send("{\"participant\":{\"identity\":\"user-%d\",\"sid\":\"PA_ana\"}}".formatted(ana.getId()))
+                .andExpect(status().isOk());
+
+        assertThat(holder()).isEqualTo(ana.getId());
+    }
+
     // ---- helpers ----
 
     private void anaShares() {

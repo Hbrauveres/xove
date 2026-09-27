@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Who is sharing, take the screen, stop sharing. Members only. */
 @RestController
@@ -32,11 +33,15 @@ public class ScreenController {
         return ScreenState.of(slot, me.getId());
     }
 
-    /** The body says which LiveKit connection and track the share comes from; it's optional. */
+    /** The body says which LiveKit connection and screen track the share comes from; both are required. */
     @PostMapping("/take")
     public ScreenState take(@AuthenticationPrincipal OidcUser google,
                             @RequestBody(required = false) SharingConnection connection) {
         User me = currentUser.member(google);
+        if (connection == null || !connection.isComplete()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Your browser didn't say which video connection is sharing. Reload the page and try again.");
+        }
         slot.take(me.getId(), me.getName(), me.getAvatarUrl(), connection);
         return ScreenState.of(slot, me.getId());
     }

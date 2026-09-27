@@ -145,17 +145,23 @@ class ScreenControllerTest {
     }
 
     @Test
-    void takingWithoutConnectionIdsStillWorks() throws Exception {
-        take("sub-friend").andExpect(status().isOk());
+    void takingWithoutSayingWhichConnectionIsRefused() throws Exception {
+        mvc.perform(post("/api/screen/take").with(as("sub-friend")).with(csrf()))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/screen/take").with(as("sub-friend")).with(csrf())
+                        .contentType("application/json").content("{\"participantSid\":\"PA_laptop\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Your browser didn't say which video connection is sharing. Reload the page and try again."));
 
-        Long friend = slot.current().orElseThrow().userId();
-        assertThat(slot.connectionLeft(friend, "PA_anything")).isTrue();
+        assertThat(slot.current()).isEmpty();
     }
 
     // ---- helpers ----
 
     private ResultActions take(String subject) throws Exception {
-        return mvc.perform(post("/api/screen/take").with(as(subject)).with(csrf()));
+        return mvc.perform(post("/api/screen/take").with(as(subject)).with(csrf())
+                .contentType("application/json")
+                .content("{\"participantSid\":\"PA_" + subject + "\",\"trackSid\":\"TR_" + subject + "\"}"));
     }
 
     private ResultActions release(String subject) throws Exception {

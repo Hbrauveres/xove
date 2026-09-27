@@ -153,6 +153,21 @@ describe("room: sharing", () => {
     expect(take?.body).toEqual({ participantSid: "PA_me", trackSid: "TR_my_screen" });
   });
 
+  it("stops sharing and says so when the screen track can't be identified", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    lastRoom().localParticipant.screenTrackSid = undefined;
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+    expect(await screen.findByText(/couldn't start sharing your screen/i)).toBeInTheDocument();
+    expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(false);
+    expect(server.calls.some((c) => c.path === "/api/screen/take")).toBe(false);
+  });
+
   it("does nothing if the picker is closed without choosing", async () => {
     const server = installFakeApi({ me: member });
     renderRoom();

@@ -11,8 +11,8 @@ import java.util.Optional;
  * - anyone can take the slot, even if someone else holds it (takeover);
  * - taking it again while already holding it changes nothing;
  * - only the holder can release it; releasing an empty slot is a no-op;
- * - LiveKit reports free it only when they're about the connection or track
- *   being shared; without stored ids, any report about the holder counts.
+ * - taking it needs the LiveKit connection and screen track it's shared from;
+ * - LiveKit reports free it only when they're about that connection or track.
  *
  * State lives in memory, so an API restart empties the slot. That's fine
  * until LiveKit becomes the source of truth.
@@ -31,13 +31,15 @@ public class ScreenSlot {
         return Optional.ofNullable(holder);
     }
 
-    public ScreenHolder take(Long userId, String name, String avatarUrl) {
-        return take(userId, name, avatarUrl, null);
-    }
-
-    /** @param connection where the share comes from; null when the browser didn't say */
+    /**
+     * @param connection where the share comes from; both ids are required
+     * @throws IllegalArgumentException when the connection or one of its ids is missing
+     */
     public synchronized ScreenHolder take(Long userId, String name, String avatarUrl, SharingConnection connection) {
         Objects.requireNonNull(userId, "userId");
+        if (connection == null || !connection.isComplete()) {
+            throw new IllegalArgumentException("The sharing connection and track are required");
+        }
         this.connection = connection;
         if (holder != null && holder.userId().equals(userId)) {
             return holder;
@@ -65,8 +67,7 @@ public class ScreenSlot {
         if (!isHolder(userId)) {
             return false;
         }
-        String sharing = connection == null ? null : connection.participantSid();
-        if (sharing != null && !sharing.equals(participantSid)) {
+        if (!connection.participantSid().equals(participantSid)) {
             return false;
         }
         empty();
@@ -82,14 +83,8 @@ public class ScreenSlot {
         if (!isHolder(userId)) {
             return false;
         }
-        if (connection != null) {
-            if (connection.trackSid() != null) {
-                if (!connection.trackSid().equals(trackSid)) {
-                    return false;
-                }
-            } else if (connection.participantSid() != null && !connection.participantSid().equals(participantSid)) {
-                return false;
-            }
+        if (!connection.trackSid().equals(trackSid)) {
+            return false;
         }
         empty();
         return true;

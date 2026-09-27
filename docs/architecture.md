@@ -137,7 +137,7 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `GET /api/admin/members` | Admin | Members |
 | `DELETE /api/admin/members/{id}` | Admin | Removes a member and ends all their sessions |
 | `GET /api/screen` | Member | `{ holder: { userId, name, avatarUrl, since } or null, mine }` |
-| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Optional body `{ participantSid, trackSid }`: the LiveKit connection and screen track the share comes from; never shown to anyone |
+| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Body `{ participantSid, trackSid }`: the LiveKit connection and screen track the share comes from, never shown to anyone; 400 without them |
 | `POST /api/screen/release` | Member | Frees the slot; 409 if it isn't yours |
 | `POST /api/livekit/token` | Member | `{ url, room, identity, token }` to join the video room |
 | `POST /api/livekit/webhook` | LiveKit (signature, no login) | Room events; frees the slot when the sharing connection leaves or its screen track stops. 401 on a bad signature |

@@ -11,7 +11,8 @@
 
 - `participant_left` frees the slot when its connection id matches the sharing connection (FR-1, FR-5).
 - `track_unpublished` frees it when the track is a `SCREEN_SHARE` and its id matches the shared track (FR-2). Matching the track, not just the person, means an old "unpublished" arriving late can't free a share Ana has just restarted.
-- Anything else, or anything about another person or connection, changes nothing (FR-3). If a holder has no ids (a browser still running the previous web version), the API falls back to matching the person.
+- Anything else, or anything about another person or connection, changes nothing (FR-3).
+- Taking the screen without both ids is refused with 400 (FR-7, added after review): a share the API can't match could never be freed. A browser still running the previous web version must reload before sharing.
 
 **Only LiveKit can call it (FR-4).** Verified with the real LiveKit v1.13.7: each webhook carries `Authorization: <JWT>` signed HS256 with the API secret, `iss` = the API key, a 5-minute validity, and a `sha256` claim with the base64 SHA-256 of the body. The API checks all four with Nimbus (already used for the tokens), on the raw body, before reading it. Anything else gets 401 and changes nothing.
 
@@ -33,7 +34,7 @@
 | Area | File or component | Change |
 | --- | --- | --- |
 | API | `screen/ScreenSlot.java` | Keeps the sharing connection (`participantSid`, `trackSid`, both optional) next to the holder. `take(…)` accepts them. New `connectionLeft(userId, participantSid)` and `screenUnpublished(userId, participantSid, trackSid)`: free only on a match (fallback to the person when no ids are stored). Returns whether it freed the slot, for logging |
-| API | `screen/ScreenController.java` | `POST /api/screen/take` accepts an optional JSON body `{ participantSid, trackSid }` |
+| API | `screen/ScreenController.java` | `POST /api/screen/take` requires the JSON body `{ participantSid, trackSid }`; 400 without it |
 | API | `livekit/LiveKitWebhookVerifier.java` (new) | Checks the `Authorization` JWT (HS256 with the secret, `iss` = key, time window with a small clock skew) and that its `sha256` matches the raw body |
 | API | `livekit/LiveKitWebhookController.java` (new) | `POST /api/livekit/webhook`: raw body as bytes → verify → parse with Jackson (unknown fields ignored) → for `participant_left` and `track_unpublished`, turn the identity `user-<id>` back into a user id and call the slot. Always 200 for a valid event, even when nothing changes |
 | API | `config/SecurityConfig.java` | `/api/livekit/webhook`: no login and no CSRF (LiveKit has neither); the signature is the protection |
@@ -56,7 +57,7 @@
 - 200: valid event, handled or ignored. 401: missing, badly signed, expired, wrong issuer, or body hash mismatch; nothing changes.
 - Logs one line per slot change: `slot freed: user 12 left (PA_…)`. Never logs the JWT or the body.
 
-**`POST /api/screen/take`**: optional body `{ "participantSid": "PA_…", "trackSid": "TR_…" }`. No body works as before.
+**`POST /api/screen/take`**: required body `{ "participantSid": "PA_…", "trackSid": "TR_…" }`. Without it: 400, "Your browser didn't say which video connection is sharing. Reload the page and try again." 
 
 **`GET /api/screen`**: unchanged. The connection ids are never included.
 
@@ -68,7 +69,7 @@ No database changes.
 - **Replay of a captured event within 5 minutes.** It could only free a slot for the exact same connection or track again, which has already left. Accepted.
 - **LiveKit can't reach the API** (network or URL wrong). The slot then behaves as today, stuck until a takeover. Caught by AC-9 on staging; LiveKit logs failed deliveries.
 - **LiveKit restarts on deploy** because its config changes: everyone's video reconnects once, a few seconds. Acceptable on staging; production doesn't exist yet.
-- **Old browsers without the new web version** send no ids: the fallback matches the person, which is still correct today because one person has only one connection.
+- **Old browsers without the new web version** send no ids and get 400 until they reload. Acceptable: only staging runs today.
 - **Step 5 (shared LiveKit in `infra`)** will need a webhook URL per environment and the `internal` network trick won't apply. Noted for FR-5.2; out of scope here.
 
 ## Test plan
@@ -83,6 +84,7 @@ No database changes.
 | AC-6 | `LiveKitWebhookControllerTest#acceptsEventsWhenNobodyShares` | web layer |
 | AC-7 | `LiveKitWebhookControllerTest#ignoresAnotherConnectionOfTheSharer` | web layer |
 | AC-8 | `RoomPage.test.tsx` "logs 'stopped sharing' when the slot is freed from outside" | web UI (fake API) |
+| AC-10 | `ScreenControllerTest#takingWithoutSayingWhichConnectionIsRefused`, `ScreenSlotTest#takingWithoutSayingWhichConnectionIsRefused` | web layer / unit |
 | AC-9 | Two browsers on staging: share, close the tab, time it | manual |
 
 Also: `ScreenSlotTest` for the matching rules, the fallback and a late event after a restarted share; `ScreenControllerTest` for `take` with and without a body; `LiveKitWebhookVerifierTest` for the JWT checks; `client.test.ts` and `RoomPage.test.tsx` for sending the ids on take.

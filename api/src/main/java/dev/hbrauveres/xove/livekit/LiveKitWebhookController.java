@@ -45,7 +45,7 @@ public class LiveKitWebhookController {
         WebhookEvent event = json.readValue(body, WebhookEvent.class);
         log.debug("webhook accepted: {}", event.event());
         Long userId = event.participant() == null ? null : userIdOf(event.participant().identity());
-        if (userId != null) {
+        if (event.event() != null && userId != null) {
             handle(event, userId);
         }
         return ResponseEntity.ok().build();

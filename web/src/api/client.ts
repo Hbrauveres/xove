@@ -65,7 +65,7 @@ export const api = {
 
   screen: {
     current: () => request<ScreenState>("GET", "/api/screen"),
-    take: (connection?: SharingConnection) => request<ScreenState>("POST", "/api/screen/take", connection),
+    take: (connection: SharingConnection) => request<ScreenState>("POST", "/api/screen/take", connection),
     release: () => request<ScreenState>("POST", "/api/screen/release"),
   },
 

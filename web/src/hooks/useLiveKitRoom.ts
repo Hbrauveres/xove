@@ -130,10 +130,15 @@ export function useLiveKitRoom(): LiveKitRoom {
       sync();
       const local = room.localParticipant;
       if (!local.isScreenShareEnabled) return null;
-      return {
-        participantSid: local.sid,
-        trackSid: local.getTrackPublication(Track.Source.ScreenShare)?.trackSid,
-      };
+      const trackSid = local.getTrackPublication(Track.Source.ScreenShare)?.trackSid;
+      if (!local.sid || !trackSid) {
+        // The API needs both to free the slot when this share ends.
+        await local.setScreenShareEnabled(false);
+        sync();
+        setError("Couldn't start sharing your screen.");
+        return null;
+      }
+      return { participantSid: local.sid, trackSid };
     } catch (e) {
       // Closing the browser's picker is a choice, not an error.
       if (e instanceof DOMException && e.name === "NotAllowedError") return null;
