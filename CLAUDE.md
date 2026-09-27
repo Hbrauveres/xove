@@ -11,7 +11,7 @@ Xovê: a private web app where one person shares their screen and invited friend
 
 ## Who you're working with
 
-Henrique, software engineer, owner of the project. He builds Xovê to learn and to show Java on his GitHub. Casual Brazilian Portuguese or English, direct and practical. He wants **one step at a time**: one clear action, wait for the result, then the next. Long walls of instructions don't work for him.
+Henrique, software engineer, owner of the project. He builds Xovê to learn and to show Java on his GitHub. Casual Brazilian Portuguese or English, direct and practical. He wants **one step at a time**: one clear action, wait for the result, then the next. **Keep replies short and direct**: a few lines, one command, at most one line of why. Explain only what he asks; no extra options, background or flourish. If something unexpected comes up, say it in one line and ask before going deeper.
 
 ## How we work
 
