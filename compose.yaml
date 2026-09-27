@@ -33,18 +33,41 @@ services:
   livekit:
     image: livekit/livekit-server:v1.13.7
     container_name: xove-${APP_ENV:-prod}-livekit
-    command: --config /etc/livekit.yaml
     restart: unless-stopped
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
-    volumes:
-      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+      # The whole LiveKit config. It's here instead of a file because the webhook
+      # needs the API key, and LiveKit's YAML can't read environment variables
+      # (a config file is ignored when LIVEKIT_CONFIG is set). No secrets in it.
+      LIVEKIT_CONFIG: |
+        # Signaling (WebSocket). Only Caddy talks to this port, over the Docker network.
+        port: 7880
+        rtc:
+          # Fallback for networks that block UDP: WebRTC over TCP.
+          tcp_port: 7881
+          # All UDP media on one port (UDP mux) instead of a 50000-60000 range.
+          udp_port: 7882
+          # Ask a STUN server for the VPS's public IP, so browsers get an address they can reach.
+          use_external_ip: true
+        room:
+          # Close a room 5 minutes after the last person leaves.
+          empty_timeout: 300
+        # Room events go to this environment's API, signed with this key's secret,
+        # so it can free the screen when the sharer leaves (specs/0038-stale-slot).
+        webhook:
+          api_key: ${LIVEKIT_API_KEY}
+          urls:
+            - http://api:8080/api/livekit/webhook
+        logging:
+          level: info
     ports:
       - "7881:7881/tcp"
       - "7882:7882/udp"
     mem_limit: 512m
     networks:
       - web
+      # "api" only resolves to this environment's API on this network.
+      - internal
 
   db:
     image: postgres:17-alpine

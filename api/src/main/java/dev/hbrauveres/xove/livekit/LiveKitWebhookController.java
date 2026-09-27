@@ -39,9 +39,11 @@ public class LiveKitWebhookController {
     public ResponseEntity<Void> receive(@RequestHeader(name = "Authorization", required = false) String authorization,
                                         @RequestBody byte[] body) {
         if (!verifier.verify(authorization, body)) {
+            log.warn("webhook refused: missing or invalid LiveKit signature");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         WebhookEvent event = json.readValue(body, WebhookEvent.class);
+        log.debug("webhook accepted: {}", event.event());
         Long userId = event.participant() == null ? null : userIdOf(event.participant().identity());
         if (userId != null) {
             handle(event, userId);
