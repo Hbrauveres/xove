@@ -77,7 +77,7 @@ export LIVEKIT_API_KEY=devkey
 export LIVEKIT_API_SECRET=dev-secret-at-least-32-characters-long
 ```
 
-Restart the API after setting these. Without LiveKit everything works except video, and the room shows "Video offline".
+Restart the API after setting these. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a sharer who closes the tab keeps the slot until someone takes over; the full stack (`docker compose up`) has them.
 
 ## Run the whole stack in Docker
 

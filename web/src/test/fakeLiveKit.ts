@@ -69,7 +69,14 @@ export class Room {
   disconnected = false;
 
   readonly localParticipant = {
+    sid: "PA_me",
     isScreenShareEnabled: false,
+    /** Tests set this to undefined to play LiveKit not reporting the screen track. */
+    screenTrackSid: "TR_my_screen" as string | undefined,
+    getTrackPublication: (source: string) =>
+      source === Track.Source.ScreenShare && this.localParticipant.isScreenShareEnabled
+        ? { trackSid: this.localParticipant.screenTrackSid }
+        : undefined,
     /** Tests set this to "cancel" to play someone closing the browser's picker. */
     nextPicker: "share" as "share" | "cancel",
     setScreenShareEnabled: vi.fn(async (enabled: boolean) => {

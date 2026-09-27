@@ -125,7 +125,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
       // The picker first: browsers only open it straight from a click.
       const sharing = await lk.startScreenShare();
       if (!sharing) return;
-      const ok = await slot.take();
+      const ok = await slot.take(sharing);
       if (!ok) await lk.stopScreenShare();
     } finally {
       starting.current = false;

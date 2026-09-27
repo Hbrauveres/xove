@@ -105,6 +105,21 @@ describe("room: watching", () => {
     expect(await screen.findByText("Duda is sharing")).toBeInTheDocument();
     expect(await screen.findByText(/duda started sharing/i)).toBeInTheDocument();
   });
+
+  // Spec 0038, AC-8: the API frees the slot when LiveKit says the sharer left.
+  it("logs 'stopped sharing' when the slot is freed from outside", async () => {
+    const server = installFakeApi({ me: member });
+    server.screenHolder = someoneSharing("Ana Souza", 7);
+    renderRoom();
+    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+
+    act(() => {
+      server.screenHolder = null;
+    });
+
+    expect(await screen.findByText(/nobody is sharing right now/i)).toBeInTheDocument();
+    expect(await screen.findByText(/ana stopped sharing/i)).toBeInTheDocument();
+  });
 });
 
 describe("room: sharing", () => {
@@ -122,6 +137,35 @@ describe("room: sharing", () => {
     expect(lastRoom().localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(true, expect.anything());
     const take = server.calls.find((c) => c.method === "POST" && c.path === "/api/screen/take");
     expect(take?.headers["X-XSRF-TOKEN"]).toBe("abc123");
+  });
+
+  it("sends the connection and track ids when taking the screen", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+    expect(await screen.findByText("You are sharing")).toBeInTheDocument();
+    const take = server.calls.find((c) => c.method === "POST" && c.path === "/api/screen/take");
+    expect(take?.body).toEqual({ participantSid: "PA_me", trackSid: "TR_my_screen" });
+  });
+
+  it("stops sharing and says so when the screen track can't be identified", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    lastRoom().localParticipant.screenTrackSid = undefined;
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+    expect(await screen.findByText(/couldn't start sharing your screen/i)).toBeInTheDocument();
+    expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(false);
+    expect(server.calls.some((c) => c.path === "/api/screen/take")).toBe(false);
   });
 
   it("does nothing if the picker is closed without choosing", async () => {
