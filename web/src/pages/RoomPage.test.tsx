@@ -105,6 +105,21 @@ describe("room: watching", () => {
     expect(await screen.findByText("Duda is sharing")).toBeInTheDocument();
     expect(await screen.findByText(/duda started sharing/i)).toBeInTheDocument();
   });
+
+  // Spec 0038, AC-8: the API frees the slot when LiveKit says the sharer left.
+  it("logs 'stopped sharing' when the slot is freed from outside", async () => {
+    const server = installFakeApi({ me: member });
+    server.screenHolder = someoneSharing("Ana Souza", 7);
+    renderRoom();
+    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+
+    act(() => {
+      server.screenHolder = null;
+    });
+
+    expect(await screen.findByText(/nobody is sharing right now/i)).toBeInTheDocument();
+    expect(await screen.findByText(/ana stopped sharing/i)).toBeInTheDocument();
+  });
 });
 
 describe("room: sharing", () => {
