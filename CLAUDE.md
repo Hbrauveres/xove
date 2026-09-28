@@ -38,7 +38,8 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 
 ## Useful facts
 
-- Test counts at the last checkpoint: API 90, web 45 (2026-09-27, spec 0038).
+- Test counts at the last checkpoint: API 92, web 45 (2026-09-28, spec 0044).
+- LiveKit runs from the `infra` repo, one server per environment: staging `rtc-stage.xove.app` (room `xove-stage`), production `rtc.xove.app` (room `xove`).
 - Staging: `stage.xove.app` (behind an extra gate). Production: `xove.app` (placeholder until launch).
 - Images: `ghcr.io/hbrauveres/xove-api`, `ghcr.io/hbrauveres/xove-web`, tagged `sha-<12 chars of the commit>`.
 - On the server, `ops/deploy.sh status | deploy <sha> | rollback` in the environment's checkout.

@@ -15,7 +15,8 @@ From anywhere: `https://<environment host>/api/health` answers `{"status":"UP"}`
 ## Logs
 
 ```bash
-docker compose logs --tail 100 -f api      # or web, db, livekit
+docker compose logs --tail 100 -f api      # or web, db
+docker logs --tail 100 -f livekit-stage     # LiveKit runs from infra: livekit-stage, livekit-prod
 docker compose logs --since 30m api
 ```
 
@@ -33,8 +34,8 @@ What to look for:
 | Symptom | Likely cause | What to do |
 | --- | --- | --- |
 | Sign-in ends on `/?error=login-failed` | The API refused the Google login | `docker compose logs api \| grep "login failed"` shows why. Often a stale session in the browser: try a private window |
-| "Video offline" in the room | The API has no LiveKit settings, or can't sign tokens | Check `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` in `.env` (secret ≥ 32 characters), then `docker compose up -d api` |
-| "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker compose logs livekit \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
+| "Video offline" in the room | The API has no LiveKit settings, or can't sign tokens | Check the `livekit` group of `infra/config/<env>.yaml` and the `livekit-<env>` vault item (secret ≥ 32 characters), then redeploy the app |
+| "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker logs livekit-stage \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
 | Video works on Wi-Fi but not on mobile data | UDP media blocked somewhere | Check the server's firewall and the provider's panel for the LiveKit UDP and TCP media ports |
 | Deploy failed in the pipeline | New version unhealthy; the server already rolled back | Read the deploy step's log (it includes the container logs), fix forward |
 | Pipeline's vulnerability scan fails on a PR that changed nothing related | A new CVE was published for a dependency | Follow the [vulnerability policy](pipeline.md#vulnerability-policy) |
@@ -111,7 +112,7 @@ Henrique's own SSH keys stay in his own vault. Production's items are added with
 
 Specific cases:
 
-- **LiveKit key pair:** the API and LiveKit read the same pair, so both restart; people in the room reconnect.
+- **LiveKit key pair:** the API and its LiveKit read the same pair from `livekit-<env>`. After rebuilding the settings, redeploy the app and restart that LiveKit: `docker compose -p livekit-<env> --env-file /srv/infra/generated/<env>.env up -d` in `infra/livekit`. People in the room reconnect.
 - **Database password:** also change it inside PostgreSQL (`ALTER USER … PASSWORD …`) before rebuilding and restarting the API.
 - **Google client secret:** create the new secret in the Google console first; keep the old one until the API runs with the new one.
 - **Staging gate password:** put the new password in `stage-gate`, its bcrypt hash in `hash` (`docker compose exec caddy caddy hash-password` in `infra/proxy`), then rebuild `platform` and restart the proxy.

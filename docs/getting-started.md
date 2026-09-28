@@ -85,7 +85,7 @@ docker run -d --name xove-dev-livekit -p 7880:7880 -p 7881:7881 -p 7882:7882/udp
   --keys "$LIVEKIT_API_KEY: $LIVEKIT_API_SECRET"
 ```
 
-Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a sharer who closes the tab keeps the slot until someone takes over; the full stack (`docker compose up`) has them.
+Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a sharer who closes the tab keeps the slot until someone takes over. On the servers, LiveKit runs from the `infra` repo, one per environment, with webhooks.
 
 ## Run the whole stack in Docker
 

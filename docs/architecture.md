@@ -18,7 +18,7 @@ flowchart LR
 | **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
 | **api** | Login, sessions, access requests, admin actions, the screen slot, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
 | **db** | Users, access requests, sessions | PostgreSQL 17, schema managed by Flyway |
-| **livekit** | Receives each shared screen once and forwards it to every viewer | LiveKit server (a WebRTC SFU) |
+| **livekit** | Receives each shared screen once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `infra` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
 | **reverse proxy** | HTTPS certificates, routing by hostname and path | Caddy, shared by every app on the server; configured in a separate private repository |
 
 The database is only reachable by the API, on a private Docker network. Only the proxy and LiveKit's media ports face the internet.
@@ -46,7 +46,7 @@ web/                  React application
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
 ops/                  deploy and health check scripts
-compose.yaml          how the services run together, including LiveKit's config
+compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the infra repo
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml)
 docs/                 this wiki
 ```
@@ -109,7 +109,9 @@ The rules the room follows:
 
 The slot lives in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart frees it.
 
-**LiveKit webhooks.** LiveKit posts every room event to `http://api:8080/api/livekit/webhook` over the private network, signed with the API key's secret (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, and only acts on `participant_left` and `track_unpublished` (screen share). LiveKit's config lives in `compose.yaml` (`LIVEKIT_CONFIG`), because the webhook needs the API key and LiveKit's YAML can't read environment variables.
+**LiveKit webhooks.** Each environment's LiveKit posts every room event to its own API (`http://xove-<env>-api:8080/api/livekit/webhook`), signed with that environment's API key (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, ignores events from any room other than its own, and only acts on `participant_left` and `track_unpublished` (screen share).
+
+**Where LiveKit runs** ([spec 0044](../specs/0044-livekit-in-infra/spec.md)). One LiveKit server per environment, both defined once in the `infra` repo (`livekit/compose.yaml`) and fed by that environment's generated settings: staging at `rtc-stage.xove.app` with media on 7881/tcp and 7882/udp, production at `rtc.xove.app` with 7883/tcp and 7884/udp. Each has its own key pair, shared only with its own API, so nothing signed for one environment is accepted by the other. This app only needs `LIVEKIT_URL`, the key pair and `LIVEKIT_ROOM`.
 
 ## Data model
 
@@ -151,7 +153,7 @@ Errors follow RFC 9457 (problem details); the web app shows their `detail` field
 - **CSRF:** every state-changing request carries a token read from a cookie and echoed in a header.
 - **Authorization:** member and admin checks happen on the server for every request. The API never trusts an id sent by the browser.
 - **LiveKit tokens:** signed by the API with a secret LiveKit shares. A token names one room and one identity, allows publishing only screen and screen audio (never camera or microphone), and expires after one hour. The secret never reaches the browser.
-- **Network:** the database has no public port. Containers don't publish ports except LiveKit's media ports; everything else goes through the proxy.
+- **Network:** the database has no public port. The app's containers publish no ports; only the proxy (80/443) and each LiveKit's two media ports face the internet.
 - **Supply chain:** every change passes a vulnerability scan of the images and dependencies and a static analysis of the code before it can be published (see [Pipeline](pipeline.md)).
 
 **Trust boundary to know about:** any member's token may publish a screen; the one-sharer rule is enforced by the web app. That's acceptable for a small group of friends. Server-side enforcement (granting publish rights only to the slot holder) is on the roadmap.

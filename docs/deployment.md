@@ -60,7 +60,7 @@ Key points:
 - **The server never builds.** It pulls images the pipeline built, tested and scanned.
 - **The SSH key can do one thing.** On the server, the pipeline's key is restricted to running `ops/deploy.sh` (a forced command), so it can't open a shell. The script only accepts `deploy <40-character commit>`, `rollback` or `status`.
 - **Rollback is automatic.** If the new version isn't healthy within 3 minutes, the script puts back the previous commit and images, checks health again, and reports the failure. Stage 6 of the pipeline then deletes the failed images.
-- **The checkout follows the images.** The script moves the server's checkout to the deployed commit, so `compose.yaml` and the LiveKit config always match the code that's running.
+- **The checkout follows the images.** The script moves the server's checkout to the deployed commit, so `compose.yaml` always matches the code that's running. LiveKit isn't part of this deploy: it runs from the `infra` repo (one server per environment) and keeps running while the app is redeployed.
 
 ### Database migrations and rollback
 
