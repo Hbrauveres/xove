@@ -90,7 +90,7 @@ jobs:
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          DEPLOY_SSH_KEY: op://Xove CI/deploy-ssh/private key?ssh-format=openssh
+          DEPLOY_SSH_KEY: op://Xove CI/deploy-ssh/private_key?ssh-format=openssh
           DEPLOY_KNOWN_HOSTS: op://Xove CI/deploy-ssh/known-hosts
           DEPLOY_HOST: op://Xove CI/deploy-ssh/host
           DEPLOY_PORT: op://Xove CI/deploy-ssh/port
