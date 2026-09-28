@@ -1,7 +1,7 @@
 # Secrets in 1Password, one generated .env per environment — spec
 
 - Issue: #43
-- Status: Approved (2026-09-28)
+- Status: Approved (2026-09-28); FR-1 amended during planning (two vaults)
 - Owner: Henrique
 
 ## Problem
@@ -14,7 +14,7 @@ Henrique (one place for every secret, rotation without touching the server by ha
 
 ## Functional requirements
 
-- **FR-1** Every secret of every environment lives in one 1Password vault dedicated to Xovê, one item per secret group, with separate values per environment where they differ. Nothing else is the source of a secret.
+- **FR-1** Every secret of every environment lives in the Xovê 1Password vaults (runtime secrets and pipeline secrets in separate vaults, amended by the plan on 2026-09-28), one item per secret group, with separate values per environment where they differ. Nothing else is the source of a secret.
 - **FR-2** Every public setting of an environment (addresses, ports, room names, feature toggles later) lives in git, in one settings file per environment in the `infra` repo, grouped by service.
 - **FR-3** For each environment, one `.env` is built from that environment's settings file plus its secrets from the vault. It's never in git, never edited by hand, readable only by the deploy user, and every service of that environment reads it.
 - **FR-4** The server reads the vault with its own credential that can only read this vault, and only read; that credential is the one secret set up by hand on the server.
