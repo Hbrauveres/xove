@@ -20,7 +20,8 @@ Each task is small enough for one commit, leaves the build green, and says which
   - Done: `compose.yaml` has only `web`, `api`, `db`, publishes no port, and passes `LIVEKIT_ROOM: ${LIVEKIT_ROOM:-xove}` to the API; AC-1 `git grep` finds no LiveKit server config outside docs and specs.
 - [x] **T8** Docs in both repos: `architecture.md`, `operations.md`, `deployment.md`, `getting-started.md`, `CLAUDE.md`, `infra/README.md` · covers FR-7 · verify: AC-8 review
   - Done: `architecture.md` (component table, layout, webhooks per environment, a "Where LiveKit runs" paragraph, network rule), `operations.md` (LiveKit logs with `docker logs livekit-<env>`, troubleshooting, key pair rotation), `getting-started.md`, `deployment.md`, `CLAUDE.md` (counts 92/45, where LiveKit runs), decision #28; `infra/README.md` was done in T3.
-- [ ] **T9** Review every AC (`/review`) · verify: no gaps left
+- [x] **T9** Review every AC (`/review`) · verify: no gaps left
+  - Done: spec-reviewer across both repos found the code meets the spec (API 92, infra 20 tests, config checks). Fixed after review: `operations.md` (one-time rollback caveat past the LiveKit move; `livekit-prod` in the inventory; Docker-published ports bypass ufw), `getting-started.md` variable table (`LIVEKIT_ROOM`, the pair's role), `infra/README.md` (`prod.yaml` now exists; addresses, ports and webhooks per server; how to check webhooks), a test for webhook events without a room (API 93). The rollout order goes in the PR as the T10 checklist.
 - [ ] **T10** Rollout (Henrique, with Claude): merge `infra`; build `stage` and `prod` on the VPS; merge `xove` (the deploy removes the old LiveKit); start `livekit-stage` and recreate the proxy (AC-2, AC-5 logs); start `livekit-prod` (AC-7); token cross-checks with the LiveKit CLI (AC-4); published ports (AC-6) · covers FR-2, FR-4, FR-5, FR-6, FR-7 · verify: AC-2, AC-4, AC-5, AC-6, AC-7 written in the PR
 
 ## Coverage

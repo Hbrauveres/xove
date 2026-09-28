@@ -56,6 +56,8 @@ docker compose restart api                 # restart one service
 docker compose up -d                       # apply changed settings (a restart doesn't re-read them)
 ```
 
+**Rolling back past the LiveKit move (one-time caveat).** App versions from before [spec 0044](../specs/0044-livekit-in-infra/spec.md) still start their own LiveKit on 7881/7882, which `livekit-stage` (from `infra`) now holds. To roll back that far: stop `livekit-stage` first (`docker compose -p livekit-stage --env-file /srv/infra/generated/stage.env down` in `/srv/infra/livekit`), run `ops/deploy.sh rollback`, and point `rtc-stage.caddy` back at `xove-stage-livekit:7880`. Rollbacks between versions after the move don't need any of this.
+
 ## Database
 
 ```bash
@@ -94,7 +96,8 @@ Nobody writes a `.env` by hand. Each environment's settings are built from two s
 | --- | --- | --- | --- |
 | `google-oauth-stage` | Xove App | `password` (client secret) | API (staging and local dev) |
 | `postgres-stage` | Xove App | `password` | db, API |
-| `livekit-stage` | Xove App | `username` (API key), `password` (API secret) | LiveKit, API |
+| `livekit-stage` | Xove App | `username` (API key), `password` (API secret) | Staging's LiveKit and API |
+| `livekit-prod` | Xove App | `username` (API key), `password` (API secret) | Production's LiveKit (and its API, from #46) |
 | `stage-gate` | Xove App | `password`, `hash`, `cookie` | You (the gate prompt), the proxy |
 | `postgres-dev`, `livekit-dev` | Xove App | as above | Local development only |
 | `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release |
@@ -121,4 +124,4 @@ Specific cases:
 
 ## Server hardening in place
 
-SSH with keys only on a non-default port, no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall, and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.
+SSH with keys only on a non-default port, no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall (ports published by Docker, like LiveKit's media ports, bypass the host firewall, so the provider's firewall is the one that decides for them), and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.

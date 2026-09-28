@@ -109,7 +109,8 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | api | Google OAuth client |
 | `ADMIN_EMAILS` | api | Comma-separated admin emails |
 | `LIVEKIT_URL` | api | Address browsers use to reach LiveKit (`wss://…` on servers) |
-| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api, livekit | Shared pair; the API signs tokens with it, LiveKit checks them. Secret ≥ 32 characters |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api | The pair shared with that environment's LiveKit (run from `infra`): the API signs tokens with it, LiveKit checks them and signs its webhooks. Secret ≥ 32 characters |
+| `LIVEKIT_ROOM` | api | This environment's room (staging `xove-stage`, production `xove`); defaults to `xove` |
 
 Their values live in the `infra` repo, one file per environment (`config/dev.yaml`, `stage.yaml`…), with secrets as 1Password references. There's no `.env` in this repo; see [operations](operations.md) for how the servers build theirs.
 

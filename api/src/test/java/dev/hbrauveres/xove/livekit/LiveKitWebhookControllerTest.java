@@ -150,6 +150,15 @@ class LiveKitWebhookControllerTest {
     }
 
     @Test
+    void ignoresEventsWithoutARoom() throws Exception {
+        anaShares();
+
+        send(left(ana, "PA_ana").replace("\"room\":{\"name\":\"xove\"},", "")).andExpect(status().isOk());
+
+        assertThat(holder()).isEqualTo(ana.getId());
+    }
+
+    @Test
     void ignoresOtherEventsAndStrangeIdentities() throws Exception {
         anaShares();
 
