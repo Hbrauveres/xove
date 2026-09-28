@@ -115,8 +115,12 @@ jobs:
         # ops/deploy.sh checks health on the VPS and rolls back by itself; there's
         # no second check from outside (it would need the staging gate's cookie).
         run: |
+          # Up to 5 connection attempts, 20 s each: a passing network problem between
+          # the runner and the VPS doesn't fail the release. Only connecting is retried;
+          # the deploy command is sent once, when a connection exists.
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
+            -o ConnectTimeout=20 -o ConnectionAttempts=5 \
             "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA"
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0

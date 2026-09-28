@@ -120,4 +120,4 @@ Specific cases:
 
 ## Server hardening in place
 
-SSH with keys only on a non-default port, no root login, fail2ban, a host firewall plus the provider's firewall, and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.
+SSH with keys only on a non-default port, no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall, and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.
