@@ -28,7 +28,7 @@ A reference isn't a secret, so the whole file lives in git and shows exactly wha
 
 | Reader | Credential | Can read |
 | --- | --- | --- |
-| The VPS (`build-env`) | 1Password service account `xove-server`, token in `~/.config/op/token` (`chmod 600`) | Vault `Xove`, read only |
+| The VPS (`build-env`) | 1Password service account `xove-server`, token in `~/.config/op/token` (`chmod 600`) | Vault `Xove App`, read only |
 | The pipeline | 1Password service account `xove-ci`, token as the only Actions secret `OP_SERVICE_ACCOUNT_TOKEN` | Vault `Xove CI`, read only |
 | Henrique, locally | His own 1Password account (desktop app integration with the CLI) | Everything he owns |
 
@@ -53,7 +53,7 @@ A reference isn't a secret, so the whole file lives in git and shows exactly wha
 | Infra | `infra/.github/workflows/caddy.yml` (or a new `checks.yml`) | Runs the `build-env` tests and checks that no config value looks like a secret (only `op://` for secret keys) |
 | Infra | `infra/.gitignore`, `infra/README.md` | Ignore `generated/`; how to build an environment |
 | App | `xove/ops/deploy.sh` | Build `stage.env` before a deploy (fail the deploy if the build fails); `IMAGE_TAG` in `.deploy/image.env`; Compose with both env files |
-| App | `xove/.github/workflows/stage.yml` | `load-secrets-action` for the deploy key, known hosts, host/port/user, stage cookie and Discord webhook; only `OP_SERVICE_ACCOUNT_TOKEN` from GitHub |
+| App | `xove/.github/workflows/stage.yml` | `load-secrets-action` for the deploy key, known hosts, host/port/user and Discord webhook; only `OP_SERVICE_ACCOUNT_TOKEN` from GitHub. The post-deploy check from outside (through the staging gate) is removed: `deploy.sh`'s health check on the VPS decides (Henrique, 2026-09-28), so the stage cookie never leaves `Xove App` |
 | App | `xove/.env.example` | Removed; `docs/getting-started.md` points to `infra/config/dev.yaml` and `build-env dev --export` |
 | Docs | `docs/operations.md` | Vault, settings files, building an `.env`, secrets inventory, rotation runbook |
 | Docs | `docs/getting-started.md`, `docs/deployment.md`, `docs/pipeline.md`, `CLAUDE.md` | Local dev from the vault; deploy builds the env; pipeline reads the vault; the one Actions secret |
@@ -63,16 +63,16 @@ A reference isn't a secret, so the whole file lives in git and shows exactly wha
 
 No API or database changes.
 
-**Secrets inventory** (vault `Xove` for runtime secrets, `Xove CI` for pipeline secrets; item names are final in the PR):
+**Secrets inventory** (vault `Xove App` for runtime secrets, `Xove CI` for pipeline secrets; item names are final in the PR):
 
 | Item | Fields | Used by |
 | --- | --- | --- |
 | `google-oauth-<env>` | client id, secret | app |
 | `postgres-<env>` | password | db, app |
 | `livekit-<env>` | api key, secret | LiveKit, app |
-| `stage-gate` | password, bcrypt hash, cookie | proxy (`Xove`); the cookie also in `Xove CI` for the pipeline's health check |
+| `stage-gate` | password, bcrypt hash, cookie | proxy (`Xove App`) |
 | `deploy-ssh` (`Xove CI`) | private key, known hosts, host, port, user | pipeline |
-| `discord-webhook` | url | pipeline (`Xove CI`); a copy in `Xove` for backups later |
+| `discord-webhook` | url | pipeline (`Xove CI`); a copy in `Xove App` for backups later |
 | `ghcr-read-token` | token | VPS (`docker login`) |
 | `op-server-token`, `op-ci-token` | token | reference copies of the two service account tokens |
 
@@ -81,7 +81,7 @@ No API or database changes.
 ## Risks
 
 - **Service accounts on Henrique's Individual/Families plan.** The docs set no plan requirement, only that they can't use the built-in Private/Shared vaults (we create our own). Confirmed in 1Password's Developer section before any code.
-- **Two copies of the stage cookie and the Discord webhook** (one per vault): rotating them means updating both items; the runbook says so.
+- **Two copies of the Discord webhook** (one per vault, once backups use it): rotating it means updating both items; the runbook says so.
 - **The server token can read every runtime secret.** It's `chmod 600` for the deploy user only, and read only. A leak means rotating the token and, to be safe, the secrets.
 - **A failed build blocks deploys** (1Password down, token expired). That's the safe side: the running version keeps running, and the error names the cause.
 - **Switch-over mistakes.** The old `.env` files are kept as `.env.bak` (`chmod 600`) until AC-1 and AC-8 pass, then deleted.
@@ -104,7 +104,7 @@ No API or database changes.
 
 ## Rollout
 
-1. **Henrique, in 1Password:** confirm the plan supports service accounts; create vaults `Xove` and `Xove CI`; create the items above from today's `.env` files and Actions secrets (copy, don't retype); create the service accounts `xove-server` (read `Xove`) and `xove-ci` (read `Xove CI`).
+1. **Henrique, in 1Password:** confirm the plan supports service accounts; create vaults `Xove App` and `Xove CI`; create the items above from today's `.env` files and Actions secrets (copy, don't retype); create the service accounts `xove-server` (read `Xove App`) and `xove-ci` (read `Xove CI`).
 2. **Henrique, on the VPS:** install the 1Password CLI and `python3-yaml`; save the server token to `~/.config/op/token` (`chmod 600`).
 3. **`infra` PR** (config, `build-env`, tests, proxy compose). After the merge, `git pull` on the VPS, then `ops/build-env platform` and `ops/build-env stage`; compare with the old files (AC-1); `docker compose --env-file … up -d` for the proxy (AC-8).
 4. **`xove` PR** (deploy script, pipeline, docs). Add `OP_SERVICE_ACCOUNT_TOKEN` to GitHub first. The merge's stage release uses the vault end to end (AC-9); then delete the other Actions secrets and the `.env.bak` files.
@@ -113,3 +113,5 @@ No API or database changes.
 ## Decided trade-off
 
 **Two vaults** (Henrique, 2026-09-28): `Xove` for runtime secrets, read by the server; `Xove CI` for pipeline secrets, read by the pipeline. A leaked CI token can't read the database password or the Google secret. The spec's FR-1 is amended to "the Xovê vaults".
+
+**Naming (2026-09-28):** the runtime vault is `Xove App`; references look like `op://Xove App/livekit-stage/password`. Built-in fields are used where they fit (`username`, `password`) plus labelled custom fields (`hash`, `cookie`, `host`, `port`, `user`, `known-hosts`). Public values (client id, database name and user, URLs) are settings in `config/`, not vault items.
