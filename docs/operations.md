@@ -43,18 +43,22 @@ What to look for:
 ## Restarting and updating
 
 ```bash
-docker compose restart api                 # restart one service
-docker compose up -d                       # apply .env or compose.yaml changes
-ops/deploy.sh deploy <commit-sha>          # move to another published version
+ops/deploy.sh deploy <commit-sha>          # move to another published version (rebuilds the settings first)
 ops/deploy.sh rollback                     # back to the previous deploy
 ```
 
-Changes to `.env` need `docker compose up -d` (a restart doesn't re-read it).
+For compose commands by hand in an environment's checkout, point Compose at the generated settings first:
+
+```bash
+export COMPOSE_ENV_FILES=/srv/infra/generated/stage.env,.deploy/image.env
+docker compose restart api                 # restart one service
+docker compose up -d                       # apply changed settings (a restart doesn't re-read them)
+```
 
 ## Database
 
 ```bash
-docker compose exec db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 Useful queries:
@@ -69,18 +73,49 @@ Change data through the app (admin page) rather than by hand, so the rules (sess
 
 **Backups (planned):** a nightly `pg_dump` per environment, kept 14 days, with a copy off the server and a tested restore.
 
+## Settings and secrets
+
+Nobody writes a `.env` by hand. Each environment's settings are built from two sources ([spec 0043](../specs/0043-secrets-vault/spec.md), decisions 25 and 27):
+
+- **Public settings** live in git, in the private `infra` repo: `config/<env>.yaml` (`platform` for the shared proxy, `stage`, `prod`, `dev`), grouped by service. A secret appears there only as a 1Password reference, `op://<vault>/<item>/<field>`; CI refuses a plain value for any key ending in `_SECRET`, `_PASSWORD`, `_TOKEN`, `_HASH`, `_COOKIE` or `_KEY`.
+- **Secrets** live only in 1Password, in two vaults:
+
+| Vault | Holds | Read by |
+| --- | --- | --- |
+| `Xove App` | Everything the running services need (per environment), plus the throwaway dev values | The server, with the service account `xove-server` (read only, this vault only) |
+| `Xove CI` | What the pipeline needs to deploy and notify | The stage release, with the service account `xove-ci` (read only, this vault only) |
+
+`infra/ops/build-env <env>` resolves the references and writes `/srv/infra/generated/<env>.env` (`chmod 600`, never committed). If anything is missing, it names the key and keeps the previous file. On the server it authenticates with `~/.config/op/token`; `ops/deploy.sh` runs it before every deploy and rollback. Locally, `eval "$(../infra/ops/build-env dev --export)"` loads the dev values into one terminal ([getting started](getting-started.md#settings-from-1password)).
+
+### Secrets inventory
+
+| Item | Vault | Fields | Used by |
+| --- | --- | --- | --- |
+| `google-oauth-stage` | Xove App | `password` (client secret) | API (staging and local dev) |
+| `postgres-stage` | Xove App | `password` | db, API |
+| `livekit-stage` | Xove App | `username` (API key), `password` (API secret) | LiveKit, API |
+| `stage-gate` | Xove App | `password`, `hash`, `cookie` | You (the gate prompt), the proxy |
+| `postgres-dev`, `livekit-dev` | Xove App | as above | Local development only |
+| `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release |
+| `discord-webhook` | Xove CI | `password` (the URL) | Stage release |
+| `op-token xove-server`, `op-token xove-ci` | Henrique's own vault | the service account tokens | Kept to re-create them; in use on the server and in GitHub |
+
+Also outside the vaults' reach: the server's GHCR read token (in Docker's login on the server, a copy in Henrique's vault) and the SSH keys Henrique uses himself. Production's items are added with production (#46).
+
 ## Rotating a secret
 
-1. Generate the new value and store it in the password manager.
-2. Update the environment's `.env` on the server.
-3. `docker compose up -d` so the containers pick it up.
+1. Change it in 1Password.
+2. On the server: `cd /srv/infra && ops/build-env <env>` (or `platform` for the proxy).
+3. Restart what uses it: `ops/deploy.sh deploy <current sha>` for the app, `docker compose up -d` in `infra/proxy` for the proxy.
 
 Specific cases:
 
 - **LiveKit key pair:** the API and LiveKit read the same pair, so both restart; people in the room reconnect.
-- **Database password:** also change it inside PostgreSQL (`ALTER USER … PASSWORD …`) before restarting the API.
+- **Database password:** also change it inside PostgreSQL (`ALTER USER … PASSWORD …`) before rebuilding and restarting the API.
 - **Google client secret:** create the new secret in the Google console first; keep the old one until the API runs with the new one.
-- **Pipeline deploy key:** add the new public key on the server, update the `DEPLOY_SSH_KEY` secret, run a deploy, then remove the old key.
+- **Staging gate password:** put the new password in `stage-gate`, its bcrypt hash in `hash` (`docker compose exec caddy caddy hash-password` in `infra/proxy`), then rebuild `platform` and restart the proxy.
+- **Pipeline deploy key:** add the new public key on the server, replace the key in `deploy-ssh`, run a deploy, then remove the old public key.
+- **A service account token:** create a new token in 1Password, replace `~/.config/op/token` (server) or the `OP_SERVICE_ACCOUNT_TOKEN` Actions secret (pipeline), then revoke the old one.
 
 ## Server hardening in place
 

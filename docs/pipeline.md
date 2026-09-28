@@ -110,16 +110,17 @@ Dependabot (`.github/dependabot.yml`) opens weekly pull requests for Maven, npm,
 
 ## Secrets the pipeline uses
 
-Stored in the repository's Actions secrets (Settings → Secrets and variables → Actions). Values are never printed in logs.
+Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only token of the `xove-ci` 1Password service account. The jobs that need secrets load them from the `Xove CI` vault with 1Password's `load-secrets-action` (pinned by SHA); values are masked in the logs. The references are in `stage.yml`, so the workflow shows where every value comes from.
 
-| Secret | Used by | What it is |
+| Value | Reference | Used by |
 | --- | --- | --- |
-| `DEPLOY_SSH_KEY` | Deploy stage | Private key that can only run the deploy script on the staging server |
-| `DEPLOY_KNOWN_HOSTS` | Deploy stage | The server's host key, so the runner is sure it reaches the real server |
-| `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER` | Deploy stage | Where and as whom to connect |
-| `STAGE_COOKIE` | Deploy stage | Lets the post-deploy check pass the staging gate |
-| `DISCORD_WEBHOOK_URL` | Notify Discord | Webhook of the channel that receives pipeline results. Anyone with it can post there, so it's a secret |
-| `GITHUB_TOKEN` | Publish, deploy, cleanup | Created by GitHub for each run; used to push and delete images |
+| Deploy key | `op://Xove CI/deploy-ssh/private key` | Deploy stage: a key that can only run the deploy script on the server |
+| Server host key | `op://Xove CI/deploy-ssh/known-hosts` | Deploy stage: the runner checks it reaches the real server |
+| Host, port, user | `op://Xove CI/deploy-ssh/host`, `port`, `user` | Deploy stage |
+| Discord webhook | `op://Xove CI/discord-webhook/password` | Notify Discord: anyone with it can post in the channel |
+| `GITHUB_TOKEN` | created by GitHub for each run | Publish, deploy, cleanup: push and delete images |
+
+The deploy stage has no check from outside: `ops/deploy.sh` checks health on the server and rolls back by itself (decision 27).
 
 ## Adding a stage or a job
 
