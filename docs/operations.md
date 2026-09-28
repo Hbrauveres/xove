@@ -15,7 +15,8 @@ From anywhere: `https://<environment host>/api/health` answers `{"status":"UP"}`
 ## Logs
 
 ```bash
-docker compose logs --tail 100 -f api      # or web, db, livekit
+docker compose logs --tail 100 -f api      # or web, db
+docker logs --tail 100 -f livekit-stage     # LiveKit runs from infra: livekit-stage, livekit-prod
 docker compose logs --since 30m api
 ```
 
@@ -33,8 +34,8 @@ What to look for:
 | Symptom | Likely cause | What to do |
 | --- | --- | --- |
 | Sign-in ends on `/?error=login-failed` | The API refused the Google login | `docker compose logs api \| grep "login failed"` shows why. Often a stale session in the browser: try a private window |
-| "Video offline" in the room | The API has no LiveKit settings, or can't sign tokens | Check `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` in `.env` (secret ≥ 32 characters), then `docker compose up -d api` |
-| "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker compose logs livekit \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
+| "Video offline" in the room | The API has no LiveKit settings, or can't sign tokens | Check the `livekit` group of `infra/config/<env>.yaml` and the `livekit-<env>` vault item (secret ≥ 32 characters), then redeploy the app |
+| "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker logs livekit-stage \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
 | Video works on Wi-Fi but not on mobile data | UDP media blocked somewhere | Check the server's firewall and the provider's panel for the LiveKit UDP and TCP media ports |
 | Deploy failed in the pipeline | New version unhealthy; the server already rolled back | Read the deploy step's log (it includes the container logs), fix forward |
 | Pipeline's vulnerability scan fails on a PR that changed nothing related | A new CVE was published for a dependency | Follow the [vulnerability policy](pipeline.md#vulnerability-policy) |
@@ -54,6 +55,8 @@ export COMPOSE_ENV_FILES=/srv/infra/generated/stage.env,.deploy/image.env
 docker compose restart api                 # restart one service
 docker compose up -d                       # apply changed settings (a restart doesn't re-read them)
 ```
+
+**Rolling back past the LiveKit move (one-time caveat).** App versions from before [spec 0044](../specs/0044-livekit-in-infra/spec.md) still start their own LiveKit on 7881/7882, which `livekit-stage` (from `infra`) now holds. To roll back that far: stop `livekit-stage` first (`docker compose -p livekit-stage --env-file /srv/infra/generated/stage.env down` in `/srv/infra/livekit`), run `ops/deploy.sh rollback`, and point `rtc-stage.caddy` back at `xove-stage-livekit:7880`. Rollbacks between versions after the move don't need any of this.
 
 ## Database
 
@@ -93,7 +96,8 @@ Nobody writes a `.env` by hand. Each environment's settings are built from two s
 | --- | --- | --- | --- |
 | `google-oauth-stage` | Xove App | `password` (client secret) | API (staging and local dev) |
 | `postgres-stage` | Xove App | `password` | db, API |
-| `livekit-stage` | Xove App | `username` (API key), `password` (API secret) | LiveKit, API |
+| `livekit-stage` | Xove App | `username` (API key), `password` (API secret) | Staging's LiveKit and API |
+| `livekit-prod` | Xove App | `username` (API key), `password` (API secret) | Production's LiveKit (and its API, from #46) |
 | `stage-gate` | Xove App | `password`, `hash`, `cookie` | You (the gate prompt), the proxy |
 | `postgres-dev`, `livekit-dev` | Xove App | as above | Local development only |
 | `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release |
@@ -111,7 +115,7 @@ Henrique's own SSH keys stay in his own vault. Production's items are added with
 
 Specific cases:
 
-- **LiveKit key pair:** the API and LiveKit read the same pair, so both restart; people in the room reconnect.
+- **LiveKit key pair:** the API and its LiveKit read the same pair from `livekit-<env>`. After rebuilding the settings, redeploy the app and restart that LiveKit: `docker compose -p livekit-<env> --env-file /srv/infra/generated/<env>.env up -d` in `infra/livekit`. People in the room reconnect.
 - **Database password:** also change it inside PostgreSQL (`ALTER USER … PASSWORD …`) before rebuilding and restarting the API.
 - **Google client secret:** create the new secret in the Google console first; keep the old one until the API runs with the new one.
 - **Staging gate password:** put the new password in `stage-gate`, its bcrypt hash in `hash` (`docker compose exec caddy caddy hash-password` in `infra/proxy`), then rebuild `platform` and restart the proxy.
@@ -120,4 +124,4 @@ Specific cases:
 
 ## Server hardening in place
 
-SSH with keys only on a non-default port (enforced by `/etc/ssh/sshd_config.d/00-keys-only.conf`: Ubuntu's `50-cloud-init.conf` had turned password logins back on, and sshd keeps the first value it reads), no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall, and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.
+SSH with keys only on a non-default port (enforced by `/etc/ssh/sshd_config.d/00-keys-only.conf`: Ubuntu's `50-cloud-init.conf` had turned password logins back on, and sshd keeps the first value it reads), no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall (ports published by Docker, like LiveKit's media ports, bypass the host firewall, so the provider's firewall is the one that decides for them), and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.
