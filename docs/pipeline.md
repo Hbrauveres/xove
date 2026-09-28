@@ -120,7 +120,7 @@ Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only t
 | Discord webhook | `op://Xove CI/discord-webhook/password` | Notify Discord: anyone with it can post in the channel |
 | `GITHUB_TOKEN` | created by GitHub for each run | Publish, deploy, cleanup: push and delete images |
 
-The deploy stage has no check from outside: `ops/deploy.sh` checks health on the server and rolls back by itself (decision 27). Notify Discord also reads its webhook from the vault, so if 1Password or the token fails, that run posts nothing: the failed job in the Actions tab is the signal.
+The deploy stage has no check from outside: `infra`'s `ops/deploy.sh` checks health on the server (the `healthcheck:` entries in `compose.yaml`) and rolls back by itself (decision 27). Notify Discord also reads its webhook from the vault, so if 1Password or the token fails, that run posts nothing: the failed job in the Actions tab is the signal.
 
 ## Adding a stage or a job
 

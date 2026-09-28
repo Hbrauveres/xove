@@ -30,37 +30,40 @@ Nobody pushes to `main` directly. A branch ruleset requires a pull request and t
 | Database | Its own | Its own |
 | Search engines | Told not to index (`X-Robots-Tag: noindex`) | Normal |
 
-Both environments run on the same server from separate checkouts of this repository. Their settings are generated per environment from the `infra` repo and 1Password ([settings and secrets](operations.md#settings-and-secrets)), never written by hand or committed. Container names carry the environment (`xove-stage-api`, `xove-prod-api`), so they can run side by side. A shared reverse proxy, configured in a separate private repository, routes each hostname to its containers and handles HTTPS.
+Both environments run on the same server, from their published images and this repo's `compose.yaml` (no checkout of the code). Their settings are generated per environment from the `infra` repo and 1Password ([settings and secrets](operations.md#settings-and-secrets)), never written by hand or committed. Container names carry the environment (`xove-stage-api`, `xove-prod-api`), so they can run side by side. A shared reverse proxy, configured in a separate private repository, routes each hostname to its containers and handles HTTPS.
 
 ## How a deploy works
 
 ```mermaid
 sequenceDiagram
   participant GH as Pipeline (stage 5)
-  participant S as Server: ops/deploy.sh
+  participant S as Server: infra/ops/deploy.sh xove stage
+  participant G as GitHub (xove repo)
   participant R as Container registry
   GH->>S: SSH: deploy <commit>
-  Note over S: remember current commit and image tag
-  S->>S: git reset to <commit><br/>(compose.yaml, scripts, config)
-  S->>S: build <env>.env from infra/config + 1Password
-  S->>S: IMAGE_TAG=sha-<commit> in .deploy/image.env
+  Note over S: remember the running tag and the last deploy
+  S->>S: build stage.env from infra/config + 1Password
+  S->>G: compose.yaml of <commit>
+  Note over S: refuse versions that still start LiveKit (before spec 0044)
+  S->>S: IMAGE_TAG=sha-<commit>, check web and api resolve to it
   S->>R: pull api and web images
-  S->>S: docker compose up -d
-  S->>S: ops/healthcheck.sh
+  S->>S: docker compose up --wait (project xove-stage)
   alt healthy
-    S-->>GH: ok (logged in .deploy/history)
+    S-->>GH: ok (logged in the history)
   else not healthy
-    S->>S: back to previous commit and tag, compose up, health check
+    S->>S: previous compose file and tag, up --wait again
     S-->>GH: failed, rolled back
   end
 ```
 
-Key points:
+Key points ([spec 0067](../specs/0067-deploy-from-infra/spec.md), decisions 25 and 26):
 
-- **The server never builds.** It pulls images the pipeline built, tested and scanned.
-- **The SSH key can do one thing.** On the server, the pipeline's key is restricted to running `ops/deploy.sh` (a forced command), so it can't open a shell. The script only accepts `deploy <40-character commit>`, `rollback` or `status`.
-- **Rollback is automatic.** If the new version isn't healthy within 3 minutes, the script puts back the previous commit and images, checks health again, and reports the failure. Stage 6 of the pipeline then deletes the failed images.
-- **The checkout follows the images.** The script moves the server's checkout to the deployed commit, so `compose.yaml` always matches the code that's running. LiveKit isn't part of this deploy: it runs from the `infra` repo (one server per environment) and keeps running while the app is redeployed.
+- **The server never builds and has no copy of the code.** It pulls the images the pipeline built, tested and scanned, and runs them with the `compose.yaml` of that same commit, downloaded from GitHub.
+- **The deploy tool lives in the private `infra` repo**, so a change merged into this public repo can't change what runs on the server with deploy rights. One tool deploys any app to any environment: `ops/deploy.sh <app> <env> …`.
+- **The SSH key can do one thing.** On the server, the pipeline's key is restricted to `/srv/infra/ops/deploy.sh xove stage` (a forced command), so it can't open a shell or pick another app or environment. The tool only accepts `deploy <40-character commit>`, `rollback` or `status`.
+- **"Healthy" is defined here, in `compose.yaml`** (`healthcheck:` for every service). The deploy waits for it with `docker compose up --wait`, and so does the pipeline's validate stage.
+- **Rollback is automatic.** If the new version isn't healthy within 3 minutes, the tool runs the previous deploy's compose file and images again and reports the failure. Stage 6 of the pipeline then deletes the failed images.
+- **State lives in `infra`, on the server:** `/srv/infra/state/xove-<env>/` keeps the deploy history, the running tag and the recent compose files. LiveKit isn't part of this deploy: it runs from `infra` too, and keeps running while the app is redeployed.
 
 ### Database migrations and rollback
 
@@ -71,12 +74,12 @@ Flyway runs new migrations when the API starts. A rollback puts back the old cod
 
 ## Deploying by hand
 
-On the server, from the environment's checkout:
+On the server:
 
 ```bash
-ops/deploy.sh status                  # what's running, recent deploys, container status
-ops/deploy.sh deploy <commit-sha>     # deploy a commit whose images were published
-ops/deploy.sh rollback                # go back to the previous deploy
+/srv/infra/ops/deploy.sh xove stage status                # what's running, recent deploys, container status
+/srv/infra/ops/deploy.sh xove stage deploy <commit-sha>   # deploy a commit whose images were published
+/srv/infra/ops/deploy.sh xove stage rollback              # go back to the previous deploy
 ```
 
 The images for a commit exist only if its pipeline reached stage 4.
@@ -85,11 +88,11 @@ The images for a commit exist only if its pipeline reached stage 4.
 
 One-time steps per environment. Values (host, user, keys) go in 1Password, not here.
 
-1. **Checkout and settings:** clone the repository on `main` into the environment's folder, and the `infra` repo into `/srv/infra`. Install the 1Password CLI and `python3-yaml`, put the `xove-server` service account token in `~/.config/op/token` (`chmod 600`), and check the environment's settings resolve: `/srv/infra/ops/build-env <env> --check`.
+1. **Infra and settings:** clone the `infra` repo into `/srv/infra` (no checkout of this repo is needed). Install the 1Password CLI and `python3-yaml`, put the `xove-server` service account token in `~/.config/op/token` (`chmod 600`), and check the environment's settings resolve: `/srv/infra/ops/build-env <env> --check`.
 2. **Registry login:** the images are private, so the server logs in to GitHub Container Registry once with a personal access token (classic) that has only `read:packages`: `docker login ghcr.io`.
 3. **Deploy key:** generate a dedicated key pair. Add the public key to the deploy user's `authorized_keys` with a forced command and no extras:
    ```
-   command="/path/to/checkout/ops/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA… github-actions-deploy
+   command="/srv/infra/ops/deploy.sh xove <env>",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA… github-actions-deploy
    ```
 4. **Pipeline secrets:** store the private key, the server's host key (`ssh-keyscan`), host, port and user in the `deploy-ssh` item of the `Xove CI` vault (see [Pipeline](pipeline.md#secrets-the-pipeline-uses)).
 5. **First deploy:** merge anything to `main`, or run the pipeline manually. The first deploy has nothing to roll back to, so watch it.

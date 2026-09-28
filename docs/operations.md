@@ -1,13 +1,12 @@
 # Operations
 
-Day-to-day checks and fixes on a server running Xovê. Commands run from the environment's checkout on the server unless said otherwise.
+Day-to-day checks and fixes on a server running Xovê. There's no checkout of this repo on the server: deploys run from the `infra` repo (`/srv/infra/ops/deploy.sh xove <env> …`), and containers are named `xove-<env>-<service>` (`xove-stage-api`).
 
 ## Is it up?
 
 ```bash
-ops/deploy.sh status          # running version, last deploys, containers
-ops/healthcheck.sh 10         # api and web answer?
-docker compose ps             # every container, restarts, health
+/srv/infra/ops/deploy.sh xove stage status     # running version, last deploys, containers
+docker ps --filter name=xove-stage              # every container, restarts, health ("healthy" comes from compose.yaml)
 ```
 
 From anywhere: `https://<environment host>/api/health` answers `{"status":"UP"}` (staging needs its gate passed first).
@@ -15,9 +14,9 @@ From anywhere: `https://<environment host>/api/health` answers `{"status":"UP"}`
 ## Logs
 
 ```bash
-docker compose logs --tail 100 -f api      # or web, db
-docker logs --tail 100 -f livekit-stage     # LiveKit runs from infra: livekit-stage, livekit-prod
-docker compose logs --since 30m api
+docker logs --tail 100 -f xove-stage-api   # or xove-stage-web, xove-stage-db
+docker logs --tail 100 -f livekit-stage    # LiveKit runs from infra: livekit-stage, livekit-prod
+docker logs --since 30m xove-stage-api
 ```
 
 What to look for:
@@ -33,35 +32,30 @@ What to look for:
 
 | Symptom | Likely cause | What to do |
 | --- | --- | --- |
-| Sign-in ends on `/?error=login-failed` | The API refused the Google login | `docker compose logs api \| grep "login failed"` shows why. Often a stale session in the browser: try a private window |
+| Sign-in ends on `/?error=login-failed` | The API refused the Google login | `docker logs xove-stage-api 2>&1 \| grep "login failed"` shows why. Often a stale session in the browser: try a private window |
 | "Video offline" in the room | The API has no LiveKit settings, or can't sign tokens | Check the `livekit` group of `infra/config/<env>.yaml` and the `livekit-<env>` vault item (secret ≥ 32 characters), then redeploy the app |
 | "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker logs livekit-stage \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
 | Video works on Wi-Fi but not on mobile data | UDP media blocked somewhere | Check the server's firewall and the provider's panel for the LiveKit UDP and TCP media ports |
 | Deploy failed in the pipeline | New version unhealthy; the server already rolled back | Read the deploy step's log (it includes the container logs), fix forward |
 | Pipeline's vulnerability scan fails on a PR that changed nothing related | A new CVE was published for a dependency | Follow the [vulnerability policy](pipeline.md#vulnerability-policy) |
-| A container restarts in a loop | Crash on boot | `docker compose logs --tail 200 <service>` |
+| A container restarts in a loop | Crash on boot | `docker logs --tail 200 xove-<env>-<service>` |
 
 ## Restarting and updating
 
 ```bash
-ops/deploy.sh deploy <commit-sha>          # move to another published version (rebuilds the settings first)
-ops/deploy.sh rollback                     # back to the previous deploy
+/srv/infra/ops/deploy.sh xove stage deploy <commit-sha>   # move to another published version (rebuilds the settings first)
+/srv/infra/ops/deploy.sh xove stage rollback              # back to the previous deploy
+docker restart xove-stage-api                             # restart one container as it is
 ```
 
-For compose commands by hand in an environment's checkout, point Compose at the generated settings first:
+Changed settings or secrets need a redeploy of the running version (`deploy <current sha>`): a restart doesn't re-read them.
 
-```bash
-export COMPOSE_ENV_FILES=/srv/infra/generated/stage.env,.deploy/image.env
-docker compose restart api                 # restart one service
-docker compose up -d                       # apply changed settings (a restart doesn't re-read them)
-```
-
-**Rolling back past the LiveKit move (one-time caveat).** App versions from before [spec 0044](../specs/0044-livekit-in-infra/spec.md) still start their own LiveKit on 7881/7882, which `livekit-stage` (from `infra`) now holds. To roll back that far: stop `livekit-stage` first (`docker compose -p livekit-stage --env-file /srv/infra/generated/stage.env down` in `/srv/infra/livekit`), run `ops/deploy.sh rollback`, and point `rtc-stage.caddy` back at `xove-stage-livekit:7880`. Rollbacks between versions after the move don't need any of this.
+**Rolling back past the LiveKit move.** The deploy tool refuses versions from before [spec 0044](../specs/0044-livekit-in-infra/spec.md): their `compose.yaml` still starts its own LiveKit on 7881/7882, which `livekit-stage` (from `infra`) now holds. If one is ever needed, it's a manual job: stop `livekit-stage`, run that version's compose file by hand as project `xove-stage`, and point `rtc-stage.caddy` back at `xove-stage-livekit:7880`.
 
 ## Database
 
 ```bash
-docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker exec -it xove-stage-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 Useful queries:
@@ -111,7 +105,7 @@ Henrique's own SSH keys stay in his own vault. Production's items are added with
 
 1. Change it in 1Password.
 2. On the server: `cd /srv/infra && ops/build-env <env>` (or `platform` for the proxy).
-3. Restart what uses it: `ops/deploy.sh deploy <current sha>` for the app, `docker compose up -d` in `infra/proxy` for the proxy.
+3. Restart what uses it: `/srv/infra/ops/deploy.sh xove <env> deploy <current sha>` for the app, `docker compose up -d` in `infra/proxy` for the proxy.
 
 Specific cases:
 

@@ -45,7 +45,6 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-ops/                  deploy and health check scripts
 compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the infra repo
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml)
 docs/                 this wiki
