@@ -98,13 +98,11 @@ jobs:
       - name: Load the images
         run: for f in "$RUNNER_TEMP"/images/*.tar; do docker load -i "$f"; done
 
-      - name: Start db, api and web
+      - name: Start db, api and web, and wait until healthy
+        # "Healthy" is defined in compose.yaml, the same checks the server's deploy waits for.
         run: |
           docker network create web
-          docker compose up -d --no-build db api web
-
-      - name: Wait until healthy
-        run: ops/healthcheck.sh 150
+          docker compose up -d --no-build --wait --wait-timeout 150 db api web
 
       - name: Check that the API refuses anonymous requests
         run: docker compose exec -T api sh -c 'wget -S -qO- http://localhost:8080/api/me 2>&1 | grep -q " 401"'

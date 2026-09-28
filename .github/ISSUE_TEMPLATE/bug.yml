@@ -39,7 +39,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: "`sha-…` from `ops/deploy.sh status`, or the release tag."
+      description: "`sha-…` from `ops/deploy.sh <app> <env> status` on the server (infra repo), or the release tag."
   - type: textarea
     id: logs
     attributes:

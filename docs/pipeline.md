@@ -53,8 +53,8 @@ flowchart LR
 | 3 | **Vulnerability scan** | Trivy scans both images (OS packages and the Java libraries inside the jar) and the web dependencies (`package-lock.json`) | A HIGH or CRITICAL vulnerability **with a fix available** is found |
 | 3 | **SAST** | Semgrep scans the source with its default, Java, TypeScript, React, secrets and Dockerfile rules | Any finding |
 | 4 | **Publish images** | Pushes both images to GitHub Container Registry as `xove-api:sha-<12 chars of the commit>` and `xove-web:sha-…` | Registry errors |
-| 5 | **Deploy stage** | Asks the staging server over SSH to deploy that commit (see [Deployment](deployment.md)), checks staging from the internet, then tags the images `:stage` | The new version isn't healthy (the server rolls back by itself first) |
-| 6 | **Remove failed images** | Deletes the images of a commit whose deploy failed, so nobody runs them by mistake. GHCR deletes whole versions, so a version that also carries other tags (a commit that didn't change that image shares it with earlier commits) is kept | — |
+| 5 | **Deploy stage** | Asks the staging server over SSH to deploy that commit (see [Deployment](deployment.md)), then tags the images `:stage` | The new version isn't healthy (the server rolls back by itself first) |
+| 6 | **Remove failed images** | Deletes the images of a commit that ran on staging and wasn't healthy (the deploy tool's exit code 2), so nobody runs them by mistake. A deploy refused before anything changed (GitHub, the registry or 1Password unreachable, another deploy running) keeps them: re-run the whole workflow. GHCR deletes whole versions, so a version that also carries other tags (a commit that didn't change that image shares it with earlier commits) is kept | — |
 
 Jobs in the same stage run in parallel. Each job starts on a fresh machine, which is why images travel between stages as artifacts.
 
@@ -67,7 +67,7 @@ Jobs in the same stage run in parallel. Each job starts on a fresh machine, whic
 | Push to a branch (any commit) | Commit checks | 1 → 3 | Every commit is validated; the pull request's **required checks** come from here |
 | Push to `main` (a merged PR) | Stage release | 1 → 5 (6 on failure) | Checks the merged result again, then publishes and deploys to staging |
 | Tag `v*` (planned) | Production release | Promote → deploy | Ships a build that already runs on staging |
-| Manual ("Run workflow" button) | Either | Same as above | Re-run on demand |
+| Manual ("Run workflow" button) | Either | Same as above; a stage release from a branch stops after the checks | Re-run on demand; only `main` is released (the server refuses other commits) |
 
 A new push to a branch cancels that branch's older run. Stage releases always finish and run one at a time, in merge order.
 
@@ -120,7 +120,7 @@ Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only t
 | Discord webhook | `op://Xove CI/discord-webhook/password` | Notify Discord: anyone with it can post in the channel |
 | `GITHUB_TOKEN` | created by GitHub for each run | Publish, deploy, cleanup: push and delete images |
 
-The deploy stage has no check from outside: `ops/deploy.sh` checks health on the server and rolls back by itself (decision 27). Notify Discord also reads its webhook from the vault, so if 1Password or the token fails, that run posts nothing: the failed job in the Actions tab is the signal.
+The deploy stage has no check from outside: `infra`'s `ops/deploy.sh` checks health on the server (the `healthcheck:` entries in `compose.yaml`) and rolls back by itself (decision 27). Notify Discord also reads its webhook from the vault, so if 1Password or the token fails, that run posts nothing: the failed job in the Actions tab is the signal.
 
 ## Adding a stage or a job
 
