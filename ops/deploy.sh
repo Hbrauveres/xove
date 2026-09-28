@@ -85,7 +85,9 @@ build_env() {
 # the settings files can't quietly run the previous images and report "ok".
 images_resolve_to() {
   local tag="$1" images image
-  images="$(docker compose config --images web api)" || return 1
+  # Only web and api: "config --images web api" would also list their dependencies (db).
+  images="$(docker compose config --format json | python3 -c \
+    'import json, sys; s = json.load(sys.stdin)["services"]; print(s["web"]["image"]); print(s["api"]["image"])')" || return 1
   for image in $images; do
     if [[ "$image" != *":$tag" ]]; then
       echo "[deploy] error: compose doesn't resolve the images to $tag (got $image)" >&2
