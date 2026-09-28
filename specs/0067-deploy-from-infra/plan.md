@@ -86,6 +86,19 @@ No new setting or secret.
 6. **Remove** `/srv/apps/xove-stage` (AC-1).
 7. **Rollback of the move itself:** put the old `command=` back in `authorized_keys`; the old checkout still exists until step 6.
 
+## Review fixes (2026-09-28)
+
+The first `/review` found gaps in the merged `infra` tool; fixed in a second `infra` PR before this one merges:
+
+- **Only commits on `main` deploy** (GitHub's compare API; GitHub also serves fork commits through the repo's URL), and **the compose file is checked as untrusted** by `infra/ops/check-compose`: only the app's own images at the commit's tag (`postgres` for `db`), its own volumes and networks plus `web`, container names `xove-<env>-…`, and only service keys that can't reach the host. `config --no-env-resolution` keeps `env_file` visible instead of reading a server file (needs Compose 2.35+).
+- **The way back is prepared before anything changes** (the previous compose file downloaded and checked); without it, the tool says so and a failure asks to fix forward.
+- **The running version comes from the history only**; `image.env` is written after a healthy switch, and says `unknown` after a failure with no way back.
+- **The request is one short line of plain text** (a newline could hide a second one); **one deploy at a time** per app and environment (`flock`); the state folder is created only for valid requests.
+- **Rollback skips redeploys of the same commit**; compose files are kept by the history, not by date; only this app's old images are removed (the last 3 versions of each environment stay), no host-wide prune.
+- **Second review:** `include` and `extends` refused in the file as written (Compose would fetch them again between the check and `up`); `*` in an allowed image stands for one tag only (`postgres:5000/…` is another registry); `up --timeout 30` and time limits on pull, config, logs and `build-env`, so a compose file can't hold a deploy up; Compose runs with an empty environment (the compose file can't read the deploy's variables); the work runs detached with its log in `state/<app>-<env>/logs/`, so a dropped SSH connection can't stop it halfway; exit codes 2 (ran, unhealthy) and 3 (refused, nothing changed), and the pipeline deletes images only on 2; the deploy key uses `restrict`.
+- **Third review:** the new images are pulled before anything changes (a registry problem is exit 3, not "unhealthy"), and the way back uses images already on the server; size and time limits on the downloaded compose file and its checks; the state folder is `chmod 700`. Accepted: a failing version's last container logs still go to the pipeline's log (as before), for debugging.
+- `xove`: the stage release publishes, deploys and notifies only for `main`; docs say what "unhealthy" means in time, and that a rollback to a version from before this change only waits for "running".
+
 ## Decided trade-offs
 
 Decided with Henrique on 2026-09-28:

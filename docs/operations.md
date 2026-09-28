@@ -6,6 +6,7 @@ Day-to-day checks and fixes on a server running Xovê. There's no checkout of th
 
 ```bash
 /srv/infra/ops/deploy.sh xove stage status     # running version, last deploys, containers
+ls -t /srv/infra/state/xove-stage/logs | head   # the output of recent deploys and rollbacks
 docker ps --filter name=xove-stage              # every container, restarts, health ("healthy" comes from compose.yaml)
 ```
 
@@ -37,6 +38,11 @@ What to look for:
 | "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker logs livekit-stage \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
 | Video works on Wi-Fi but not on mobile data | UDP media blocked somewhere | Check the server's firewall and the provider's panel for the LiveKit UDP and TCP media ports |
 | Deploy failed in the pipeline | New version unhealthy; the server already rolled back | Read the deploy step's log (it includes the container logs), fix forward |
+| Deploy refused, "isn't on the app's main branch" | The commit isn't on `main` (a branch, a fork) | Merge it first; only `main` deploys |
+| Deploy refused, "breaks the rules above" | `compose.yaml` uses something `infra/ops/check-compose` doesn't allow (another image, a host mount, a new key…) | Change `compose.yaml`, or allow it in `infra` if it's safe |
+| Stage release cancelled during the deploy | The server keeps going: the deploy may have finished, but the images weren't marked `:stage` | `status` on the server; re-run the stage release if needed |
+| Deploy refused, "nothing was changed" (exit 3) | GitHub, the registry or 1Password didn't answer, or another deploy was running | Re-run the whole stage release (its images were kept) |
+| Deploy failed, "running: unknown" in `status` | The deploy and its rollback both failed, or there was no version to go back to | Read the logs, then deploy a version that works: `deploy <sha>` |
 | Pipeline's vulnerability scan fails on a PR that changed nothing related | A new CVE was published for a dependency | Follow the [vulnerability policy](pipeline.md#vulnerability-policy) |
 | A container restarts in a loop | Crash on boot | `docker logs --tail 200 xove-<env>-<service>` |
 
