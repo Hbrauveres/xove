@@ -54,7 +54,7 @@ flowchart LR
 | 3 | **SAST** | Semgrep scans the source with its default, Java, TypeScript, React, secrets and Dockerfile rules | Any finding |
 | 4 | **Publish images** | Pushes both images to GitHub Container Registry as `xove-api:sha-<12 chars of the commit>` and `xove-web:sha-…` | Registry errors |
 | 5 | **Deploy stage** | Asks the staging server over SSH to deploy that commit (see [Deployment](deployment.md)), checks staging from the internet, then tags the images `:stage` | The new version isn't healthy (the server rolls back by itself first) |
-| 6 | **Remove failed images** | Deletes the images of a commit whose deploy failed, so nobody runs them by mistake | — |
+| 6 | **Remove failed images** | Deletes the images of a commit whose deploy failed, so nobody runs them by mistake. GHCR deletes whole versions, so a version that also carries other tags (a commit that didn't change that image shares it with earlier commits) is kept | — |
 
 Jobs in the same stage run in parallel. Each job starts on a fresh machine, which is why images travel between stages as artifacts.
 
