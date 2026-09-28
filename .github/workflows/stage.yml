@@ -137,16 +137,24 @@ jobs:
       - name: Delete this commit's images from the registry
         # Staging already rolled back to the previous version (ops/deploy.sh);
         # this removes the images that failed, so nobody deploys them by mistake.
+        # GHCR deletes whole versions, not single tags. A commit that didn't change
+        # an image (docs only) shares its version with earlier tags, so a version
+        # is only deleted when this commit's tag is its only tag.
         run: |
           for service in api web; do
-            ids=$(gh api --paginate "/users/$OWNER/packages/container/xove-$service/versions" \
-              --jq ".[] | select(.metadata.container.tags | index(\"$TAG\")) | .id")
-            for id in $ids; do
-              gh api -X DELETE "/users/$OWNER/packages/container/xove-$service/versions/$id"
-              echo "deleted xove-$service:$TAG (version $id)"
-            done
+            versions=$(gh api --paginate "/users/$OWNER/packages/container/xove-$service/versions" \
+              --jq ".[] | select(.metadata.container.tags | index(\"$TAG\")) | \"\(.id) \(.metadata.container.tags | length)\"")
+            while read -r id tags; do
+              [[ -z "$id" ]] && continue
+              if [[ "$tags" == 1 ]]; then
+                gh api -X DELETE "/users/$OWNER/packages/container/xove-$service/versions/$id"
+                echo "deleted xove-$service:$TAG (version $id)"
+              else
+                echo "kept xove-$service version $id: it also carries $((tags - 1)) other tag(s)"
+              fi
+            done <<< "$versions"
           done
-          echo "Deploy of \`$TAG\` failed: staging was rolled back and the images were removed." >> "$GITHUB_STEP_SUMMARY"
+          echo "Deploy of \`$TAG\` failed: staging was rolled back; images only this commit used were removed." >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------- notify
   notify:
