@@ -51,12 +51,12 @@ The pull request template has the full checklist. In short:
 - [ ] Tests cover the new behaviour, and `./mvnw test` / `npm test` pass locally
 - [ ] Database changes are a **new** Flyway migration, compatible with the previous version of the code ([why](deployment.md#database-migrations-and-rollback))
 - [ ] No secrets, hostnames of servers or personal data in code, config or docs
-- [ ] New settings are added to `.env.example` and the [environment variables](getting-started.md#environment-variables) table
+- [ ] New settings are added to every environment's file in `infra/config/` (secrets as 1Password references) and the [environment variables](getting-started.md#environment-variables) table
 - [ ] Docs updated if behaviour, setup or the pipeline changed
 
 ## Rules that don't bend
 
-- Never commit a `.env` file or a secret. `.env.example` holds names, never values.
+- Never commit a `.env` file or a secret. Settings live in `infra/config/<env>.yaml`; secrets only in 1Password.
 - Never edit a migration that already ran anywhere. Add a new one.
 - Never push to `main` directly (the ruleset blocks it anyway).
 - A red pipeline on `main` is fixed before anything else is merged.

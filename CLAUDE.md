@@ -27,7 +27,7 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 
 ## Rules
 
-- **Secrets never in git and never in chat.** They live in 1Password and the servers' `.env` files (`chmod 600`). If Henrique pastes a secret, tell him to rotate it.
+- **Secrets never in git and never in chat.** They live only in 1Password (vaults `Xove App` and `Xove CI`); public settings live in `infra/config/<env>.yaml`, and each environment's `.env` is generated from both by `infra/ops/build-env` (never edited by hand). If Henrique pastes a secret, tell him to rotate it.
 - **Never edit a Flyway migration that already ran.** Add a new `V<n>__…` file. Keep migrations compatible with the previous code (rollback doesn't undo migrations).
 - **Never push to `main` directly.** Branch names `feat/`, `fix/`, `docs/`, `ci/`, `chore/`; conventional commits (`feat(api): …`). PRs are squash-merged, so the PR title must be a conventional commit too.
 - Tests come with every change. API: `cd api && ./mvnw test`. Web: `cd web && npm test && npm run build`.

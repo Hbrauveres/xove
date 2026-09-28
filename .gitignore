@@ -1,1 +1,4 @@
 .deploy/
+# Settings are generated from infra/config and 1Password; never commit one.
+.env
+.env.*

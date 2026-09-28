@@ -33,4 +33,4 @@ flowchart LR
 
 ## What this wiki leaves out
 
-Hostnames of servers, IP addresses, SSH details, account names and every secret value. Those live in the maintainer's password manager and on the servers themselves. Variable *names* are documented so you know what to set, never their values.
+Hostnames of servers, IP addresses, SSH details, account names and every secret value. Those live in 1Password and on the servers themselves. Variable *names* are documented so you know what to set, never their values.
