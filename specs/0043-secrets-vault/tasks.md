@@ -1,0 +1,45 @@
+# Secrets in 1Password, one generated .env per environment — tasks
+
+- Plan: [plan.md](plan.md)
+
+Each task is small enough for one commit, leaves the build green, and says which requirements it serves and how it's verified. Tick a task only when its verification passes. The repo each task changes is in brackets; tasks marked **Henrique** are done by hand outside the repos.
+
+- [ ] **T1** [infra] `ops/build-env <env>`: read `config/<env>.yaml`, flatten the groups (duplicate key → error), resolve `op://` references with the 1Password CLI, write to a temp file and move it to `generated/<env>.env` with `chmod 600` only on full success; `--export` prints `export` lines; `--check` resolves everything and reports missing keys without writing; never prints values · covers FR-3, FR-5 · verify: `python3 -m unittest ops/test_build_env.py` with a fake `op` on `PATH` (missing reference, missing setting, duplicate key, `op` failure, success, file mode, no values in output)
+- [ ] **T2** [infra] CI runs the `build-env` tests and a config check: every key that holds a secret must be an `op://` reference (a list of secret key names, e.g. `*_SECRET`, `*_PASSWORD`, `*_TOKEN`, `*_HASH`, `*_COOKIE`) · covers FR-7 · verify: the checks pass on the PR; a test config with a plain secret value fails them
+- [ ] **T3** **Henrique**: in 1Password, confirm service accounts can be created; create vaults `Xove` and `Xove CI`; copy every secret from today's `.env` files and Actions secrets into items (inventory in the plan); create service accounts `xove-server` (read `Xove`) and `xove-ci` (read `Xove CI`). On the VPS: install the 1Password CLI and `python3-yaml`; save the server token in `~/.config/op/token` (`chmod 600`) · covers FR-1, FR-4 · verify: AC-4 with the server token (`op vault list` shows only `Xove`; editing an item is refused), result in the PR
+- [ ] **T4** [infra] `config/platform.yaml`, `stage.yaml`, `prod.yaml`, `dev.yaml` with every setting and secret reference (prod complete but unused until #46) · covers FR-2, FR-7 · verify: `build-env --check` passes for `platform`, `stage` and `dev` with Henrique's 1Password; the T2 config check passes
+- [ ] **T5** [infra] `proxy/compose.yaml` lists its variables under `environment:` and runs with `--env-file /srv/infra/generated/platform.env`; `.gitignore` ignores `generated/`; `README.md` explains building an environment · covers FR-3, FR-8 · verify: `caddy validate` in CI; `docker compose config` with a sample env file shows only the proxy's variables in the container
+- [ ] **T6** [xove] `ops/deploy.sh` runs `/srv/infra/ops/build-env stage` before a deploy (a failed build fails the deploy, nothing changes), keeps `IMAGE_TAG` in `.deploy/image.env`, runs Compose with both env files; status and rollback read the tag from the new place · covers FR-3, FR-8 · verify: `shellcheck`; a local Docker simulation of `deploy`, `rollback` and a failing build (fake `build-env`), like the Step 1 verification
+- [ ] **T7** [xove] `stage.yml` loads the deploy key, known hosts, host, port, user, stage cookie and Discord webhook from `Xove CI` with `load-secrets-action` (pinned SHA); only `OP_SERVICE_ACCOUNT_TOKEN` comes from GitHub · covers FR-9 · verify: actionlint and Semgrep pass; the stage release after merge is green (T11)
+- [ ] **T8** [xove] Local development from the vault: remove `.env.example`; `docs/getting-started.md` uses `eval "$(../infra/ops/build-env dev --export)"` before running the API and the web app · covers FR-10 · verify: AC-10 on Henrique's machine, result in the PR
+- [ ] **T9** Docs: `docs/operations.md` (vaults, settings files, building an `.env`, secrets inventory, rotation runbook with the special cases and the two-copy items), `docs/deployment.md`, `docs/pipeline.md`, `CLAUDE.md`, and decision #26 if anything outlives the spec · covers FR-6, FR-7 · verify: review; the inventory matches the vault item list
+- [ ] **T10** Review every AC (`/review`) · verify: no gaps left
+- [ ] **T11** Rollout on the VPS (Henrique, with Claude): merge `infra`, build `platform.env` and `stage.env`, compare with the old files key by key without printing values (AC-1), switch the proxy (AC-8), check file modes (AC-6); add `OP_SERVICE_ACCOUNT_TOKEN` to GitHub, merge `xove`, check the stage release and Discord (AC-9); delete the other Actions secrets and the `.env.bak` files · covers FR-3, FR-8, FR-9 · verify: AC-1, AC-6, AC-8, AC-9 written in the PR
+- [ ] **T12** Rotation drill: rotate the staging LiveKit key pair only in 1Password, rebuild, redeploy, share and watch · covers FR-6 · verify: AC-2, written in the PR
+
+## Coverage
+
+| Requirement | Tasks |
+| --- | --- |
+| FR-1 | T3 |
+| FR-2 | T4 |
+| FR-3 | T1, T5, T6, T11 |
+| FR-4 | T3 |
+| FR-5 | T1 |
+| FR-6 | T9, T12 |
+| FR-7 | T2, T4, T9 |
+| FR-8 | T5, T6, T11 |
+| FR-9 | T7, T11 |
+| FR-10 | T8 |
+| AC-1 | T11 |
+| AC-2 | T12 |
+| AC-3 | T1 |
+| AC-4 | T3 |
+| AC-5 | T2, T9 |
+| AC-6 | T11 |
+| AC-7 | T9 |
+| AC-8 | T11 |
+| AC-9 | T11 |
+| AC-10 | T8 |
+
+Nothing uncovered. AC-1, AC-2, AC-4, AC-6, AC-8, AC-9 and AC-10 are manual by nature (they need the real vault and server); their results go in the PRs.
