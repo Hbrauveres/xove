@@ -114,7 +114,7 @@ Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only t
 
 | Value | Reference | Used by |
 | --- | --- | --- |
-| Deploy key | `op://Xove CI/deploy-ssh/private key` | Deploy stage: a key that can only run the deploy script on the server |
+| Deploy key | `op://Xove CI/deploy-ssh/private_key` (the field id: labels are translated, ids aren't) | Deploy stage: a key that can only run the deploy script on the server |
 | Server host key | `op://Xove CI/deploy-ssh/known-hosts` | Deploy stage: the runner checks it reaches the real server |
 | Host, port, user | `op://Xove CI/deploy-ssh/host`, `port`, `user` | Deploy stage |
 | Discord webhook | `op://Xove CI/discord-webhook/password` | Notify Discord: anyone with it can post in the channel |
