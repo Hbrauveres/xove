@@ -29,12 +29,12 @@ Henrique (operations: one deploy tool, kept in the private repo), and anyone rea
 - **AC-1** On the server, `/srv/apps/xove-stage` no longer exists, and staging runs (manual, written in the PR).
 - **AC-2** After the move, a merge to `xove` deploys staging through `infra`'s tool, and the stage release is green with a Discord message (manual).
 - **AC-3** The data survives: the users and access requests on staging are the same before and after the move (row counts compared, manual).
-- **AC-4** A deploy of a commit whose images don't exist, or whose images don't start healthy, leaves the previous version running (automated simulation, and the rollback drill on staging).
-- **AC-5** The restricted key can only ask for "deploy <commit>", "rollback" or "status"; anything else is refused (automated test, plus a check with the real key).
-- **AC-6** The deployed `compose.yaml` is the one from the deployed commit: a change to `compose.yaml` in a commit reaches the server only when that commit is deployed (automated simulation).
+- **AC-4** A deploy of a commit whose images don't exist, or whose images don't start healthy, leaves the previous version running (the rollback drill on staging).
+- **AC-5** The restricted key can only ask for "deploy <commit>", "rollback" or "status"; anything else is refused (a check with the real key).
+- **AC-6** The deployed `compose.yaml` is the one from the deployed commit: a change to `compose.yaml` in a commit reaches the server only when that commit is deployed (the first deploy after the move runs this branch's health checks).
 - **AC-7** `git grep ops/` in `xove` finds no server script, and the docs in both repos describe the new deploy (review).
 - **AC-8** Right after the move, `status` lists the deploys made before it, and `rollback` goes to the previous one (manual, with the drill).
-- **AC-9** Asking to deploy or roll back to a commit from before #44 is refused with a message, and nothing changes; a commit from after #44 but before this change deploys fine (automated simulation).
+- **AC-9** Asking to deploy or roll back to a commit from before #44 is refused with a message, and nothing changes; a commit from after #44 but before this change deploys fine (unit test of `infra/ops/check-compose`; the drill rolls back to one).
 
 ## Out of scope
 

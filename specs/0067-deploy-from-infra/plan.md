@@ -99,6 +99,8 @@ The first `/review` found gaps in the merged `infra` tool; fixed in a second `in
 - **Third review:** the new images are pulled before anything changes (a registry problem is exit 3, not "unhealthy"), and the way back uses images already on the server; size and time limits on the downloaded compose file and its checks; the state folder is `chmod 700`. Accepted: a failing version's last container logs still go to the pipeline's log (as before), for debugging.
 - `xove`: the stage release publishes, deploys and notifies only for `main`; docs say what "unhealthy" means in time, and that a rollback to a version from before this change only waits for "running".
 
+**Simulation dropped (2026-09-28):** the Docker deploy simulation (`infra/ops/test_deploy.sh`) made every `infra` pull request wait over 10 minutes, which is too much for a one-person project. It was removed. Staging is the real test: the first deploy, the rollback drill and the real key cover AC-4, AC-5, AC-6 and AC-9, plus the fast `check-compose` unit tests. The test plan above is kept as it was written.
+
 ## Decided trade-offs
 
 Decided with Henrique on 2026-09-28:
