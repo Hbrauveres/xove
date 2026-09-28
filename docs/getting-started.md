@@ -28,63 +28,70 @@ npm run dev          # http://localhost:5173
 
 Vite forwards every `/api` request to `http://localhost:8080`, so the web app talks to a local API without any CORS setup. Without the API running, you'll see the home page and a failed sign-in.
 
+## Settings from 1Password
+
+Local settings come from the `infra` repo (`config/dev.yaml`, next to this repo's
+folder) and secrets from the 1Password vault `Xove App`, the same way the servers
+get theirs. Once per machine:
+
+1. Install the 1Password CLI **for Windows** and turn on **Settings → Developer →
+   Integrate with 1Password CLI** in the 1Password app (unlocks with the app).
+2. In WSL, make it reachable as `op`, and check it:
+
+   ```bash
+   mkdir -p ~/.local/bin && ln -sf "$(command -v op.exe)" ~/.local/bin/op
+   op vault list                   # shows Xove App among your vaults
+   ```
+
+3. Python 3 with PyYAML (`python3 -c "import yaml"`).
+
+Then, in every new terminal where you run Xovê:
+
+```bash
+eval "$(../infra/ops/build-env dev --export)"
+```
+
+It exports every variable in `config/dev.yaml`, secrets resolved from the vault,
+into that terminal only. Nothing is written to disk.
+
 ## Run the API
 
-The API needs a PostgreSQL database and Google OAuth credentials.
-
-**1. A database.** The quickest way is a throwaway container:
+**1. A database**, a throwaway container with the dev password from the vault:
 
 ```bash
 docker run -d --name xove-dev-db -p 5432:5432 \
-  -e POSTGRES_DB=xove -e POSTGRES_USER=xove -e POSTGRES_PASSWORD=dev \
+  -e POSTGRES_DB="$POSTGRES_DB" -e POSTGRES_USER="$POSTGRES_USER" -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
   postgres:17-alpine
 ```
 
-**2. Google OAuth credentials.** In the Google Cloud console, an OAuth client of type "Web application" with this authorized redirect URI:
+An older `xove-dev-db` made with the password `dev` won't accept the vault's
+password: remove it first (`docker rm -f xove-dev-db`).
 
-```
-http://localhost:5173/api/login/oauth2/code/google
-```
-
-Ask the maintainer for the development client, or create your own.
-
-**3. Start it:**
+**2. Start it:**
 
 ```bash
-cd api
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/xove
-export SPRING_DATASOURCE_USERNAME=xove
-export SPRING_DATASOURCE_PASSWORD=dev
-export GOOGLE_CLIENT_ID=<client id>
-export GOOGLE_CLIENT_SECRET=<client secret>
-export ADMIN_EMAILS=<your google email>
-./mvnw spring-boot:run          # http://localhost:8080/api/health
+cd api && ./mvnw spring-boot:run          # http://localhost:8080/api/health
 ```
 
-Flyway creates the tables on the first start. Your email in `ADMIN_EMAILS` makes you an admin and a member.
+Flyway creates the tables on the first start. Your email in `ADMIN_EMAILS` makes you an admin and a member. The Google client is the staging one; it also allows `http://localhost:5173`.
 
 Open http://localhost:5173, sign in with Google, and you land in the room.
 
-**4. Video (optional).** Sharing needs a LiveKit server. Run one in development mode with a key pair of your own (the API needs a secret of at least 32 characters, longer than LiveKit's built-in dev secret):
+**3. Video (optional).** Sharing needs a LiveKit server. Run one in development mode with the dev key pair from the vault:
 
 ```bash
 docker run -d --name xove-dev-livekit -p 7880:7880 -p 7881:7881 -p 7882:7882/udp \
   livekit/livekit-server:v1.13.7 --dev --bind 0.0.0.0 \
-  --keys "devkey: dev-secret-at-least-32-characters-long"
-
-export LIVEKIT_URL=ws://localhost:7880
-export LIVEKIT_API_KEY=devkey
-export LIVEKIT_API_SECRET=dev-secret-at-least-32-characters-long
+  --keys "$LIVEKIT_API_KEY: $LIVEKIT_API_SECRET"
 ```
 
-Restart the API after setting these. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a sharer who closes the tab keeps the slot until someone takes over; the full stack (`docker compose up`) has them.
+Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a sharer who closes the tab keeps the slot until someone takes over; the full stack (`docker compose up`) has them.
 
 ## Run the whole stack in Docker
 
-The same `compose.yaml` the servers use:
+The same `compose.yaml` the servers use, with the variables exported above:
 
 ```bash
-cp .env.example .env            # fill in the values
 docker network create web       # once; shared with the reverse proxy on servers
 docker compose up -d --build
 docker compose ps
@@ -104,7 +111,7 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | `LIVEKIT_URL` | api | Address browsers use to reach LiveKit (`wss://…` on servers) |
 | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api, livekit | Shared pair; the API signs tokens with it, LiveKit checks them. Secret ≥ 32 characters |
 
-`.env.example` in the repository lists them all. The real `.env` is never committed.
+Their values live in the `infra` repo, one file per environment (`config/dev.yaml`, `stage.yaml`…), with secrets as 1Password references. There's no `.env` in this repo; see [operations](operations.md) for how the servers build theirs.
 
 ## Next
 

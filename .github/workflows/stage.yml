@@ -79,10 +79,27 @@ jobs:
     env:
       TAG: ${{ needs.publish.outputs.tag }}
     steps:
+      # Secrets come from the 1Password vault "Xove CI" (spec 0043); the only
+      # secret stored in GitHub is the read-only token of the xove-ci service account.
+      - name: Load the deploy secrets from 1Password
+        id: vault
+        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
+        with:
+          version: 2.39.0
+          # Values only as this step's (masked) outputs, never in the job's environment.
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          DEPLOY_SSH_KEY: op://Xove CI/deploy-ssh/private key?ssh-format=openssh
+          DEPLOY_KNOWN_HOSTS: op://Xove CI/deploy-ssh/known-hosts
+          DEPLOY_HOST: op://Xove CI/deploy-ssh/host
+          DEPLOY_PORT: op://Xove CI/deploy-ssh/port
+          DEPLOY_USER: op://Xove CI/deploy-ssh/user
+
       - name: Set up the deploy key
         env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ steps.vault.outputs.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ steps.vault.outputs.DEPLOY_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
@@ -91,22 +108,16 @@ jobs:
 
       - name: Deploy (the VPS rolls back by itself if the new version isn't healthy)
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ steps.vault.outputs.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ steps.vault.outputs.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ steps.vault.outputs.DEPLOY_USER }}
         # The key only runs ops/deploy.sh on the VPS; "deploy <sha>" is its argument.
+        # ops/deploy.sh checks health on the VPS and rolls back by itself; there's
+        # no second check from outside (it would need the staging gate's cookie).
         run: |
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
             "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA"
-
-      - name: Check staging from the internet
-        env:
-          STAGE_COOKIE: ${{ secrets.STAGE_COOKIE }}
-        run: |
-          curl -fsS --retry 5 --retry-delay 3 --retry-all-errors \
-            --cookie "xove_stage=$STAGE_COOKIE" \
-            https://stage.xove.app/api/health
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -163,9 +174,20 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Load the Discord webhook from 1Password
+        id: vault
+        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
+        with:
+          version: 2.39.0
+          # Values only as this step's (masked) outputs, never in the job's environment.
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          DISCORD_WEBHOOK_URL: op://Xove CI/discord-webhook/password
+
       - name: Post the result to Discord
         env:
-          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          WEBHOOK: ${{ steps.vault.outputs.DISCORD_WEBHOOK_URL }}
           CHECKS: ${{ needs.checks.result }}
           PUBLISH: ${{ needs.publish.result }}
           DEPLOY: ${{ needs.deploy-stage.result }}
