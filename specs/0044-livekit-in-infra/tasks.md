@@ -1,0 +1,38 @@
+# LiveKit in infra, one server per environment — tasks
+
+- Plan: [plan.md](plan.md)
+
+Each task is small enough for one commit, leaves the build green, and says which requirements it serves and how it's verified. Tick a task only when its verification passes. The repo each task changes is in brackets; tasks marked **Henrique** are done by hand outside the repos.
+
+- [ ] **T1** [xove] The room comes from `LIVEKIT_ROOM` (`application.yml`: `room: ${LIVEKIT_ROOM:xove}`) · covers FR-3 · verify: `LiveKitControllerTest#usesTheConfiguredRoom` (a non-default room reaches the browser and the token), `./mvnw test`
+- [ ] **T2** [xove] The webhook ignores events for any room other than its own (one debug log line) · covers FR-4, FR-5 · verify: `LiveKitWebhookControllerTest#ignoresEventsFromAnotherRoom` (a valid, signed `participant_left` for the sharer from another room changes nothing); the existing webhook tests still pass
+- [ ] **T3** [infra] `livekit/compose.yaml`: LiveKit once, container `livekit-${LIVEKIT_ENV}`, `LIVEKIT_KEYS` and `LIVEKIT_CONFIG` built from the environment's settings (ports listened on and published, webhook URL, key), network `web`, required values `${VAR:?}`; README explains it · covers FR-1, FR-2, FR-6 · verify: `checks.yml` step with a dummy env file: `docker compose config` passes, the container gets only `LIVEKIT_KEYS` and `LIVEKIT_CONFIG`, the published ports are the configured ones
+- [ ] **T4** **Henrique**: DNS A record `rtc` → the VPS; open 7883/tcp and 7884/udp in ufw and the Hostinger panel; generate the production key pair (`livekit-server generate-keys`) and store it in `Xove App` as `livekit-prod` (username = key, password = secret) · covers FR-2 · verify: `dig +short rtc.xove.app` shows the VPS; `ufw status` lists both ports; the vault item exists
+- [ ] **T5** [infra] Settings and sites: `config/stage.yaml` gains `LIVEKIT_ENV`, the ports, the webhook URL and `LIVEKIT_ROOM: xove-stage`; new `config/prod.yaml` with only the `livekit` group; `proxy/sites/rtc-stage.caddy` points to `livekit-stage:7880`; new `proxy/sites/rtc.caddy` for `rtc.xove.app` → `livekit-prod:7880` · covers FR-2, FR-3, FR-5 · verify: `check-config` and `caddy validate` in CI; `build-env stage --check` and `build-env prod --check` on the VPS
+- [ ] **T6** Local run: both LiveKit projects from `infra/livekit/compose.yaml` with dummy settings plus this branch's API; each server starts on its own ports; a join and leave on the staging server reaches the API's webhook; tokens signed for one server are refused by the other · covers FR-2, FR-4 · verify: results written in the PR (a rehearsal of AC-4 and AC-5)
+- [ ] **T7** [xove] `compose.yaml` drops the `livekit` service; the API gets `LIVEKIT_ROOM: ${LIVEKIT_ROOM:-xove}` · covers FR-1 · verify: AC-1 `git grep` finds no LiveKit server config outside the docs; commit checks (the validate stage doesn't need LiveKit)
+- [ ] **T8** Docs in both repos: `architecture.md`, `operations.md`, `deployment.md`, `getting-started.md`, `CLAUDE.md`, `infra/README.md` · covers FR-7 · verify: AC-8 review
+- [ ] **T9** Review every AC (`/review`) · verify: no gaps left
+- [ ] **T10** Rollout (Henrique, with Claude): merge `infra`; build `stage` and `prod` on the VPS; merge `xove` (the deploy removes the old LiveKit); start `livekit-stage` and recreate the proxy (AC-2, AC-5 logs); start `livekit-prod` (AC-7); token cross-checks with the LiveKit CLI (AC-4); published ports (AC-6) · covers FR-2, FR-4, FR-5, FR-6, FR-7 · verify: AC-2, AC-4, AC-5, AC-6, AC-7 written in the PR
+
+## Coverage
+
+| Requirement | Tasks |
+| --- | --- |
+| FR-1 | T3, T7 |
+| FR-2 | T3, T4, T5, T6, T10 |
+| FR-3 | T1, T5 |
+| FR-4 | T2, T6, T10 |
+| FR-5 | T2, T5, T10 |
+| FR-6 | T3, T10 |
+| FR-7 | T8, T10 |
+| AC-1 | T7 |
+| AC-2 | T10 |
+| AC-3 | T1 |
+| AC-4 | T6 (rehearsal), T10 |
+| AC-5 | T2, T6, T10 |
+| AC-6 | T10 |
+| AC-7 | T10 |
+| AC-8 | T8 |
+
+Nothing uncovered. AC-2, AC-4, AC-6 and AC-7 need the real server; T6 rehearses AC-4 and AC-5 locally first.
