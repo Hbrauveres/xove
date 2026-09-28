@@ -7,7 +7,7 @@ Read this first in any session about this repository.
 Xovê: a private web app where one person shares their screen and invited friends watch it. React web app (`web/`), Java 21 + Spring Boot API (`api/`), PostgreSQL, a self-hosted LiveKit server, all in Docker Compose on one VPS behind a shared Caddy proxy (configured in the separate private `infra` repo).
 
 - Project wiki: `docs/` (start at `docs/README.md`). Architecture, testing, pipeline, deployment, operations, decisions.
-- Build plan with the roadmap, requirements and acceptance criteria: the Claude Doc "Xovê build plan" (Henrique has the link). It's the source of truth for what's next.
+- What's next: the backlog in GitHub Issues, on the "Xovê" project board, grouped by milestone (one per roadmap step). Each issue holds its requirements until its spec is written. The early build plan (`xove-plan.md`) is retired.
 
 ## Who you're working with
 
@@ -19,7 +19,7 @@ Henrique, software engineer, owner of the project. He builds Xovê to learn and 
 2. **Show before you act outward.** Before every commit, show Henrique the `git diff` (or a summary plus the full diff on request) and wait for his approval. Pushes, issues, issue comments and PRs also need his approval (`.claude/settings.json` asks for them).
 3. **Henrique merges and releases.** Merging a PR, creating `v*` tags and anything on the VPS stay with him; never try to work around the denied commands in `.claude/settings.json`.
 4. Every push runs the commit checks; `main` only accepts PRs whose checks pass. Merges to `main` deploy to staging automatically.
-5. Update the build plan doc after every milestone: tick what's done, record decisions.
+5. After every milestone: close or update its issues, record decisions in `docs/decisions.md`, and update this file.
 
 ## Spec-driven development
 
