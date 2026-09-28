@@ -22,7 +22,8 @@ Each task is small enough for one commit, leaves the build green, and says which
   - Done: architecture (diagram, rule 6, webhooks paragraph, endpoints, layout), operations (log lines, troubleshooting), getting-started (dev LiveKit has no webhooks), decisions #24; the diagram renders.
 - [x] **T9** — Review every AC (`/review`) · verify: no gaps left
   - Done: spec-reviewer found every FR/AC covered (AC-9 manual). Fixed after review: take requires both ids (FR-7, AC-10, no fallback), guard for a signed event without a name, note on AC-7, `CLAUDE.md` counts.
-- [ ] **T10** — After merge, manual AC-9 on staging with two browsers: Ana shares, closes her tab; within 10 s Bruno sees "Nobody is sharing right now" and "Ana stopped sharing" · covers FR-5, FR-6 · verify: result written in the PR
+- [x] **T10** — After merge, manual AC-9 on staging with two browsers: Ana shares, closes her tab; within 10 s Bruno sees "Nobody is sharing right now" and "Ana stopped sharing" · covers FR-5, FR-6 · verify: result written in the PR
+  - Done: checked on staging by Henrique after PR #39 deployed (2026-09-27): closing the sharer's tab freed the stage for the viewer and the feed showed "stopped sharing".
 
 ## Coverage
 
