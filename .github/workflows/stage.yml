@@ -86,6 +86,8 @@ jobs:
         uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
         with:
           version: 2.39.0
+          # Values only as this step's (masked) outputs, never in the job's environment.
+          export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           DEPLOY_SSH_KEY: op://Xove CI/deploy-ssh/private key?ssh-format=openssh
@@ -177,6 +179,8 @@ jobs:
         uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
         with:
           version: 2.39.0
+          # Values only as this step's (masked) outputs, never in the job's environment.
+          export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           DISCORD_WEBHOOK_URL: op://Xove CI/discord-webhook/password

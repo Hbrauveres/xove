@@ -12,10 +12,10 @@
 app:
   APP_ENV: stage
   LIVEKIT_URL: wss://rtc-stage.xove.app
-  GOOGLE_CLIENT_SECRET: op://Xove/google-oauth-stage/secret
+  GOOGLE_CLIENT_SECRET: op://Xove App/google-oauth-stage/secret
 db:
   POSTGRES_DB: xove
-  POSTGRES_PASSWORD: op://Xove/postgres-stage/password
+  POSTGRES_PASSWORD: op://Xove App/postgres-stage/password
 ```
 
 A reference isn't a secret, so the whole file lives in git and shows exactly what an environment needs and where each value comes from.
@@ -115,3 +115,5 @@ No API or database changes.
 **Two vaults** (Henrique, 2026-09-28): `Xove` for runtime secrets, read by the server; `Xove CI` for pipeline secrets, read by the pipeline. A leaked CI token can't read the database password or the Google secret. The spec's FR-1 is amended to "the Xovê vaults".
 
 **Naming (2026-09-28):** the runtime vault is `Xove App`; references look like `op://Xove App/livekit-stage/password`. Built-in fields are used where they fit (`username`, `password`) plus labelled custom fields (`hash`, `cookie`, `host`, `port`, `user`, `known-hosts`). Public values (client id, database name and user, URLs) are settings in `config/`, not vault items.
+
+**Accepted exception (review, 2026-09-28):** the two service account tokens stay in Henrique's own vault, not in the Xove vaults they unlock. Every other secret, including the server's GHCR read token (`ghcr-read-token`), lives in `Xove App` or `Xove CI`.

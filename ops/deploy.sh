@@ -81,6 +81,19 @@ build_env() {
   "$INFRA_DIR/ops/build-env" "$ENVIRONMENT" || fail "couldn't build the $ENVIRONMENT settings; nothing was changed"
 }
 
+# Fails unless Compose resolves web and api to <tag>, so a Compose that ignored
+# the settings files can't quietly run the previous images and report "ok".
+images_resolve_to() {
+  local tag="$1" images image
+  images="$(docker compose config --images web api)" || return 1
+  for image in $images; do
+    if [[ "$image" != *":$tag" ]]; then
+      echo "[deploy] error: compose doesn't resolve the images to $tag (got $image)" >&2
+      return 1
+    fi
+  done
+}
+
 # Puts the checkout on <commit> and runs the images tagged <tag>.
 # Each line checks itself: `set -e` doesn't apply inside a function that is
 # called as an `if` condition, which is how deploy() uses this one.
@@ -89,6 +102,7 @@ switch_to() {
   git fetch --quiet origin || return 1
   git reset --quiet --hard "$commit" || return 1
   set_tag "$tag" || return 1
+  images_resolve_to "$tag" || return 1
   docker compose pull --quiet web api || return 1
   docker compose up -d --no-build --remove-orphans || return 1
 }

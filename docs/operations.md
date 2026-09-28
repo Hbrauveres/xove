@@ -77,7 +77,7 @@ Change data through the app (admin page) rather than by hand, so the rules (sess
 
 Nobody writes a `.env` by hand. Each environment's settings are built from two sources ([spec 0043](../specs/0043-secrets-vault/spec.md), decisions 25 and 27):
 
-- **Public settings** live in git, in the private `infra` repo: `config/<env>.yaml` (`platform` for the shared proxy, `stage`, `prod`, `dev`), grouped by service. A secret appears there only as a 1Password reference, `op://<vault>/<item>/<field>`; CI refuses a plain value for any key ending in `_SECRET`, `_PASSWORD`, `_TOKEN`, `_HASH`, `_COOKIE` or `_KEY`.
+- **Public settings** live in git, in the private `infra` repo: `config/<env>.yaml` (`platform` for the shared proxy, `stage`, `dev`; `prod` arrives with production, #46), grouped by service. A secret appears there only as a 1Password reference, `op://<vault>/<item>/<field>`; CI refuses a plain value for any key ending in `_SECRET`, `_PASSWORD`, `_TOKEN`, `_HASH`, `_COOKIE` or `_KEY`.
 - **Secrets** live only in 1Password, in two vaults:
 
 | Vault | Holds | Read by |
@@ -98,9 +98,10 @@ Nobody writes a `.env` by hand. Each environment's settings are built from two s
 | `postgres-dev`, `livekit-dev` | Xove App | as above | Local development only |
 | `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release |
 | `discord-webhook` | Xove CI | `password` (the URL) | Stage release |
-| `op-token xove-server`, `op-token xove-ci` | Henrique's own vault | the service account tokens | Kept to re-create them; in use on the server and in GitHub |
+| `ghcr-read-token` | Xove App | `password` (GitHub token, `read:packages` only) | The server's `docker login ghcr.io`, to pull the app's images |
+| `op-token xove-server`, `op-token xove-ci` | Henrique's own vault | the service account tokens | In use on the server and in GitHub. Kept outside the Xove vaults on purpose: they're the keys to those vaults |
 
-Also outside the vaults' reach: the server's GHCR read token (in Docker's login on the server, a copy in Henrique's vault) and the SSH keys Henrique uses himself. Production's items are added with production (#46).
+Henrique's own SSH keys stay in his own vault. Production's items are added with production (#46).
 
 ## Rotating a secret
 
