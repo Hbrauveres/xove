@@ -42,4 +42,4 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 - LiveKit runs from the `infra` repo, one server per environment: staging `rtc-stage.xove.app` (room `xove-stage`), production `rtc.xove.app` (room `xove`).
 - Staging: `stage.xove.app` (behind an extra gate). Production: `xove.app` (placeholder until launch).
 - Images: `ghcr.io/hbrauveres/xove-api`, `ghcr.io/hbrauveres/xove-web`, tagged `sha-<12 chars of the commit>`.
-- On the server, `ops/deploy.sh status | deploy <sha> | rollback` in the environment's checkout.
+- On the server, deploys run from the `infra` repo, not a checkout of this one: `/srv/infra/ops/deploy.sh xove <env> status | deploy <sha> | rollback`.
