@@ -138,6 +138,17 @@ class LiveKitWebhookControllerTest {
         assertThat(holder()).isEqualTo(ana.getId());
     }
 
+    // Spec 0044, AC-5: each environment only acts on its own room.
+    @Test
+    void ignoresEventsFromAnotherRoom() throws Exception {
+        anaShares();
+
+        send(left(ana, "PA_ana").replace("\"name\":\"xove\"", "\"name\":\"xove-stage\""))
+                .andExpect(status().isOk());
+
+        assertThat(holder()).isEqualTo(ana.getId());
+    }
+
     @Test
     void ignoresOtherEventsAndStrangeIdentities() throws Exception {
         anaShares();
