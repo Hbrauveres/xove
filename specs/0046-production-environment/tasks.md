@@ -6,7 +6,8 @@ Each task is small enough for one commit, leaves the build green, and says which
 
 Done outside the repos (Henrique, 2026-09-29): Google OAuth client for production (`google-oauth-prod`), `postgres-prod`, `deploy-ssh-prod`, and the `www` DNS record.
 
-- [ ] **T1** [infra] Production's settings in `config/prod.yaml`: the `app` and `db` groups (room `xove`, own Google client, own database password) · covers FR-2, FR-4, FR-5 · verify: `ops/check-config` and the infra tests pass; on the VPS, `ops/build-env prod --check` lists every key
+- [x] **T1** [infra] Production's settings in `config/prod.yaml`: the `app` and `db` groups (room `xove`, own Google client, own database password) · covers FR-2, FR-4, FR-5 · verify: `ops/check-config` and the infra tests pass; on the VPS, `ops/build-env prod --check` lists every key
+  - Done: `app` and `db` groups in `config/prod.yaml` (own Google client and database password, room `xove`); `build-env prod --check` resolves 15 values on Henrique's laptop. New CI step: every variable the app's `compose.yaml` uses must be set in `stage.yaml` and `prod.yaml` (fails when one is missing, tested).
 - [ ] **T2** [infra] Security updates: `host/apt/52xove-unattended-upgrades` (security only, restart at 04:00) and how to install it in the README · covers FR-14 · verify: the file is valid for `unattended-upgrades --dry-run` on the VPS
 - [ ] **T3** [xove] `release.yml`, first two stages: "Check the release" (tag format, on `main`, stage release green, images exist) and "Tag the images" (`vX.Y.Z` and `prod`, same digests) · covers FR-7, FR-8, FR-9 · verify: actionlint clean
 - [ ] **T4** [xove] `release.yml`: "Deploy production" (production's key), "Check production" (from the internet), and "Roll back production" (runs when the check fails, and alone from the "Run workflow" button) · covers FR-10, FR-11, FR-12 · verify: actionlint clean; review that the button and the failed check run the same job
