@@ -105,7 +105,7 @@ jobs:
         # The same images (same digests) under a second name; nothing is rebuilt.
         run: |
           for service in api web; do
-            docker buildx imagetools create -t "$IMAGE_PREFIX-$service:$GITHUB_REF_NAME" "$IMAGE_PREFIX-$service:$TAG"
+            docker buildx imagetools create --prefer-index=false -t "$IMAGE_PREFIX-$service:$GITHUB_REF_NAME" "$IMAGE_PREFIX-$service:$TAG"
           done
           echo "\`$TAG\` is also \`$GITHUB_REF_NAME\`." >> "$GITHUB_STEP_SUMMARY"
 
