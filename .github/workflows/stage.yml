@@ -107,9 +107,10 @@ jobs:
           DEPLOY_KNOWN_HOSTS: ${{ steps.vault.outputs.DEPLOY_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          # Keys saved in the Windows 1Password app come with \r\n line endings, which ssh can't read.
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
 
       - name: Deploy (the VPS rolls back by itself if the new version isn't healthy)
         id: deploy
