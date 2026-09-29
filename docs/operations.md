@@ -5,12 +5,12 @@ Day-to-day checks and fixes on a server running Xovê. There's no checkout of th
 ## Is it up?
 
 ```bash
-/srv/infra/ops/deploy.sh xove stage status     # running version, last deploys, containers
+/srv/infra/ops/deploy.sh xove stage status     # running version, last deploys, containers (or: xove prod status)
 ls -t /srv/infra/state/xove-stage/logs | head   # the output of recent deploys and rollbacks
 docker ps --filter name=xove-stage              # every container, restarts, health ("healthy" comes from compose.yaml)
 ```
 
-From anywhere: `https://<environment host>/api/health` answers `{"status":"UP"}` (staging needs its gate passed first).
+From anywhere: `https://xove.app/api/health` answers `{"status":"UP"}` (staging's, at `stage.xove.app`, needs its gate passed first).
 
 ## Logs
 
@@ -49,10 +49,12 @@ What to look for:
 ## Restarting and updating
 
 ```bash
-/srv/infra/ops/deploy.sh xove stage deploy <commit-sha>   # move to another published version (rebuilds the settings first)
-/srv/infra/ops/deploy.sh xove stage rollback              # back to the previous deploy
+/srv/infra/ops/deploy.sh xove stage deploy <commit-sha>   # staging only: move to another published version (rebuilds the settings first)
+/srv/infra/ops/deploy.sh xove stage rollback              # staging only: back to the previous deploy
 docker restart xove-stage-api                             # restart one container as it is
 ```
+
+Production is never deployed or rolled back by hand: release a version tag, or run **Production release** → **Run workflow** to roll back ([Deployment](deployment.md#production-releases)).
 
 Changed settings or secrets need a redeploy of the running version (`deploy <current sha>`): a restart doesn't re-read them.
 
@@ -80,13 +82,13 @@ Change data through the app (admin page) rather than by hand, so the rules (sess
 
 Nobody writes a `.env` by hand. Each environment's settings are built from two sources ([spec 0043](../specs/0043-secrets-vault/spec.md), decisions 25 and 27):
 
-- **Public settings** live in git, in the private `infra` repo: `config/<env>.yaml` (`platform` for the shared proxy, `stage`, `dev`; `prod` arrives with production, #46), grouped by service. A secret appears there only as a 1Password reference, `op://<vault>/<item>/<field>`; CI refuses a plain value for any key ending in `_SECRET`, `_PASSWORD`, `_TOKEN`, `_HASH`, `_COOKIE` or `_KEY`.
+- **Public settings** live in git, in the private `infra` repo: `config/<env>.yaml` (`platform` for the shared proxy, `stage`, `prod`, `dev`), grouped by service. A secret appears there only as a 1Password reference, `op://<vault>/<item>/<field>`; CI refuses a plain value for any key ending in `_SECRET`, `_PASSWORD`, `_TOKEN`, `_HASH`, `_COOKIE` or `_KEY`.
 - **Secrets** live only in 1Password, in two vaults:
 
 | Vault | Holds | Read by |
 | --- | --- | --- |
 | `Xove App` | Everything the running services need (per environment), plus the throwaway dev values | The server, with the service account `xove-server` (read only, this vault only) |
-| `Xove CI` | What the pipeline needs to deploy and notify | The stage release, with the service account `xove-ci` (read only, this vault only) |
+| `Xove CI` | What the pipeline needs to deploy and notify | The stage and production releases, with the service account `xove-ci` (read only, this vault only) |
 
 `infra/ops/build-env <env>` resolves the references and writes `/srv/infra/generated/<env>.env` (`chmod 600`, never committed). If anything is missing, it names the key and keeps the previous file. On the server it authenticates with `~/.config/op/token`; `ops/deploy.sh` runs it before every deploy and rollback. Locally, `eval "$(../infra/ops/build-env dev --export)"` loads the dev values into one terminal ([getting started](getting-started.md#settings-from-1password)).
 
@@ -97,15 +99,18 @@ Nobody writes a `.env` by hand. Each environment's settings are built from two s
 | `google-oauth-stage` | Xove App | `password` (client secret) | API (staging and local dev) |
 | `postgres-stage` | Xove App | `password` | db, API |
 | `livekit-stage` | Xove App | `username` (API key), `password` (API secret) | Staging's LiveKit and API |
-| `livekit-prod` | Xove App | `username` (API key), `password` (API secret) | Production's LiveKit (and its API, from #46) |
+| `google-oauth-prod` | Xove App | `password` (client secret) | Production's API |
+| `postgres-prod` | Xove App | `password` | Production's db and API |
+| `livekit-prod` | Xove App | `username` (API key), `password` (API secret) | Production's LiveKit and API |
 | `stage-gate` | Xove App | `password`, `hash`, `cookie` | You (the gate prompt), the proxy |
 | `postgres-dev`, `livekit-dev` | Xove App | as above | Local development only |
-| `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release |
-| `discord-webhook` | Xove CI | `password` (the URL) | Stage release |
+| `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release (can only deploy staging) |
+| `deploy-ssh-prod` | Xove CI | as above | Production release (can only deploy production) |
+| `discord-webhook` | Xove CI | `password` (the URL) | Stage and production releases |
 | `ghcr-read-token` | Xove App | `password` (GitHub token, `read:packages` only) | The server's `docker login ghcr.io`, to pull the app's images |
 | `op-token xove-server`, `op-token xove-ci` | Henrique's own vault | the service account tokens | In use on the server and in GitHub. Kept outside the Xove vaults on purpose: they're the keys to those vaults |
 
-Henrique's own SSH keys stay in his own vault. Production's items are added with production (#46).
+Henrique's own SSH keys stay in his own vault.
 
 ## Rotating a secret
 
@@ -124,4 +129,4 @@ Specific cases:
 
 ## Server hardening in place
 
-SSH with keys only on a non-default port (enforced by `/etc/ssh/sshd_config.d/00-keys-only.conf`: Ubuntu's `50-cloud-init.conf` had turned password logins back on, and sshd keeps the first value it reads), no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall (ports published by Docker, like LiveKit's media ports, bypass the host firewall, so the provider's firewall is the one that decides for them), and no container ports published except the reverse proxy and LiveKit's media. Automatic security updates are planned before production opens to members.
+SSH with keys only on a non-default port (enforced by `/etc/ssh/sshd_config.d/00-keys-only.conf`: Ubuntu's `50-cloud-init.conf` had turned password logins back on, and sshd keeps the first value it reads), no root login, fail2ban (its `sshd` jail is overridden in `/etc/fail2ban/jail.d/sshd.local` to watch `ssh.service` and ban on the real SSH port; the Ubuntu defaults watched `sshd.service` and port 22, so it caught nothing until 2026-09-28), a host firewall plus the provider's firewall (ports published by Docker, like LiveKit's media ports, bypass the host firewall, so the provider's firewall is the one that decides for them), and no container ports published except the reverse proxy and LiveKit's media. Security updates install by themselves every day (`unattended-upgrades`, settings in `infra/host/apt/90security-updates`); when one needs a restart, the server restarts at 04:00 server time and every container comes back on its own (`restart: unless-stopped`). Check with `systemctl status unattended-upgrades` and `/var/log/unattended-upgrades/`.

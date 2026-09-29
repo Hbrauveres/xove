@@ -40,6 +40,6 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 
 - Test counts at the last checkpoint: API 93, web 45 (2026-09-28, spec 0044).
 - LiveKit runs from the `infra` repo, one server per environment: staging `rtc-stage.xove.app` (room `xove-stage`), production `rtc.xove.app` (room `xove`).
-- Staging: `stage.xove.app` (behind an extra gate). Production: `xove.app` (placeholder until launch).
+- Staging: `stage.xove.app` (behind an extra gate), deployed on every merge. Production: `xove.app`, released only by a version tag `vX.Y.Z` (`release.yml`); its "Run workflow" button rolls production back. `v0.0.x` are test releases until backups exist (#42).
 - Images: `ghcr.io/hbrauveres/xove-api`, `ghcr.io/hbrauveres/xove-web`, tagged `sha-<12 chars of the commit>`.
-- On the server, deploys run from the `infra` repo, not a checkout of this one: `/srv/infra/ops/deploy.sh xove <env> status | deploy <sha> | rollback`.
+- On the server, deploys run from the `infra` repo, not a checkout of this one: `/srv/infra/ops/deploy.sh xove <env> status | deploy <sha> | rollback`. By hand only for staging; each environment has its own deploy key.
