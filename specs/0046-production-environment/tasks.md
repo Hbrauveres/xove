@@ -18,7 +18,8 @@ Done outside the repos (Henrique, 2026-09-29): Google OAuth client for productio
   - Done: GitHub Release with generated notes after a passing check (pre-release for `v0.0.x`); Discord for every result (released, failed and rolled back, failed deploy, refused, manual rollback). Checked: actionlint.
 - [x] **T6** Docs: `deployment.md`, `pipeline.md`, `operations.md`, a new decision in `decisions.md`, `CLAUDE.md`; nothing says to deploy production by hand · covers FR-15 · verify: review
   - Done: `deployment.md` (environments table, "Production releases", staging-only manual deploys), `pipeline.md` (the three pipelines, when each runs, failures, secrets), `operations.md` (production's secrets, security updates, no manual production deploys), decision 30, `CLAUDE.md` facts. Also in `infra`: the `xove.app` proxy site with the `www` redirect, and a CI step that checks the proxy's sites are valid.
-- [ ] **T7** Review every AC (`/review`) · verify: no gaps left
+- [x] **T7** Review every AC (`/review`) · verify: no gaps left
+  - Done: review found no blocker. Fixed: Discord messages for a failed check whose rollback failed, time limits on every job, the staging check counts only green stage releases of `main` pushes, docs. Left for Henrique: the rollout order (see the PR) and an optional GitHub Environment for production's key.
 - [ ] **T8** Rollout · covers FR-1, FR-3, FR-6 · verify: AC-1 to AC-13 written in the PR:
   1. Merge the `infra` PR; on the VPS: `git pull`, add production's public key to `authorized_keys` (`command="/srv/infra/ops/deploy.sh xove prod",restrict`), install the update settings, `ops/build-env prod --check`.
   2. Merge the `xove` PR; tag `v0.0.1`; the production release goes green (AC-6).
