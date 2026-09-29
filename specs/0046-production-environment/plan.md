@@ -41,7 +41,7 @@ The same workflow has a **"Run workflow" button** (manual run) that does only st
 | Pipeline | `xove/.github/workflows/release.yml` (new) | "Production release": the stages above, on `v*` tags, plus the manual rollback |
 | Config | `infra/config/prod.yaml` | Adds the `app` and `db` groups: `APP_ENV: prod`, `LIVEKIT_ROOM: xove`, `ADMIN_EMAILS`, `GOOGLE_CLIENT_ID` (public), `GOOGLE_CLIENT_SECRET` and `POSTGRES_PASSWORD` (vault references), `POSTGRES_DB`, `POSTGRES_USER` |
 | Proxy | `infra/proxy/sites/xove.caddy` | The real site plus the `www` redirect |
-| Server | `infra/host/apt/52xove-unattended-upgrades` (new) + `infra/README.md` | Security updates only; automatic restart at 04:00 |
+| Server | `infra/host/apt/90security-updates` (new) + `infra/README.md` | Security updates only; automatic restart at 04:00 |
 | Docs | `xove/docs/deployment.md`, `pipeline.md`, `operations.md`, `decisions.md`, `CLAUDE.md` | How production is set up, released and rolled back; no manual deploy |
 | API, web, database | — | None |
 
