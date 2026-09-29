@@ -144,7 +144,7 @@ jobs:
       - name: Mark these images as the ones on stage
         run: |
           for service in api web; do
-            docker buildx imagetools create -t "$IMAGE_PREFIX-$service:stage" "$IMAGE_PREFIX-$service:$TAG"
+            docker buildx imagetools create --prefer-index=false -t "$IMAGE_PREFIX-$service:stage" "$IMAGE_PREFIX-$service:$TAG"
           done
           echo "Staging now runs \`$TAG\`." >> "$GITHUB_STEP_SUMMARY"
 
