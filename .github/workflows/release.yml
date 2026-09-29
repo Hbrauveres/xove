@@ -24,7 +24,8 @@ permissions:
 
 concurrency:
   group: production-release
-  # Releases and rollbacks run one at a time, in order; none is cancelled.
+  # Releases and rollbacks run one at a time; a running one is never cancelled.
+  # GitHub keeps only one run waiting: a newer one replaces it (and that one posts nothing).
   cancel-in-progress: false
 
 env:
@@ -37,6 +38,10 @@ jobs:
     name: 1 · Check the release
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read   # to read the commit's stage release
     outputs:
       tag: ${{ steps.images.outputs.tag }}
     steps:
@@ -58,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          green=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/stage.yml/runs?head_sha=$GITHUB_SHA&status=success" --jq .total_count)
+          green=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/stage.yml/runs?head_sha=$GITHUB_SHA&status=success&event=push&branch=main" --jq .total_count)
           if [[ "$green" == 0 ]]; then
             echo "::error::${GITHUB_SHA::12} never passed a stage release; release a commit that runs on staging"; exit 1
           fi
@@ -84,6 +89,7 @@ jobs:
     name: 2 · Tag the images
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       packages: write
     env:
@@ -108,6 +114,7 @@ jobs:
     name: 3 · Deploy production
     needs: promote
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # Production's own key (spec 0046), from the 1Password vault "Xove CI". On the VPS it
       # can only run infra's ops/deploy.sh for xove on production (a forced command).
@@ -153,6 +160,7 @@ jobs:
     name: 4 · Check production
     needs: deploy-production
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: xove.app and its API answer from the internet
         # Up to 2 minutes: the page loads and the API says it's up.
@@ -180,6 +188,7 @@ jobs:
         (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
       )
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Load production's deploy key from 1Password
         id: vault
@@ -231,6 +240,7 @@ jobs:
     name: 6 · GitHub Release
     needs: check-production
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     steps:
@@ -250,6 +260,7 @@ jobs:
     needs: [verify, promote, deploy-production, check-production, rollback-production, github-release]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Load the Discord webhook from 1Password
         id: vault
@@ -286,8 +297,10 @@ jobs:
           if [[ "$EVENT" == "workflow_dispatch" ]]; then
             if [[ "$ROLLBACK" == "success" ]]; then
               title="↩️ Production rolled back"; color=15105570
+            elif [[ "$ROLLBACK" == "skipped" ]]; then
+              title="⏭️ Rollback skipped: run it from main"; color=9807270
             else
-              title="❌ Production rollback failed"; color=15158332
+              title="❌ Production rollback failed: check the server"; color=15158332
             fi
             stages="$(icon "$ROLLBACK") Roll back"
           else
@@ -295,9 +308,11 @@ jobs:
               title="✅ Production release: $GITHUB_REF_NAME is live"; color=3066993
             elif [[ "$ROLLBACK" == "success" ]]; then
               title="❌ Production release $GITHUB_REF_NAME failed its check; rolled back"; color=15158332
-            elif [[ "$DEPLOY" == "failure" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME failed to deploy; the VPS kept or restored the previous version"; color=15158332
-            elif [[ "$VERIFY" == "cancelled" || "$PROMOTE" == "cancelled" || "$DEPLOY" == "cancelled" ]]; then
+            elif [[ "$CHECK" == "failure" || "$CHECK" == "cancelled" ]]; then
+              title="❌ Production release $GITHUB_REF_NAME failed its check and wasn't rolled back: production may be broken, check the server"; color=15158332
+            elif [[ "$DEPLOY" == "failure" || "$DEPLOY" == "cancelled" ]]; then
+              title="❌ Production release $GITHUB_REF_NAME failed to deploy: see the run log (the VPS rolls back by itself when it can)"; color=15158332
+            elif [[ "$VERIFY" == "cancelled" || "$PROMOTE" == "cancelled" ]]; then
               title="⚪ Production release $GITHUB_REF_NAME cancelled"; color=9807270
             else
               title="❌ Production release $GITHUB_REF_NAME failed; production didn't change"; color=15158332

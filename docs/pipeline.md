@@ -96,11 +96,11 @@ Renaming a job changes its check name. When that happens, update the branch rule
 | SAST | Log: file, line and rule | Fix the code; if it's a false positive, add a `# nosemgrep: <rule-id>` comment with the reason |
 | Deploy stage | Log shows the server's own output, including the rollback | Staging is already back on the previous version. Fix forward with a new PR |
 | Check the release (production) | Log: which check failed | Tag a commit that is on `main` and has a green stage release |
-| Deploy production / Check production | Log shows the server's output, or which address didn't answer | Production is back on the previous version (the server or stage 5 rolled it back). Fix forward, then tag a new version |
+| Deploy production / Check production | Log shows the server's output, or which address didn't answer | Production is back on the previous version (the server or stage 5 rolled it back), unless Discord or the log says the rollback failed or there was nothing to roll back to: then check the server. Fix forward, then tag a new version |
 
 To retry a flaky job: open the run and click **Re-run failed jobs** (or `gh run rerun <run-id> --failed`).
 
-**Discord notifications.** Every stage release and every production release (or rollback) ends with **Notify Discord**, which posts to a Discord channel through a webhook: success (which `sha-…` is live), failure or cancellation, the commit, each stage's result and links to the run and to staging. It never pings anyone (mentions are disabled), and it only warns in the run if the webhook secret is missing. Commit checks on branches don't notify: you're watching those as you push.
+**Discord notifications.** Every stage release, production release and rollback ends with **Notify Discord**, which posts to a Discord channel through a webhook: success (which `sha-…` is live on staging, or which version is live on production), failure or cancellation, the commit, each stage's result and links to the run and to the environment. It never pings anyone (mentions are disabled), and it only warns in the run if the webhook secret is missing. Commit checks on branches don't notify: you're watching those as you push. Production releases run one at a time; if two wait at once, GitHub keeps only the newest, and the replaced one posts nothing.
 
 ## Vulnerability policy
 

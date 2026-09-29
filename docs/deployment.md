@@ -102,7 +102,7 @@ One-time steps per environment. Values (host, user, keys) go in 1Password, not h
    ```
    Each environment has its own key: `deploy-ssh` for staging, `deploy-ssh-prod` for production.
 4. **Pipeline secrets:** store the private key, the server's host key (`ssh-keyscan`), host, port and user in that environment's item of the `Xove CI` vault (see [Pipeline](pipeline.md#secrets-the-pipeline-uses)).
-5. **First deploy:** merge anything to `main`, or run the pipeline manually. The first deploy has nothing to roll back to, so watch it.
+5. **First deploy:** for staging, merge anything to `main` (or run the stage release manually); for production, push a version tag. The first deploy has nothing to roll back to, so watch it.
 
 ## Production releases
 
@@ -118,6 +118,6 @@ Production changes only through the **Production release** pipeline ([`release.y
    - Creates a GitHub Release, and posts to Discord.
 4. **If the check from the internet fails,** the pipeline rolls production back to the version that ran before.
 
-**Rolling back by hand:** in GitHub Actions, open **Production release** → **Run workflow** (on `main`). It runs only the "Roll back production" stage: production goes back to the version that ran before the current one. Running it twice goes forward again; to go further back, tag an older commit with a new version.
+**Rolling back by hand:** in GitHub Actions, open **Production release** → **Run workflow** (on `main`). It runs only the "Roll back production" stage: production goes back to the version that ran before the current one. Running it twice goes forward again; to go further back, tag an older commit with a new version. Only commits merged after the production release existed (spec 0046) can be released: a tag runs the `release.yml` of the tagged commit, and older commits don't have one.
 
 `v0.0.x` versions are test releases (pre-releases on GitHub): there are no backups yet (#42).
