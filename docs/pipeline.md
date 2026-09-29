@@ -8,7 +8,7 @@ Xovê's CI/CD runs on GitHub Actions. It turns every change into a Docker image 
 | --- | --- | --- | --- |
 | **Commit checks** | [`ci.yml`](../.github/workflows/ci.yml) | Every push to any branch except `main` | 1 · Build → 2 · Validate → 3 · Tests and scans |
 | **Stage release** | [`stage.yml`](../.github/workflows/stage.yml) | Every push to `main` (a merged pull request) | The same commit checks, then 4 · Publish → 5 · Deploy stage → 6 · Cleanup on failure, and a Discord message with the result |
-| **Production release** | `release.yml` (planned) | A version tag `v*` | Promote the tested images → deploy production |
+| **Production release** | [`release.yml`](../.github/workflows/release.yml) | A version tag `vX.Y.Z`, or its "Run workflow" button (rollback) | 1 · Check the release → 2 · Tag the images → 3 · Deploy production → 4 · Check production → 5 · Roll back production (only if the check fails) → 6 · GitHub Release, and a Discord message |
 
 The commit checks are one reusable workflow: the stage release calls it instead of repeating it, so "what a commit must pass" is defined in one place.
 
@@ -58,7 +58,7 @@ flowchart LR
 
 Jobs in the same stage run in parallel. Each job starts on a fresh machine, which is why images travel between stages as artifacts.
 
-**Build once, promote.** The image deployed to staging is the one that was built in stage 1 and tested in stages 2 and 3, not a rebuild. Production will reuse that same image with a version tag.
+**Build once, promote.** The image deployed to staging is the one that was built in stage 1 and tested in stages 2 and 3, not a rebuild. Production reuses that same image, with a version tag added.
 
 ## When it runs
 
@@ -66,8 +66,9 @@ Jobs in the same stage run in parallel. Each job starts on a fresh machine, whic
 | --- | --- | --- | --- |
 | Push to a branch (any commit) | Commit checks | 1 → 3 | Every commit is validated; the pull request's **required checks** come from here |
 | Push to `main` (a merged PR) | Stage release | 1 → 5 (6 on failure) | Checks the merged result again, then publishes and deploys to staging |
-| Tag `v*` (planned) | Production release | Promote → deploy | Ships a build that already runs on staging |
-| Manual ("Run workflow" button) | Either | Same as above; a stage release from a branch stops after the checks | Re-run on demand; only `main` is released (the server refuses other commits) |
+| Tag `vX.Y.Z` | Production release | 1 → 4 (5 if the check fails), then 6 | Ships a build that already ran on staging |
+| Manual on **Production release** | Production release | 5 only | Rolls production back to the version that ran before |
+| Manual ("Run workflow" button) on **Commit checks** or **Stage release** | That one | Same as above; a stage release from a branch stops after the checks | Re-run on demand; only `main` is released (the server refuses other commits) |
 
 A new push to a branch cancels that branch's older run. Stage releases always finish and run one at a time, in merge order.
 
@@ -94,10 +95,12 @@ Renaming a job changes its check name. When that happens, update the branch rule
 | Vulnerability scan | Log, one group per target | Upgrade the library or base image named in the table (see policy below) |
 | SAST | Log: file, line and rule | Fix the code; if it's a false positive, add a `# nosemgrep: <rule-id>` comment with the reason |
 | Deploy stage | Log shows the server's own output, including the rollback | Staging is already back on the previous version. Fix forward with a new PR |
+| Check the release (production) | Log: which check failed | Tag a commit that is on `main` and has a green stage release |
+| Deploy production / Check production | Log shows the server's output, or which address didn't answer | Production is back on the previous version (the server or stage 5 rolled it back), unless Discord or the log says the rollback failed or there was nothing to roll back to: then check the server. Fix forward, then tag a new version |
 
 To retry a flaky job: open the run and click **Re-run failed jobs** (or `gh run rerun <run-id> --failed`).
 
-**Discord notifications.** Every stage release ends with **Notify Discord**, which posts to a Discord channel through a webhook: success (which `sha-…` is live), failure or cancellation, the commit, each stage's result and links to the run and to staging. It never pings anyone (mentions are disabled), and it only warns in the run if the webhook secret is missing. Commit checks on branches don't notify: you're watching those as you push.
+**Discord notifications.** Every stage release, production release and rollback ends with **Notify Discord**, which posts to a Discord channel through a webhook: success (which `sha-…` is live on staging, or which version is live on production), failure or cancellation, the commit, each stage's result and links to the run and to the environment. It never pings anyone (mentions are disabled), and it only warns in the run if the webhook secret is missing. Commit checks on branches don't notify: you're watching those as you push. Production releases run one at a time; if two wait at once, GitHub keeps only the newest, and the replaced one posts nothing.
 
 ## Vulnerability policy
 
@@ -110,24 +113,21 @@ Dependabot (`.github/dependabot.yml`) opens weekly pull requests for Maven, npm,
 
 ## Secrets the pipeline uses
 
-Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only token of the `xove-ci` 1Password service account. The jobs that need secrets load them from the `Xove CI` vault with 1Password's `load-secrets-action` (pinned by SHA); values are masked in the logs. The references are in `stage.yml`, so the workflow shows where every value comes from.
+Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only token of the `xove-ci` 1Password service account. The jobs that need secrets load them from the `Xove CI` vault with 1Password's `load-secrets-action` (pinned by SHA); values are masked in the logs. The references are in `stage.yml` and `release.yml`, so the workflow shows where every value comes from.
 
 | Value | Reference | Used by |
 | --- | --- | --- |
-| Deploy key | `op://Xove CI/deploy-ssh/private_key` (the field id: labels are translated, ids aren't) | Deploy stage: a key that can only run the deploy script on the server |
+| Deploy key | `op://Xove CI/deploy-ssh/private_key` (the field id: labels are translated, ids aren't) | Deploy stage: a key that can only deploy staging |
+| Production's deploy key | `op://Xove CI/deploy-ssh-prod/private_key`, plus its `known-hosts`, `host`, `port`, `user` | Deploy production, Roll back production: a key that can only deploy production |
 | Server host key | `op://Xove CI/deploy-ssh/known-hosts` | Deploy stage: the runner checks it reaches the real server |
 | Host, port, user | `op://Xove CI/deploy-ssh/host`, `port`, `user` | Deploy stage |
 | Discord webhook | `op://Xove CI/discord-webhook/password` | Notify Discord: anyone with it can post in the channel |
-| `GITHUB_TOKEN` | created by GitHub for each run | Publish, deploy, cleanup: push and delete images |
+| `GITHUB_TOKEN` | created by GitHub for each run | Publish, deploy, cleanup: push and delete images; production: tag images, create the GitHub Release |
 
-The deploy stage has no check from outside: `infra`'s `ops/deploy.sh` checks health on the server (the `healthcheck:` entries in `compose.yaml`) and rolls back by itself (decision 27). Notify Discord also reads its webhook from the vault, so if 1Password or the token fails, that run posts nothing: the failed job in the Actions tab is the signal.
+The stage deploy has no check from outside (production's has one, since it has no gate): `infra`'s `ops/deploy.sh` checks health on the server (the `healthcheck:` entries in `compose.yaml`) and rolls back by itself (decision 27). Notify Discord also reads its webhook from the vault, so if 1Password or the token fails, that run posts nothing: the failed job in the Actions tab is the signal.
 
 ## Adding a stage or a job
 
 Stages aren't a GitHub keyword: order comes from `needs:`. Checks that every commit should pass go in `ci.yml`; steps that only make sense after a merge (publishing, deploying, DAST against staging) go in `stage.yml`. To add a job to stage 3, add it to `ci.yml` with `needs: validate` and name it `3 · Something`. To add a whole stage between two others, point its `needs:` at the earlier stage's jobs and point the later stage at the new one. Then add any new blocking job to the required checks.
 
 Ideas already on the list: DAST (OWASP ZAP against staging, after stage 5) and performance tests.
-
-## Production (planned)
-
-The production release workflow will run on version tags (`v1.2.0`): take the `sha-…` images already tested and deployed to staging, tag them with the version, and deploy them to production with the same script and rollback. See [Deployment](deployment.md).

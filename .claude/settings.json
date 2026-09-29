@@ -19,9 +19,7 @@
       "Bash(gh issue list:*)",
       "Bash(gh pr view:*)",
       "Bash(gh run view:*)",
-      "Bash(gh run list:*)"
-    ],
-    "ask": [
+      "Bash(gh run list:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(gh issue create:*)",
@@ -29,6 +27,7 @@
       "Bash(gh issue edit:*)",
       "Bash(gh pr create:*)"
     ],
+    "ask": [],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",

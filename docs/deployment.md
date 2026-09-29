@@ -15,7 +15,7 @@ gitGraph
 ```
 
 - **`main` is the integration branch.** Every pull request merges into it, and every merge deploys to **staging** automatically.
-- **A release is a tag** (`v1.2.0`) on a commit of `main` that's been running well on staging. The tag deploys that exact build to **production** (planned; see below).
+- **A release is a tag** (`v1.2.0`) on a commit of `main` that's been running well on staging. The tag deploys that exact build to **production** ([see below](#production-releases)). Nobody deploys production by hand.
 - Feature branches are short-lived: `feat/…`, `fix/…`, `ci/…`, `docs/…`, `chore/…`.
 
 Nobody pushes to `main` directly. A branch ruleset requires a pull request and the pipeline's required checks, and blocks force pushes and deletion.
@@ -25,9 +25,12 @@ Nobody pushes to `main` directly. A branch ruleset requires a pull request and t
 | | Staging | Production |
 | --- | --- | --- |
 | Address | `stage.xove.app` | `xove.app` |
-| Receives | Every merge to `main`, automatically | Tagged releases |
+| Receives | Every merge to `main`, automatically | Version tags (`vX.Y.Z`) only |
 | Access | An extra gate in front of the app, then normal sign-in | Normal sign-in |
 | Database | Its own | Its own |
+| Google sign-in | Its own OAuth client | Its own OAuth client |
+| LiveKit | Its own server, `rtc-stage.xove.app`, room `xove-stage` | Its own server, `rtc.xove.app`, room `xove` |
+| Deploy key | Can only deploy staging | Can only deploy production |
 | Search engines | Told not to index (`X-Robots-Tag: noindex`) | Normal |
 
 Both environments run on the same server, from their published images and this repo's `compose.yaml` (no checkout of the code). Their settings are generated per environment from the `infra` repo and 1Password ([settings and secrets](operations.md#settings-and-secrets)), never written by hand or committed. Container names carry the environment (`xove-stage-api`, `xove-prod-api`), so they can run side by side. A shared reverse proxy, configured in a separate private repository, routes each hostname to its containers and handles HTTPS.
@@ -75,9 +78,9 @@ Flyway runs new migrations when the API starts. A rollback puts back the old cod
 - Adding a table or a nullable column: safe.
 - Renaming or dropping a column: do it in two releases. First release: add the new column and write to both. Second release, once the first is proven: stop using the old one and drop it.
 
-## Deploying by hand
+## Deploying staging by hand
 
-On the server:
+Only staging, and only when needed (production is released only from tags). On the server:
 
 ```bash
 /srv/infra/ops/deploy.sh xove stage status                # what's running, recent deploys, container status
@@ -97,14 +100,24 @@ One-time steps per environment. Values (host, user, keys) go in 1Password, not h
    ```
    command="/srv/infra/ops/deploy.sh xove <env>",restrict ssh-ed25519 AAAA… github-actions-deploy
    ```
-4. **Pipeline secrets:** store the private key, the server's host key (`ssh-keyscan`), host, port and user in the `deploy-ssh` item of the `Xove CI` vault (see [Pipeline](pipeline.md#secrets-the-pipeline-uses)).
-5. **First deploy:** merge anything to `main`, or run the pipeline manually. The first deploy has nothing to roll back to, so watch it.
+   Each environment has its own key: `deploy-ssh` for staging, `deploy-ssh-prod` for production.
+4. **Pipeline secrets:** store the private key, the server's host key (`ssh-keyscan`), host, port and user in that environment's item of the `Xove CI` vault (see [Pipeline](pipeline.md#secrets-the-pipeline-uses)).
+5. **First deploy:** for staging, merge anything to `main` (or run the stage release manually); for production, push a version tag. The first deploy has nothing to roll back to, so watch it.
 
-## Production releases (planned)
+## Production releases
 
-1. Pick a commit on `main` that has been on staging and works.
-2. Tag it: `git tag v1.2.0 <commit> && git push origin v1.2.0`. Only the maintainer can create `v*` tags.
-3. A release workflow tags that commit's `sha-…` images as `v1.2.0` (no rebuild), deploys them to production with the same script and rollback, and checks production's health on the server.
-4. Rolling back production means deploying the previous tag.
+Production changes only through the **Production release** pipeline ([`release.yml`](../.github/workflows/release.yml)):
 
-Until then, production shows a placeholder page.
+1. **Pick a commit** on `main` that runs well on staging.
+2. **Tag it:** `git tag v1.2.0 <commit> && git push origin v1.2.0`. Only the maintainer can create `v*` tags; the tag is the approval.
+3. **The pipeline:**
+   - Checks the commit's stage release was green.
+   - Tags its `sha-…` images as `v1.2.0` (the same images, no rebuild).
+   - Deploys them with production's key and the same tool as staging, which rolls back by itself if the new version isn't healthy.
+   - Checks `https://xove.app` from the internet.
+   - Creates a GitHub Release, and posts to Discord.
+4. **If the check from the internet fails,** the pipeline rolls production back to the version that ran before.
+
+**Rolling back by hand:** in GitHub Actions, open **Production release** → **Run workflow** (on `main`). It runs only the "Roll back production" stage: production goes back to the version that ran before the current one. Running it twice goes forward again; to go further back, tag an older commit with a new version. Only commits merged after the production release existed (spec 0046) can be released: a tag runs the `release.yml` of the tagged commit, and older commits don't have one.
+
+`v0.0.x` versions are test releases (pre-releases on GitHub): there are no backups yet (#42).

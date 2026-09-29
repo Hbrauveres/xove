@@ -15,8 +15,8 @@ Henrique, software engineer, owner of the project. He builds Xovê to learn and 
 
 ## How we work
 
-1. **Claude Code executes, Henrique reviews and approves.** In the repo, you run the commands: create the branch from an up-to-date `main`, edit the files, run the tests (and, for pipeline or deploy changes, a local simulation with Docker), commit, push and open the PR.
-2. **Show before you act outward.** Before every commit, show Henrique the `git diff` (or a summary plus the full diff on request) and wait for his approval. Pushes, issues, issue comments and PRs also need his approval (`.claude/settings.json` asks for them).
+1. **Henrique owns the spec, plan and tasks; Claude Code implements the whole spec.** Once the tasks are approved, one `/implement` run does every task by itself: branch from an up-to-date `main`, code and tests, commit and push as it goes, then the review and the PR. Henrique reviews the full change in the PR, carefully, and asks for rework there.
+2. **Say what Henrique must do before starting.** Anything only he can do (1Password items, DNS, the VPS, merges, tags) is listed at the start of the run, so he does it first. Stop in the middle only for a real question, an opinion, or an action from him.
 3. **Henrique merges and releases.** Merging a PR, creating `v*` tags and anything on the VPS stay with him; never try to work around the denied commands in `.claude/settings.json`.
 4. Every push runs the commit checks; `main` only accepts PRs whose checks pass. Merges to `main` deploy to staging automatically.
 5. After every milestone: close or update its issues, record decisions in `docs/decisions.md`, and update this file.
@@ -40,6 +40,6 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 
 - Test counts at the last checkpoint: API 93, web 45 (2026-09-28, spec 0044).
 - LiveKit runs from the `infra` repo, one server per environment: staging `rtc-stage.xove.app` (room `xove-stage`), production `rtc.xove.app` (room `xove`).
-- Staging: `stage.xove.app` (behind an extra gate). Production: `xove.app` (placeholder until launch).
+- Staging: `stage.xove.app` (behind an extra gate), deployed on every merge. Production: `xove.app`, released only by a version tag `vX.Y.Z` (`release.yml`); its "Run workflow" button rolls production back. `v0.0.x` are test releases until backups exist (#42).
 - Images: `ghcr.io/hbrauveres/xove-api`, `ghcr.io/hbrauveres/xove-web`, tagged `sha-<12 chars of the commit>`.
-- On the server, deploys run from the `infra` repo, not a checkout of this one: `/srv/infra/ops/deploy.sh xove <env> status | deploy <sha> | rollback`.
+- On the server, deploys run from the `infra` repo, not a checkout of this one: `/srv/infra/ops/deploy.sh xove <env> status | deploy <sha> | rollback`. By hand only for staging; each environment has its own deploy key.
