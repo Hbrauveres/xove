@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { AccessRequestView, Me, MemberView, ScreenHolder } from "../api/types";
+import type { AccessRequestView, Me, MemberView, ScreenHolder, StreamSettings } from "../api/types";
 
 type Reply = { status: number; body?: unknown };
 export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
@@ -18,6 +18,8 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     members: initial.members ?? [],
     /** Who holds the screen slot. Tests set it directly to play "someone else". */
     screenHolder: null as ScreenHolder | null,
+    /** What the share is sent with; tests set it to play the sharer changing it. */
+    screenSettings: { quality: "1080p", mode: "smooth" } as StreamSettings,
     calls: [] as Call[],
     /** Force the next matching request to fail: key is "POST /api/access-requests". */
     failures: new Map<string, Reply>(),
@@ -40,7 +42,11 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     }
     const screenState = () => ({
       status: 200,
-      body: { holder: server.screenHolder, mine: server.screenHolder?.userId === MY_USER_ID },
+      body: {
+        holder: server.screenHolder,
+        mine: server.screenHolder?.userId === MY_USER_ID,
+        settings: server.screenHolder ? server.screenSettings : null,
+      },
     });
     if (key === "GET /api/screen") return screenState();
     if (key === "POST /api/livekit/token") {
@@ -50,10 +56,19 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
       };
     }
     if (key === "POST /api/screen/take") {
+      const wanted = body as Partial<StreamSettings> | undefined;
+      server.screenSettings = { quality: wanted?.quality ?? "1080p", mode: wanted?.mode ?? "smooth" };
       if (server.screenHolder?.userId !== MY_USER_ID) {
         const since = new Date().toISOString();
         server.screenHolder = { userId: MY_USER_ID, name: server.me?.name ?? null, avatarUrl: null, since };
       }
+      return screenState();
+    }
+    if (key === "POST /api/screen/settings") {
+      if (server.screenHolder?.userId !== MY_USER_ID) {
+        return { status: 409, body: { status: 409, detail: "Only the person sharing can change how their screen is sent." } };
+      }
+      server.screenSettings = body as StreamSettings;
       return screenState();
     }
     if (key === "POST /api/screen/release") {

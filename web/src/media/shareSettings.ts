@@ -39,12 +39,23 @@ export const DEFAULT_SHARE: { quality: ShareQuality; mode: ShareMode } = { quali
 
 const presetOf = (quality: ShareQuality) => SHARE_QUALITIES.find((q) => q.id === quality) ?? SHARE_QUALITIES[0];
 
-/** What the browser's screen picker captures: the size, the content hint and the sound, as played. */
-export function screenCaptureOptions(quality: ShareQuality, mode: ShareMode): ScreenShareCaptureOptions {
-  const preset = presetOf(quality);
+/** The content hint for a mode: how the browser encodes the screen. */
+export const contentHintOf = (mode: ShareMode) => (mode === "smooth" ? "motion" : "detail");
+
+/** How the browser trades quality when the connection is tight, for a mode. */
+export const degradationOf = (mode: ShareMode): RTCDegradationPreference =>
+  mode === "smooth" ? "maintain-framerate" : "maintain-resolution";
+
+/**
+ * What the browser's screen picker captures: always the best quality (so the sharer
+ * can raise it later without picking again), the mode's content hint, and the sound
+ * as played.
+ */
+export function screenCaptureOptions(mode: ShareMode): ScreenShareCaptureOptions {
+  const preset = SHARE_QUALITIES[0];
   return {
     resolution: { width: preset.width, height: preset.height, frameRate: preset.fps },
-    contentHint: mode === "smooth" ? "motion" : "detail",
+    contentHint: contentHintOf(mode),
     // Sharing this very tab would show the room inside the room.
     selfBrowserSurface: "exclude",
     // Music and game sound, not a voice: no microphone filters, both channels.
@@ -52,11 +63,13 @@ export function screenCaptureOptions(quality: ShareQuality, mode: ShareMode): Sc
   };
 }
 
-/** How the screen is sent: VP9 (VP8 where the browser can't), one layer per quality from the chosen one down to 480p. */
-export function screenPublishOptions(quality: ShareQuality, mode: ShareMode): TrackPublishOptions {
-  const index = SHARE_QUALITIES.findIndex((q) => q.id === quality);
-  const preset = SHARE_QUALITIES[Math.max(index, 0)];
-  const lower = SHARE_QUALITIES.slice(Math.max(index, 0) + 1);
+/**
+ * How the screen is sent: VP9 (VP8 where the browser can't), always with one layer
+ * per quality (1080p, 720p, 480p). The sharer's chosen quality is a cap on top of
+ * that (`capOf`), so it can go up or down while sharing, with no reload.
+ */
+export function screenPublishOptions(mode: ShareMode): TrackPublishOptions {
+  const [preset, ...lower] = SHARE_QUALITIES;
   return {
     videoCodec: "vp9",
     backupCodec: { codec: "vp8" },
@@ -68,7 +81,7 @@ export function screenPublishOptions(quality: ShareQuality, mode: ShareMode): Tr
       (l) => ({ width: l.width, height: l.height, encoding: { maxBitrate: l.maxBitrate, maxFramerate: l.fps } }) as VideoPreset,
     ),
     // Smooth: lower the resolution before the frame rate. Sharp: the other way round.
-    degradationPreference: mode === "smooth" ? "maintain-framerate" : "maintain-resolution",
+    degradationPreference: degradationOf(mode),
     // Stereo at music quality, and no silence skipping (it chops quiet moments).
     audioPreset: { maxBitrate: 128_000 },
     forceStereo: true,
@@ -76,16 +89,29 @@ export function screenPublishOptions(quality: ShareQuality, mode: ShareMode): Tr
   };
 }
 
+/** The highest layer to send for a chosen quality, as LiveKit counts them (0 = lowest). */
+export function capOf(quality: ShareQuality): 0 | 1 | 2 {
+  return quality === "1080p" ? 2 : quality === "720p" ? 1 : 0;
+}
+
+/** The size a quality asks the server for. */
+export const sizeOf = (quality: ShareQuality) => {
+  const preset = presetOf(quality);
+  return { width: preset.width, height: preset.height };
+};
+
 /**
  * The qualities a viewer can pick for a screen whose top layer is `height` pixels
  * tall: the sharer's quality and the ones below it, never above. A screen that
  * isn't 16:9 comes out a bit shorter than its preset, so it counts as the preset
  * just above.
  */
-export function viewerQualities(height: number, layers?: number): ShareQuality[] {
+export function viewerQualities(height: number, layers?: number, cap?: ShareQuality): ShareQuality[] {
   const ascending = [...SHARE_QUALITIES].reverse();
   const top = ascending.find((q) => height <= q.height) ?? SHARE_QUALITIES[0];
-  const offered = SHARE_QUALITIES.filter((q) => q.height <= top.height).map((q) => q.id);
+  // The sharer's chosen quality caps what anyone can pick (it can change while sharing).
+  const capHeight = presetOf(cap ?? "1080p").height;
+  const offered = SHARE_QUALITIES.filter((q) => q.height <= Math.min(top.height, capHeight)).map((q) => q.id);
   // Firefox and Safari sharers send one quality only: picking a lower one would change nothing.
   return layers === 1 ? offered.slice(0, 1) : offered;
 }

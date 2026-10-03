@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadSharePrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
 import type { ActivityEvent, ActivityKind, ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../types";
-import { useLiveKitRoom } from "./useLiveKitRoom";
+import type { StreamSettings } from "../api/types";
+import { useLiveKitRoom, type ScreenCapture } from "./useLiveKitRoom";
 import { useScreenSlot } from "./useScreenSlot";
 
 /**
@@ -22,9 +23,17 @@ export type RoomSession = {
   screen: ScreenTracks | null;
   /** My own screen while I share, for the preview. */
   myScreen: MediaTrack | undefined;
-  /** The quality and mode I send (remembered); changing them while sharing resends the screen. */
+  /** The quality and mode I send (remembered); changing them while sharing applies live. */
   sharePrefs: SharePrefs;
   setSharePrefs: (prefs: SharePrefs) => void;
+  /** What the current share is sent with, as the API says (for viewers' quality menus). */
+  streamSettings: StreamSettings | null;
+  /** A screen I picked but haven't started sending: the setup window shows it. */
+  pendingShare: ScreenCapture | null;
+  /** Starts sending the picked screen with these settings. */
+  confirmShare: (prefs: SharePrefs) => void;
+  /** Drops the picked screen without sending it. */
+  cancelShare: () => void;
   /** I'm sharing, but my browser gave no sound with the screen. */
   noSound: boolean;
   activity: ActivityEvent[];
@@ -128,60 +137,78 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   const [sharePrefs, setPrefsState] = useState<SharePrefs>(loadSharePrefs);
   const [noSound, setNoSound] = useState(false);
 
+  const [pendingShare, setPendingShare] = useState<ScreenCapture | null>(null);
+
+  // Step 1, from the click: the browser's picker. The screen is captured, not sent.
   const shareScreen = useCallback(async () => {
     starting.current = true;
     setStarting(true);
     try {
-      // The picker first: browsers only open it straight from a click.
-      const sharing = await lk.startScreenShare(sharePrefs);
-      if (!sharing) return;
-      const { hasSound, ...connection } = sharing;
-      const ok = await slot.take(connection);
-      if (!ok) await lk.stopScreenShare();
-      else setNoSound(!hasSound);
+      const capture = await lk.captureScreen(sharePrefs.mode);
+      if (capture) setPendingShare(capture);
     } finally {
       starting.current = false;
       setStarting(false);
     }
-  }, [lk, slot, sharePrefs]);
+  }, [lk, sharePrefs.mode]);
 
-  // A new quality or mode while sharing: send the screen again with it, tell the
-  // API the new track (so the old one going away doesn't free the slot), then
-  // stop the old one. Viewers see a short reload.
-  // Resolves true when the screen now goes out with the new settings.
-  const changeShare = useCallback(
+  // Step 2, from the setup window: send it with the chosen settings, then take the slot.
+  const confirmShare = useCallback(
     async (prefs: SharePrefs) => {
+      const capture = pendingShare;
+      if (!capture) return;
+      setPendingShare(null);
+      setPrefsState(prefs);
+      saveSharePrefs(prefs);
       starting.current = true;
       setStarting(true);
       try {
-        const change = await lk.changeScreenShare(prefs);
-        if (!change) return false;
-        const ok = await slot.take(change.connection);
-        if (ok) await change.finish();
-        else await change.cancel();
-        return ok;
+        const sharing = await lk.publishCapture(capture, prefs);
+        if (!sharing) return;
+        const { hasSound, ...connection } = sharing;
+        const ok = await slot.take(connection, prefs);
+        if (!ok) await lk.stopScreenShare();
+        else setNoSound(!hasSound);
       } finally {
         starting.current = false;
         setStarting(false);
       }
     },
-    [lk, slot],
+    [lk, slot, pendingShare],
   );
 
+  const cancelShare = useCallback(() => {
+    if (pendingShare) lk.discardCapture(pendingShare);
+    setPendingShare(null);
+  }, [lk, pendingShare]);
+
+  // The browser's own "Stop sharing" bar while the setup window is open.
+  useEffect(() => {
+    const track = pendingShare?.video.mediaStreamTrack;
+    if (!track) return;
+    const ended = () => setPendingShare(null);
+    track.addEventListener("ended", ended);
+    return () => track.removeEventListener("ended", ended);
+  }, [pendingShare]);
+
+  // While sharing, a new quality or mode applies live: LiveKit right away, and the
+  // API, which tells every viewer's app on its next poll. If the API refuses, the
+  // old settings go back.
   const setSharePrefs = useCallback(
     (prefs: SharePrefs) => {
       const before = sharePrefs;
       setPrefsState(prefs);
       saveSharePrefs(prefs);
       if (!(mine && lk.publishing)) return;
-      void changeShare(prefs).then((ok) => {
-        // The old settings are still the ones going out: show and keep those.
-        if (ok) return;
+      void (async () => {
+        await lk.applyShareSettings(prefs);
+        if (await slot.changeSettings(prefs)) return;
+        await lk.applyShareSettings(before);
         setPrefsState(before);
         saveSharePrefs(before);
-      });
+      })();
     },
-    [mine, lk.publishing, changeShare, sharePrefs],
+    [mine, lk, slot, sharePrefs],
   );
 
   const stop = useCallback(async () => {
@@ -213,6 +240,10 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     myScreen: mine ? lk.localScreen : undefined,
     sharePrefs,
     setSharePrefs,
+    streamSettings: slot.state?.settings ?? null,
+    pendingShare,
+    confirmShare: (prefs: SharePrefs) => void confirmShare(prefs),
+    cancelShare,
     // Only while my screen is actually going out.
     noSound: noSound && mine && lk.publishing,
     activity,
