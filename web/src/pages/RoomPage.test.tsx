@@ -317,3 +317,83 @@ describe("room: what the screen is sent with", () => {
     );
   });
 });
+
+describe("room: the sharer's quality and mode", () => {
+  afterEach(() => localStorage.clear());
+
+  it("sends the quality and mode picked before sharing, and remembers them", async () => {
+    installFakeApi({ me: member });
+    const view = renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+
+    await user.selectOptions(within(controls()).getByLabelText("Quality"), "720p");
+    await user.selectOptions(within(controls()).getByLabelText("Mode"), "sharp");
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await screen.findByText("You are sharing");
+
+    expect(lastRoom().localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(
+      true,
+      screenCaptureOptions("720p", "sharp"),
+      screenPublishOptions("720p", "sharp"),
+    );
+
+    view.unmount();
+    renderRoom();
+    expect(await screen.findByLabelText("Quality")).toHaveValue("720p");
+    expect(screen.getByLabelText("Mode")).toHaveValue("sharp");
+  });
+
+  it("changes the quality while sharing without stopping, and the API follows the new track", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await screen.findByText("You are sharing");
+    const local = lastRoom().localParticipant;
+    const first = local.screens[0].track;
+
+    await user.selectOptions(within(controls()).getByLabelText("Quality"), "480p");
+
+    await waitFor(() => expect(local.unpublishTrack).toHaveBeenCalledWith(first));
+    expect(local.publishTrack).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ ...screenPublishOptions("480p", "smooth"), source: "screen_share" }),
+    );
+    // The new track was registered before the old one went away.
+    const takes = server.calls.filter((c) => c.path === "/api/screen/take");
+    expect(takes.at(-1)?.body).toEqual({ participantSid: "PA_me", trackSid: local.screens[0].trackSid });
+    expect(local.screens).toHaveLength(1);
+    expect(server.screenHolder?.userId).toBe(MY_USER_ID);
+    expect(screen.getByText("You are sharing")).toBeInTheDocument();
+  });
+
+  it("tells the sharer when their browser gave no sound", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    lastRoom().localParticipant.nextPickerAudio = false;
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+    expect(await screen.findByText(/no sound is being shared/i)).toBeInTheDocument();
+  });
+
+  it("says nothing about sound when it is being shared", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await screen.findByText("You are sharing");
+
+    expect(screen.queryByText(/no sound is being shared/i)).not.toBeInTheDocument();
+  });
+});
