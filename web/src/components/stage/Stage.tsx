@@ -26,8 +26,6 @@ type Props = {
   /** My own quality and mode while I share, changed from my player's bar. */
   sharePrefs: SharePrefs;
   onSharePrefsChange: (prefs: SharePrefs) => void;
-  /** A request is on its way: the sharer's choices wait. */
-  busy?: boolean;
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -49,7 +47,6 @@ export function Stage({
   streamSettings,
   sharePrefs,
   onSharePrefsChange,
-  busy = false,
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
@@ -58,15 +55,24 @@ export function Stage({
   // (or after a tap), and fade when it stops, like YouTube.
   const [chromeShown, setChromeShown] = useState(false);
   const idleTimer = useRef<number | undefined>(undefined);
+  // Nothing fades while a control has the keyboard focus.
+  const focusInside = () => frameRef.current?.contains(document.activeElement) ?? false;
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
-    idleTimer.current = window.setTimeout(() => setChromeShown(false), CHROME_IDLE_MS);
+    const fade = () => {
+      if (focusInside()) idleTimer.current = window.setTimeout(fade, CHROME_IDLE_MS);
+      else setChromeShown(false);
+    };
+    idleTimer.current = window.setTimeout(fade, CHROME_IDLE_MS);
   }, []);
-  const hideChrome = useCallback(() => {
+  // A finger lifting off fires pointerleave at once: on touch, only the timer hides.
+  const leaveChrome = useCallback((e: React.PointerEvent) => {
+    if (e.pointerType === "touch" || focusInside()) return;
     window.clearTimeout(idleTimer.current);
     setChromeShown(false);
   }, []);
+  const playing = isMeSharing ? Boolean(myScreen) : Boolean(screen?.video);
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
   const changeWatch = (next: WatchPrefs) => {
@@ -104,7 +110,7 @@ export function Stage({
           <ScreenVideo screen={{ video: myScreen }} label="Your shared screen" />
           <div className={styles.player}>
             <div className={styles.bar}>
-              <ShareSettingsFields prefs={sharePrefs} onChange={onSharePrefsChange} disabled={busy} look="bar" />
+              <ShareSettingsFields prefs={sharePrefs} onChange={onSharePrefsChange} look="bar" />
             </div>
           </div>
         </>
@@ -153,10 +159,11 @@ export function Stage({
       <div
         ref={frameRef}
         className={`${styles.frame} ${isMeSharing ? styles.onAir : ""}`}
-        data-chrome={chromeShown ? "shown" : "hidden"}
+        // Only over a playing video: notices and the empty stage never fade.
+        data-chrome={playing ? (chromeShown ? "shown" : "hidden") : undefined}
         onPointerMove={showChrome}
         onPointerDown={showChrome}
-        onPointerLeave={hideChrome}
+        onPointerLeave={leaveChrome}
         onFocus={showChrome}
       >
         {body()}

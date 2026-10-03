@@ -2,7 +2,7 @@ package dev.hbrauveres.xove.screen;
 
 /**
  * The body of "take the screen": where the share comes from (required), and what
- * it's sent with (optional: 1080p Smooth when missing).
+ * it's sent with (optional: a missing quality is 1080p, a missing mode Smooth).
  */
 record TakeRequest(String participantSid, String trackSid, String quality, String mode) {
 
@@ -10,8 +10,8 @@ record TakeRequest(String participantSid, String trackSid, String quality, Strin
         return new SharingConnection(participantSid, trackSid);
     }
 
-    /** Null when the body names no settings. */
     StreamSettings settings() {
-        return quality == null && mode == null ? null : new StreamSettings(quality, mode);
+        return new StreamSettings(quality == null ? StreamSettings.DEFAULT.quality() : quality,
+                mode == null ? StreamSettings.DEFAULT.mode() : mode);
     }
 }

@@ -130,3 +130,12 @@
 :global([data-chrome="hidden"]) .overlay button {
   pointer-events: none;
 }
+
+/* A control with the keyboard focus keeps everything visible. */
+:global([data-chrome="hidden"]:focus-within) .overlay {
+  opacity: 1;
+}
+
+:global([data-chrome="hidden"]:focus-within) .overlay button {
+  pointer-events: auto;
+}
