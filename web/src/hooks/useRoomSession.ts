@@ -180,9 +180,6 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     await slot.release();
   }, [lk, slot]);
 
-  useEffect(() => {
-    if (!lk.publishing) setNoSound(false);
-  }, [lk.publishing]);
 
   // Someone took the screen from me: stop sending mine.
   useEffect(() => {
@@ -208,7 +205,8 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     myScreen: mine ? lk.localScreen : undefined,
     sharePrefs,
     setSharePrefs,
-    noSound,
+    // Only while my screen is actually going out.
+    noSound: noSound && mine && lk.publishing,
     activity,
     connection: lk.connection,
     startSharing: () => void shareScreen(),
