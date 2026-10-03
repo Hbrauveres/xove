@@ -21,6 +21,7 @@ Nothing to do outside the repo before starting. Henrique's part is at the end: m
 - [x] **T7** Docs: `docs/architecture.md` (presets, modes, sound, the controls), a new decision in `docs/decisions.md` (VP9 with VP8 fallback, the budgets), `CLAUDE.md` test counts · verify: review
   - Done: `docs/architecture.md` (layout, the sharer's preview, a "Video and sound quality" section with how to check a share in `webrtc-internals`), decision 31, `CLAUDE.md` test counts (web 89).
 - [ ] **T8** Review every AC (`/review`), then the checks on staging after merge, written in the PR · verify: no gaps left; on staging: about 30 fps with VP9 and the reason for any drop (AC-8), stereo music-quality sound with no pumping (AC-9), Smooth and Sharp under throttling (AC-10), a viewer's fixed quality really lowers what they receive (AC-5)
+  - Review done (no blocker). Fixed: a failed change stops its copy and restores the previous choice; no lower qualities offered for single-layer sharers (Firefox, Safari); clearer control names; tests for a mode change and for Stop after a change; docs with the real upload. Staging checks remain (after merge), plus Sharp mode's frame rate.
 
 ## Coverage
 
