@@ -39,10 +39,11 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("the facecam", () => {
   it("plays the small video, where it was put", () => {
-    const props = renderFacecam();
+    const track = new FakeTrack();
+    renderFacecam({ video: track });
 
     const video = screen.getByLabelText("Bruno's camera");
-    expect(props.video.attached).toContain(video);
+    expect(track.attached).toContain(video);
     const box = video.closest("[data-facecam]") as HTMLElement;
     expect(box.style.left).toBe("70%");
     expect(box.style.top).toBe("60%");
