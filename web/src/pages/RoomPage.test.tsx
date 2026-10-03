@@ -796,3 +796,126 @@ describe("room: the setup window and the keyboard", () => {
     expect(within(controls()).getByRole("button", { name: /share my screen/i })).toHaveFocus();
   });
 });
+
+// ---- a full room: the queue and the seat offer (spec 0060) ----
+
+describe("room: waiting for a seat", () => {
+  const seatIn = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
+
+  it("waits with its place in the queue when the room is full, without joining the video", async () => {
+    const server = installFakeApi({ me: member });
+    server.seat = { status: "waiting", place: 3 };
+    renderRoom();
+
+    expect(await screen.findByText(/you're number 3 in line/i)).toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === "/api/livekit/token")).toBe(false);
+
+    act(() => {
+      server.seat = { status: "waiting", place: 1 };
+    });
+    expect(await screen.findByText(/you're next/i)).toBeInTheDocument();
+  });
+
+  it("offers the seat in a popup with a countdown, and Enter room takes it", async () => {
+    const server = installFakeApi({ me: member });
+    server.seat = { status: "waiting", place: 1 };
+    renderRoom();
+    await screen.findByText(/you're next/i);
+
+    act(() => {
+      server.seat = { status: "offered", until: seatIn(60) };
+    });
+
+    const offer = await screen.findByRole("dialog", { name: /it's your turn/i });
+    expect(offer).toHaveTextContent(/(60|59) seconds/);
+    expect(document.title).toBe("Your turn — Xovê");
+    expect(within(offer).getByRole("button", { name: /enter room/i })).toHaveFocus();
+
+    await userEvent.setup().click(within(offer).getByRole("button", { name: /enter room/i }));
+
+    await connected();
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/room/accept")).toBe(true);
+    expect(document.title).not.toBe("Your turn — Xovê");
+  });
+
+  it("leaves the queue on Cancel, and can join it again", async () => {
+    const server = installFakeApi({ me: member });
+    server.seat = { status: "offered", until: seatIn(60) };
+    renderRoom();
+    const offer = await screen.findByRole("dialog", { name: /it's your turn/i });
+    const user = userEvent.setup();
+
+    await user.click(within(offer).getByRole("button", { name: /cancel/i }));
+
+    expect(await screen.findByText(/you left the queue/i)).toBeInTheDocument();
+    expect(server.calls.some((c) => c.method === "POST" && c.path === "/api/room/cancel")).toBe(true);
+    const polls = server.calls.filter((c) => c.path === "/api/room/enter").length;
+    await new Promise((resolve) => setTimeout(resolve, FAST_POLL * 3));
+    expect(server.calls.filter((c) => c.path === "/api/room/enter")).toHaveLength(polls);
+
+    server.seat = { status: "waiting", place: 4 };
+    await user.click(screen.getByRole("button", { name: /join the queue again/i }));
+    expect(await screen.findByText(/you're number 4 in line/i)).toBeInTheDocument();
+  });
+
+  it("goes back to waiting when the offer runs out", async () => {
+    const server = installFakeApi({ me: member });
+    server.seat = { status: "offered", until: seatIn(1) };
+    renderRoom();
+    await screen.findByRole("dialog", { name: /it's your turn/i });
+
+    act(() => {
+      server.seat = { status: "waiting", place: 2 };
+    });
+
+    expect(await screen.findByText(/you're number 2 in line/i)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("tells the API when the waiting tab closes, so the place is kept for a while", async () => {
+    const server = installFakeApi({ me: member });
+    server.seat = { status: "waiting", place: 2 };
+    renderRoom();
+    await screen.findByText(/you're number 2 in line/i);
+
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+
+    const leave = server.calls.find((c) => c.method === "POST" && c.path === "/api/room/leave");
+    expect(leave?.keepalive).toBe(true);
+  });
+
+  it("enters again when the API forgot the seat (after a restart), staying in the room", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const room = lastRoom();
+    const enters = () => server.calls.filter((c) => c.path === "/api/room/enter").length;
+    const before = enters();
+
+    act(() => {
+      server.seated = false;
+    });
+
+    await waitFor(() => expect(enters()).toBeGreaterThan(before));
+    await waitFor(() => expect(server.seated).toBe(true));
+    expect(room.disconnected).toBe(false);
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+  });
+
+  it("goes to the queue when the API forgot the seat and the room filled up", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const room = lastRoom();
+
+    act(() => {
+      server.seated = false;
+      server.seat = { status: "waiting", place: 1 };
+    });
+
+    expect(await screen.findByText(/you're next/i)).toBeInTheDocument();
+    expect(room.disconnected).toBe(true);
+  });
+});

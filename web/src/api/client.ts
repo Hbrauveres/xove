@@ -3,6 +3,7 @@ import type {
   LiveKitAccess,
   Me,
   MemberView,
+  SeatStatus,
   SharingConnection,
   StreamKind,
   StreamSettings,
@@ -35,7 +36,8 @@ const FALLBACK_MESSAGES: Record<number, string> = {
   409: "That was already done.",
 };
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** `keepalive`: the request still goes out while the page is closing. */
+async function request<T>(method: string, path: string, body?: unknown, keepalive = false): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (method !== "GET") {
@@ -48,6 +50,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     headers,
     credentials: "same-origin",
     body: body === undefined ? undefined : JSON.stringify(body),
+    ...(keepalive ? { keepalive: true } : {}),
   });
 
   if (!response.ok) {
@@ -79,6 +82,17 @@ export const api = {
     settings: (kind: StreamKind, settings: StreamSettings) =>
       request<StreamsState>("POST", `/api/streams/${kind}/settings`, settings),
     stop: (kind: StreamKind) => request<StreamsState>("POST", `/api/streams/${kind}/stop`),
+  },
+
+  room: {
+    /** Asks for a seat, or polls the queue. */
+    enter: () => request<SeatStatus>("POST", "/api/room/enter"),
+    /** Takes the seat held for me. */
+    accept: () => request<SeatStatus>("POST", "/api/room/accept"),
+    /** Leaves the queue, or turns the seat down. */
+    cancel: () => request<void>("POST", "/api/room/cancel"),
+    /** The waiting page is closing: keep my place for 30 seconds. */
+    leave: () => request<void>("POST", "/api/room/leave", undefined, true),
   },
 
   liveKitToken: () => request<LiveKitAccess>("POST", "/api/livekit/token"),

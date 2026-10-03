@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import type { AccessRequestView, LiveStream, Me, MemberView, StreamKind, StreamSettings } from "../api/types";
 
 type Reply = { status: number; body?: unknown };
-export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
+export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown; keepalive?: boolean };
 
 /** The signed-in user's id inside the fake API. /api/me doesn't expose ids, so tests never need it. */
 export const MY_USER_ID = 999;
@@ -124,7 +124,7 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     const path = String(input);
     const headers = (init?.headers ?? {}) as Record<string, string>;
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-    server.calls.push({ method, path, headers, body });
+    server.calls.push({ method, path, headers, body, keepalive: init?.keepalive });
 
     const reply = route(method, path, body);
     const text = reply.body === undefined ? "" : JSON.stringify(reply.body);

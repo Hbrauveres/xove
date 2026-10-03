@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { ShareControls } from "../components/controls/ShareControls";
+import { WaitingRoom } from "../components/room/WaitingRoom";
 import { ShareSetup } from "../components/share/ShareSetup";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
+import { useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import type { Friend } from "../types";
 import styles from "./RoomPage.module.css";
@@ -16,10 +18,27 @@ type Props = {
   pollMs?: number;
 };
 
-/** The whole app is one room: the stage, its controls, and who's here. Members only. */
+/**
+ * The whole app is one room: the stage, its controls, and who's here. Members only.
+ * Up to 20 people at once (spec 0060): whoever comes next waits for a seat.
+ */
 export function RoomPage({ pollMs }: Props = {}) {
-  const { state, signOut } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
+  const seat = useRoomSeat(pollMs);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
+
+  // The video room only with a seat: the API hands out LiveKit tokens to seated people only.
+  if (seat.status?.status !== "in") return <WaitingRoom seat={seat} onSignOut={handleSignOut} />;
+  return <Room pollMs={pollMs} seat={seat} onSignOut={handleSignOut} />;
+}
+
+function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: () => void }) {
+  const { state } = useAuth();
   const me = state.status === "signedIn" ? state.me : null;
 
   const meAsFriend = useMemo<Friend>(
@@ -29,10 +48,11 @@ export function RoomPage({ pollMs }: Props = {}) {
   const session = useRoomSession(meAsFriend, pollMs);
   const onlineCount = session.people.length;
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/", { replace: true });
-  };
+  // The API forgot my seat (it restarted): ask again. With a seat free, nothing changes here.
+  const { reenter } = seat;
+  useEffect(() => {
+    if (session.seated === false) reenter();
+  }, [session.seated, reenter]);
 
   return (
     <div className={styles.shell}>
@@ -40,7 +60,7 @@ export function RoomPage({ pollMs }: Props = {}) {
         me={session.me}
         connection={session.connection}
         onlineCount={onlineCount}
-        onSignOut={handleSignOut}
+        onSignOut={onSignOut}
         isAdmin={me?.admin ?? false}
       />
 

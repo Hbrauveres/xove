@@ -71,3 +71,12 @@ export type LiveKitAccess = {
   identity: string;
   token: string;
 };
+
+/**
+ * POST /api/room/enter (spec 0060): in the room, waiting in the queue at `place`
+ * (1 is next), or a seat held for this person until `until` (ISO timestamp).
+ */
+export type SeatStatus =
+  | { status: "in" }
+  | { status: "waiting"; place: number }
+  | { status: "offered"; until: string };
