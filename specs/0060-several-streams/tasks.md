@@ -29,7 +29,8 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
 - [x] **T4** Seats over HTTP: `RoomController` (`POST /api/room/enter`, `accept`, `cancel`, `leave`); a token only with a seat (409 otherwise); `GET /api/streams` says `seated`; the webhook marks a seat used on `participant_joined` and starts the 30 or 60 s on `participant_left` (`disconnectReason`) · covers FR-12, FR-13, FR-14 · verify: `RoomControllerTest`, `LiveKitControllerTest`, `LiveKitWebhookControllerTest`
   - Done: `/api/room` (`enter`, `accept`, `cancel`, `leave`); token and `POST /api/streams` need a seat (409); `GET /api/streams` says `seated`; the webhook marks a seat used on `participant_joined` and keeps it 30 s (`CLIENT_INITIATED`) or 60 s (anything else) on `participant_left`, and logs the reason for the staging check. API 139 tests.
 
-- [ ] **T5** The room size as a setting: `xove.room.seats` from `XOVE_ROOM_SEATS` (default 20; not a whole number from 1 to 20 stops the API at start-up); passed in `compose.yaml`; an `infra` PR sets it in `config/prod.yaml` (20), `stage.yaml` (3) and `dev.yaml` (20) · covers FR-12 · verify: `XovePropertiesTest`, `RoomControllerTest`, `ops/check-compose`, infra's config tests
+- [x] **T5** The room size as a setting: `xove.room.seats` from `XOVE_ROOM_SEATS` (default 20; not a whole number from 1 to 20 stops the API at start-up); passed in `compose.yaml`; an `infra` PR sets it in `config/prod.yaml` (20), `stage.yaml` (3) and `dev.yaml` (20) · covers FR-12 · verify: `XovePropertiesTest`, `RoomControllerTest`, `ops/check-compose`, infra's config tests
+  - Done: `xove.room.seats` (`XoveProperties.Room`, 1 to 20, 20 when missing; anything else stops start-up); `compose.yaml` passes it; infra PR #7 sets 20 / 3 / 20. `XovePropertiesTest`, `RoomSizeSettingTest`, `check-compose` and infra's checks pass. API 143 tests.
 
 ## Web
 
