@@ -16,15 +16,23 @@ export type SharePreset = {
   width: number;
   height: number;
   fps: number;
-  /** The most this quality may use, in bits per second (VP9). */
+  /**
+   * The most this quality may use, in bits per second. Set high on purpose: each
+   * connection uses what the sharer's computer and network allow, up to this.
+   */
   maxBitrate: number;
 };
 
-/** From best to lowest. The bitrates keep a full room within the VPS's traffic (#60). */
+/**
+ * From best to lowest. The ceilings are well above what a screen usually needs, so
+ * nobody is held back by them, only by their own connection; the browser and LiveKit
+ * lower the bitrate by themselves when a connection can't keep up. The VPS's monthly
+ * traffic is watched in Hostinger's panel (decided with Henrique, 2026-10-03).
+ */
 export const SHARE_QUALITIES: readonly SharePreset[] = [
-  { id: "1080p", width: 1920, height: 1080, fps: 30, maxBitrate: 2_500_000 },
-  { id: "720p", width: 1280, height: 720, fps: 30, maxBitrate: 1_200_000 },
-  { id: "480p", width: 854, height: 480, fps: 30, maxBitrate: 600_000 },
+  { id: "1080p", width: 1920, height: 1080, fps: 30, maxBitrate: 8_000_000 },
+  { id: "720p", width: 1280, height: 720, fps: 30, maxBitrate: 4_000_000 },
+  { id: "480p", width: 854, height: 480, fps: 30, maxBitrate: 2_000_000 },
 ];
 
 export const DEFAULT_SHARE: { quality: ShareQuality; mode: ShareMode } = { quality: "1080p", mode: "smooth" };

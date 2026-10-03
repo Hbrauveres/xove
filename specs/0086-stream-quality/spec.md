@@ -42,11 +42,11 @@ Nobody can choose anything either. The sharer can't pick how good their stream i
 
 **Bandwidth**
 
-- **FR-12** Each quality stays within a bandwidth budget, so a full room fits the VPS's monthly traffic (see #60). A viewer who picks a lower quality really downloads less.
+- **FR-12** Nothing of ours limits the picture: each quality may use as much bandwidth as the sharer's and the viewer's computers and connections allow (high ceilings only). A viewer who picks a lower quality really downloads less. The VPS's monthly traffic is watched in Hostinger's panel (changed with Henrique on 2026-10-03: no tight budget).
 
 ## Acceptance criteria
 
-- **AC-1** For each preset, the app asks LiveKit for the matching resolution and frame rate; in Smooth mode marked as motion and favouring frame rate, in Sharp mode marked as detail and favouring sharpness; within the budget, and with lower layers down to 480p for viewers to choose (automated test of the publish settings).
+- **AC-1** For each preset, the app asks LiveKit for the matching resolution and frame rate; in Smooth mode marked as motion and favouring frame rate, in Sharp mode marked as detail and favouring sharpness; with high ceilings that don't hold the picture back, and with lower layers down to 480p for viewers to choose (automated test of the publish settings).
 - **AC-2** The app asks for screen sound without echo cancellation, noise suppression or automatic volume, in stereo, at music quality and without silence skipping (automated test of the capture and publish settings).
 - **AC-3** Changing the quality or the mode while sharing changes what is sent, and the share keeps going (automated test, plus manual).
 - **AC-4** The sharer sees their own stream in the player, and its sound doesn't play for them (automated test).

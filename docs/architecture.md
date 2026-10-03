@@ -113,9 +113,10 @@ The slot lives in the API's memory: one API instance, a handful of people, nothi
 
 How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` ([spec 0086](../specs/0086-stream-quality/spec.md)). LiveKit's defaults suit slides and voice calls; these suit games and videos.
 
-- **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is sent in VP9 as one layer per quality, from the chosen one down to 480p: about 2.5, 1.2 and 0.6 Mbit/s each.
-  - The sharer uploads all the layers: about 4.3 Mbit/s at 1080p, 1.8 at 720p, 0.6 at 480p.
-  - Each viewer downloads only one layer: at most 2.5 Mbit/s.
+- **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is sent in VP9 as one layer per quality, from the chosen one down to 480p.
+  - **No tight limits:** each layer may use up to 8, 4 and 2 Mbit/s. That's above what a screen usually needs, so only the sharer's computer and connection, and each viewer's, limit the picture. The browser and LiveKit lower the bitrate by themselves when a connection can't keep up.
+  - The sharer uploads all the layers (up to about 14 Mbit/s at 1080p on a great connection); each viewer downloads one.
+  - The VPS's monthly traffic (8 TB) is watched in Hostinger's panel.
   - Firefox (no VP9) and Safari send a single layer: viewers then get only the sharer's quality, and the quality menu offers nothing lower. In Safari, Sharp mode also behaves like Smooth.
 - **And a mode:**
   - **Smooth** (the default): marked as motion. When the connection is tight, the picture gets softer and the frame rate holds.

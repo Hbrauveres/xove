@@ -55,8 +55,10 @@ describe("share presets", () => {
     },
   );
 
-  it("keeps every quality within its bandwidth budget", () => {
-    expect(SHARE_QUALITIES.map((q) => q.maxBitrate)).toEqual([2_500_000, 1_200_000, 600_000]);
+  it("sets ceilings high enough that only the connection limits the picture", () => {
+    // Well above LiveKit's own presets (1080p at 30 fps is 5 Mbit/s there).
+    expect(SHARE_QUALITIES.map((q) => q.maxBitrate)).toEqual([8_000_000, 4_000_000, 2_000_000]);
+    for (const q of SHARE_QUALITIES) expect(q.maxBitrate).toBeGreaterThanOrEqual(q.height * 4_000);
   });
 });
 
