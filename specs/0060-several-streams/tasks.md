@@ -8,13 +8,14 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
 
 ## API
 
-- [ ] **T1** `stream/Streams.java` and its records (`Stream`, `StreamKind`, `StartRequest`, `StreamsView`; `StreamSettings`, `SharingConnection` and `NotTheHolderException` move over). Plain Java, next to the old slot, nothing wired yet:
+- [x] **T1** `stream/Streams.java` and its records (`Stream`, `StreamKind`, `StartRequest`, `StreamsView`; `StreamSettings`, `SharingConnection` and `NotTheHolderException` move over). Plain Java, next to the old slot, nothing wired yet:
   - up to 6 streams; at most one screen and one camera per person;
   - starting the same kind again replaces your own;
   - change settings and stop only your own;
   - LiveKit reports end one stream (track) or all of a person's (connection);
   - camera qualities 720p or 480p only.
   - · covers FR-1, FR-2, FR-3, FR-5, FR-11, FR-15 · verify: `StreamsTest`
+  - Done: `Streams` with its records in the new `stream` package; a camera's settings are 720p or 480p (default 720p Smooth). `StartRequest` and `StreamsView` come with the HTTP part (T3). 17 tests.
 - [ ] **T2** `room/RoomSeats.java`, plain Java with a clock:
   - 20 seats, then the queue in order of arrival;
   - away from the room: 30 s after a closed tab, 60 s after a drop; away from the queue: 30 s after "leave", 60 s after the last poll; same seat or place when back in time;
