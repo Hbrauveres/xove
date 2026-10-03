@@ -16,9 +16,9 @@ flowchart LR
 | Component | What it does | Tech |
 | --- | --- | --- |
 | **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
-| **api** | Login, sessions, access requests, admin actions, the screen slot, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
+| **api** | Login, sessions, access requests, admin actions, the room's seats and live streams, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
 | **db** | Users, access requests, sessions | PostgreSQL 17, schema managed by Flyway |
-| **livekit** | Receives each shared screen once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `infra` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
+| **livekit** | Receives each screen and camera once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `infra` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
 | **reverse proxy** | HTTPS certificates, routing by hostname and path | Caddy, shared by every app on the server; configured in a separate private repository |
 
 The database is only reachable by the API, on a private Docker network. Only the proxy and LiveKit's media ports face the internet.
@@ -35,14 +35,15 @@ api/                  Spring Boot application
     auth/             login success handling, /api/me, the current user
     config/           security and application settings
     livekit/          LiveKit token issuing
-    screen/           the screen slot
+    room/             the room's seats and the queue
+    stream/           the live streams (screens and cameras)
     user/             users
   src/main/resources/db/migration/   Flyway migrations (V1, V2, …)
 web/                  React application
   src/api/            HTTP client and API types
   src/auth/           session state and route guards
-  src/hooks/          useScreenSlot, useLiveKitRoom, useRoomSession
-  src/media/          how screens are sent (presets, modes, sound) and remembered choices
+  src/hooks/          useRoomSeat, useStreams, useLiveKitRoom, useRoomSession
+  src/media/          how screens and cameras are sent (presets, modes, sound), who is big, remembered choices
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
@@ -73,9 +74,9 @@ flowchart TD
 
 Every sign-in gets a session, even for non-members; it just can't reach member-only endpoints.
 
-## Sharing a screen
+## Sharing screens and cameras
 
-The API owns **who** is sharing (the screen slot). LiveKit carries **what** is shared (the video).
+The API owns **who** is in the room and **which streams** are live ([spec 0060](../specs/0060-several-streams/spec.md)). LiveKit carries the video.
 
 ```mermaid
 sequenceDiagram
@@ -83,35 +84,63 @@ sequenceDiagram
   participant A as API
   participant L as LiveKit
   participant V as Viewer's browser
+  S->>A: POST /api/room/enter
+  A-->>S: in (a seat)
   S->>A: POST /api/livekit/token
   A-->>S: signed token (room, identity, allowed sources)
   S->>L: connect with the token
   Note over S: clicks "Share my screen", picks a window
   S->>L: publish screen track
-  S->>A: POST /api/screen/take (its connection and track ids)
-  V->>A: GET /api/screen (every 2 s)
-  A-->>V: holder = sharer
+  S->>A: POST /api/streams (screen, its connection and track ids)
+  V->>A: GET /api/streams (every 2 s)
+  A-->>V: the live streams
   L-->>V: screen track
-  Note over V: plays the holder's track on the stage
   Note over S: closes the tab
-  L->>A: webhook participant_left (signed)
-  A-->>V: holder = none on the next poll
+  L->>A: webhook participant_left (signed, reason CLIENT_INITIATED)
+  A-->>V: the stream is gone on the next poll
 ```
 
-The rules the room follows:
+### Seats and the queue
 
-1. **Share:** the browser's picker opens first (browsers only allow that straight from a click), then the slot is taken. Closing the picker does nothing.
-2. **Take over:** after a confirmation, the slot moves to you. The previous sharer's browser notices it's no longer the holder and stops sending.
-3. **Stop:** the Stop button or the browser's own bar stops the video and releases the slot. Only the holder can release it.
-4. **Reload while sharing:** the page sees it holds the slot but sends nothing, and releases it.
-5. **Everyone else** polls the slot every 2 seconds and plays the holder's screen track from LiveKit. The sharer sees their own screen, as viewers do, without its sound.
-6. **Sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API frees the slot when it's about the connection or screen track that is sharing. A closed tab frees the stage within a few seconds; a lost connection as soon as LiveKit gives up on it (tens of seconds). Only one connection per person: opening the room on a second device disconnects the first. Spec: [`specs/0038-stale-slot`](../specs/0038-stale-slot/spec.md).
+- **20 seats,** sharers included. The number is a setting, `XOVE_ROOM_SEATS` (1 to 20, 20 when not set); staging uses 3 to try the queue.
+- **Only someone with a seat gets a LiveKit token,** so the room can't go past the seats.
+- **Entering:** the room page asks for a seat (`POST /api/room/enter`). With one free and nobody waiting, you're in. Otherwise the waiting screen shows your place, and asks again every 2 seconds (that poll is how the API knows you're still there).
+- **A free seat is offered** to the first in the queue: a popup with "Enter room" and "Cancel", and 60 seconds to answer (the tab's title says "Your turn"). The seat is held for them meanwhile. "Cancel" leaves the queue; no answer moves them to the end, and the next person gets the popup.
+- **Leaving keeps your place for a while:**
 
-The slot lives in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart frees it.
+  | You were | How you left | How the API knows | Kept for |
+  | --- | --- | --- | --- |
+  | In the room | closed the tab | LiveKit's `participant_left`, reason `CLIENT_INITIATED` | 30 s |
+  | In the room | connection dropped | `participant_left`, any other reason | 60 s |
+  | In the queue | closed the tab | `POST /api/room/leave`, sent with `keepalive` while the page closes | 30 s |
+  | In the queue | connection dropped | no poll | 60 s after the last poll |
+
+  A dropped connection takes longer in total: LiveKit first waits for the browser to come back (about 20 to 30 seconds), and only then reports the leave.
+- **A seat never used** (a token handed out, nobody joined LiveKit) is given up after 60 seconds.
+- Nothing runs on a timer: whatever has run out is tidied away each time someone asks, by the clock.
+
+### Streams
+
+1. **Up to 6 live streams,** each a person's screen or camera. Someone with both uses 2. Nobody is pushed out: with 6 live, the start buttons wait.
+2. **Share or turn on the camera:** the browser's picker (or camera prompt) opens first, then a setup window with a preview and the settings. Nothing is sent until its "Start" button. Closing the picker does nothing. The camera is asked for only on that click, never with the microphone.
+3. **Stop:** the Stop or "Turn off camera" button, or the browser's own bar, stops the video and ends the stream. Only its person can stop or change a stream.
+4. **Reload while sharing:** the page sees the API lists a stream of its own that nothing sends, and ends it.
+5. **Everyone** polls the streams every 2 seconds and plays them from LiveKit. People sharing see their own streams, as viewers do, without their sound.
+6. **A sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API ends all of that person's streams at once, so nobody watches a frozen picture; their seat is kept as above. A stopped track ends just that stream. Only one connection per person: opening the room on a second device disconnects the first. Specs: [`0038`](../specs/0038-stale-slot/spec.md), [`0060`](../specs/0060-several-streams/spec.md).
+
+### Watching
+
+- **Each viewer picks who is big:** a click on a thumbnail. By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`).
+- **Thumbnails** under the player, one per other person sharing: their screen, or their camera when that's all they share.
+- **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
+- **Sound:** the big person's plays. Thumbnails are muted, each with its own mute button and volume; a muted thumbnail's sound isn't downloaded at all.
+- **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so thumbnails and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
+
+Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy) empties them; each open room asks for its seat again and registers what it's still sending, within a poll. If the places filled up meanwhile, it stops sending.
 
 ### Video and sound quality
 
-How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` ([spec 0086](../specs/0086-stream-quality/spec.md)). LiveKit's defaults suit slides and voice calls; these suit games and videos.
+How a screen or a camera is sent is decided in one place, `web/src/media/shareSettings.ts` ([spec 0086](../specs/0086-stream-quality/spec.md)). LiveKit's defaults suit slides and voice calls; these suit games and videos.
 
 - **Starting:** the browser's picker captures the screen, then a setup window shows a preview and the settings. Nothing is sent until "Start sharing".
 - **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is always captured at 1080p and sent in VP9 with all three layers; the chosen quality is a **cap**: the layers above it aren't sent.
@@ -119,12 +148,13 @@ How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` (
   - The sharer uploads all the layers (up to about 14 Mbit/s at 1080p on a great connection); each viewer downloads one.
   - The VPS's monthly traffic (8 TB) is watched in Hostinger's panel.
   - Firefox (no VP9) and Safari send a single layer: viewers then get only the sharer's quality, and the quality menu offers nothing lower. In Safari, Sharp mode also behaves like Smooth.
+- **A camera** ([spec 0060](../specs/0060-several-streams/spec.md)) goes up to 720p: 720p (the default) or 480p, at 30 fps, in VP9 with a 720p and a 480p layer. It has the same modes.
 - **And a mode:**
   - **Smooth** (the default): marked as motion. When the connection is tight, the picture gets softer and the frame rate holds.
   - **Sharp:** marked as detail. The picture keeps its detail and the frame rate drops.
-- **Changing them mid-share,** from the sharer's own player bar, is live: same stream, no reload.
-  - The sharer's browser applies the new cap and mode right away, and tells the API (`POST /api/screen/settings`).
-  - Every viewer's app reads the settings with the screen slot (every 2 seconds) and follows them: its quality menu offers nothing above the cap, and Auto asks for no more than the cap.
+- **Changing them mid-share,** from the sharer's own player bar (one set per stream: "Camera quality" and "Camera mode" next to the screen's), is live: same stream, no reload.
+  - The sharer's browser applies the new cap and mode right away, and tells the API (`POST /api/streams/{kind}/settings`).
+  - Every viewer's app reads the settings with the streams (every 2 seconds) and follows them: its quality menu offers nothing above the cap, and Auto asks for no more than the cap.
   - Since no viewer asks for the layers above the cap, LiveKit stops sending them (dynacast), so the sharer's upload really drops.
 - **Sound** is captured without the microphone filters (echo cancellation, noise suppression, automatic volume), in stereo, and sent at 128 kbit/s without silence skipping. Chrome gives sound only from a tab, or from the whole screen on Windows; Firefox and Safari give none, and the sharer sees a notice.
 - **Viewers** have a bar over the player:
@@ -132,11 +162,11 @@ How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` (
   - The volume slider is hidden on iPhones and iPads, which ignore a page's volume.
   - The quality menu offers "Auto" (adaptive stream: what fits the player and the connection) or a fixed quality from the sharer's down to 480p. A fixed quality asks the server for that size, so the viewer really downloads less.
 - **The LIVE label, the name and the bars** fade when the mouse stops moving over the player, and come back when it moves (or after a tap).
-- **Each browser remembers** its choices in `localStorage` (`xove.share.*`, `xove.watch.*`).
+- **Each browser remembers** its choices in `localStorage` (`xove.share.*`, `xove.camera.*`, `xove.watch.*`).
 
 To check a share on staging, open `chrome://webrtc-internals` in the viewer's or the sharer's browser. It shows the codec, frame rate, resolution, bitrate, and why quality drops: "cpu" means the sharer's computer can't keep up, "bandwidth" means the connection can't.
 
-**LiveKit webhooks.** Each environment's LiveKit posts every room event to its own API (`http://xove-<env>-api:8080/api/livekit/webhook`), signed with that environment's API key (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, ignores events from any room other than its own, and only acts on `participant_left` and `track_unpublished` (screen share).
+**LiveKit webhooks.** Each environment's LiveKit posts every room event to its own API (`http://xove-<env>-api:8080/api/livekit/webhook`), signed with that environment's API key (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, ignores events from any room other than its own, and only acts on `participant_joined` (the seat is used), `participant_left` (the person's streams end, the seat is kept 30 or 60 seconds by its `disconnectReason`) and `track_unpublished` (a screen or camera ends).
 
 **Where LiveKit runs** ([spec 0044](../specs/0044-livekit-in-infra/spec.md)). One LiveKit server per environment, both defined once in the `infra` repo (`livekit/compose.yaml`) and fed by that environment's generated settings: staging at `rtc-stage.xove.app` with media on 7881/tcp and 7882/udp, production at `rtc.xove.app` with 7883/tcp and 7884/udp. Each has its own key pair, shared only with its own API, so nothing signed for one environment is accepted by the other. This app only needs `LIVEKIT_URL`, the key pair and `LIVEKIT_ROOM`.
 
@@ -165,12 +195,16 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `POST /api/admin/access-requests/{id}/decline` | Admin | Declines; the user can ask again |
 | `GET /api/admin/members` | Admin | Members |
 | `DELETE /api/admin/members/{id}` | Admin | Removes a member and ends all their sessions |
-| `GET /api/screen` | Member | `{ holder: { userId, name, avatarUrl, since } or null, mine, settings: { quality, mode } or null }` |
-| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Body `{ participantSid, trackSid, quality?, mode? }`: the LiveKit connection and screen track the share comes from (never shown to anyone; 400 without them), and what it's sent with (a missing quality is 1080p, a missing mode Smooth) |
-| `POST /api/screen/settings` | The sharer | Changes what the share is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if it isn't your share |
-| `POST /api/screen/release` | Member | Frees the slot; 409 if it isn't yours |
-| `POST /api/livekit/token` | Member | `{ url, room, identity, token }` to join the video room |
-| `POST /api/livekit/webhook` | LiveKit (signature, no login) | Room events; frees the slot when the sharing connection leaves or its screen track stops. 401 on a bad signature |
+| `POST /api/room/enter` | Member | Asks for a seat, or polls the queue: `{ status: "in" }`, `{ status: "waiting", place }` or `{ status: "offered", until }` |
+| `POST /api/room/accept` | Member | Takes the seat offered: `{ status: "in" }`; 409 when there's no offer (it ran out) |
+| `POST /api/room/cancel` | Member | Leaves the queue, or turns the offer down; 204 |
+| `POST /api/room/leave` | Member | The waiting page is closing: the place is kept 30 seconds; 204 |
+| `GET /api/streams` | Member | `{ streams: [{ kind, userId, name, avatarUrl, since, settings: { quality, mode }, mine }], free, seated }`, oldest first |
+| `POST /api/streams` | Member with a seat | Starts a stream. Body `{ kind, participantSid, trackSid, quality?, mode? }`: `screen` or `camera`, the LiveKit connection and track it comes from (never shown to anyone; 400 without them), and what it's sent with (a missing value is 1080p Smooth for a screen, 720p Smooth for a camera; a camera can't be 1080p). Starting the same kind again replaces your own. 409 when the 6 places are taken, or without a seat |
+| `POST /api/streams/{kind}/settings` | Its person | Changes what the stream is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if you don't have that stream |
+| `POST /api/streams/{kind}/stop` | Member | Ends your stream of that kind; nothing to stop is fine |
+| `POST /api/livekit/token` | Member with a seat | `{ url, room, identity, token }` to join the video room; 409 without a seat |
+| `POST /api/livekit/webhook` | LiveKit (signature, no login) | Room events; marks seats used, keeps them after a leave, ends streams whose connection left or track stopped. 401 on a bad signature |
 
 Errors follow RFC 9457 (problem details); the web app shows their `detail` field.
 
@@ -180,8 +214,8 @@ Errors follow RFC 9457 (problem details); the web app shows their `detail` field
 - **Sessions:** stored server-side in PostgreSQL, so removing a member can end their sessions immediately. The cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
 - **CSRF:** every state-changing request carries a token read from a cookie and echoed in a header.
 - **Authorization:** member and admin checks happen on the server for every request. The API never trusts an id sent by the browser.
-- **LiveKit tokens:** signed by the API with a secret LiveKit shares. A token names one room and one identity, allows publishing only screen and screen audio (never camera or microphone), and expires after one hour. The secret never reaches the browser.
+- **LiveKit tokens:** signed by the API with a secret LiveKit shares. A token names one room and one identity, allows publishing only a screen, its sound and a camera (never a microphone), and expires after one hour. Only someone with a seat gets one. The secret never reaches the browser.
 - **Network:** the database has no public port. The app's containers publish no ports; only the proxy (80/443) and each LiveKit's two media ports face the internet.
 - **Supply chain:** every change passes a vulnerability scan of the images and dependencies and a static analysis of the code before it can be published (see [Pipeline](pipeline.md)).
 
-**Trust boundary to know about:** any member's token may publish a screen; the one-sharer rule is enforced by the web app. That's acceptable for a small group of friends. Server-side enforcement (granting publish rights only to the slot holder) is on the roadmap.
+**Trust boundaries to know about:** any seated member's token may publish a screen and a camera; the 6-stream limit is enforced by the web app and the API's list, not by LiveKit. And a token stays valid for an hour, so someone who lost their seat could rejoin LiveKit with an old one. Both are acceptable for a small group of friends.

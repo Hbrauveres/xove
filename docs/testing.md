@@ -15,8 +15,8 @@ Every change is tested automatically in the [pipeline](pipeline.md) before it ca
 
 Three kinds, from fastest to slowest:
 
-- **Plain unit tests**, no Spring and no database. Example: `ScreenSlotTest` checks the slot rules (takeover, only the holder releases, releasing an empty slot is a no-op) with a clock the test controls, so nothing sleeps. `LiveKitTokensTest` checks a token's signature, claims and expiry.
-- **Web layer tests** with MockMvc and `spring-security-test`. They send real HTTP requests through the whole Spring Security filter chain as a signed-in user (`oidcLogin()`), with or without a CSRF token (`csrf()`), and check status codes and JSON. Example: `ScreenControllerTest`, `AccessFlowTest`.
+- **Plain unit tests**, no Spring and no database. Example: `RoomSeatsTest` checks the seats and the queue (30 and 60 seconds kept, the seat offer, no answer to the end of the line) with a clock the test moves (`MutableClock`), so nothing sleeps. `StreamsTest` checks the 6 places. `LiveKitTokensTest` checks a token's signature, claims and expiry.
+- **Web layer tests** with MockMvc and `spring-security-test`. They send real HTTP requests through the whole Spring Security filter chain as a signed-in user (`oidcLogin()`), with or without a CSRF token (`csrf()`), and check status codes and JSON. Example: `StreamsControllerTest`, `RoomControllerTest`, `AccessFlowTest`.
 - **Persistence tests** against a real PostgreSQL started by Testcontainers. They check what only a real database can: unique emails, "one pending request per user", migrations applying cleanly.
 
 Docker must be running for Testcontainers. The first run downloads the `postgres:17-alpine` image.
@@ -48,7 +48,7 @@ The room page accepts a short poll interval in tests, so nothing waits 2 seconds
 
 ## What a good test here looks like
 
-- Named after the behaviour, as a sentence: `someoneElseCannotStopTheShare`, `"frees the slot when the browser's own Stop sharing bar is used"`.
+- Named after the behaviour, as a sentence: `noAnswerIn60SecondsMovesYouToTheEndAndOffersTheNext`, `"ends the stream when the browser's own Stop sharing bar is used"`.
 - Arrange, act, assert, separated by blank lines.
 - Asserts on what a user or client sees (text, status codes, JSON), not on internals.
 - No sleeps: inject a clock, use `findBy…` and `waitFor` for async UI.

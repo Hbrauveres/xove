@@ -24,7 +24,7 @@ What to look for:
 
 | Service | Useful lines |
 | --- | --- |
-| api | `Started XoveApiApplication`, Flyway `Migrating schema`, `Google login failed: …` (the reason a sign-in was refused), `slot freed: user 12 left (PA_…)` (LiveKit freed the screen), `webhook refused: …` (a webhook with a bad signature), stack traces |
+| api | `Started XoveApiApplication`, Flyway `Migrating schema`, `Google login failed: …` (the reason a sign-in was refused), `streams ended: user 12 left (PA_…)` and `user 12 left (PA_…), reason CLIENT_INITIATED` (LiveKit said someone left; the reason decides 30 or 60 seconds for their seat), `webhook refused: …` (a webhook with a bad signature), stack traces |
 | livekit | `starting LiveKit server` with the public IP it found, participant joins and leaves, `sent webhook` for each event sent to the API |
 | db | `database system is ready to accept connections` |
 | web | Caddy access log: one JSON line per request |
@@ -35,7 +35,7 @@ What to look for:
 | --- | --- | --- |
 | Sign-in ends on `/?error=login-failed` | The API refused the Google login | `docker logs xove-stage-api 2>&1 \| grep "login failed"` shows why. Often a stale session in the browser: try a private window |
 | "Video offline" in the room | The API has no LiveKit settings, or can't sign tokens | Check the `livekit` group of `infra/config/<env>.yaml` and the `livekit-<env>` vault item (secret ≥ 32 characters), then redeploy the app |
-| "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Anyone can take over the screen. `docker logs livekit-stage \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
+| "Loading X's screen…" forever | The sharer's video can't reach LiveKit, or LiveKit's webhooks don't reach the API | Watch someone else meanwhile (click their thumbnail). `docker logs livekit-stage \| grep webhook` should show `sent webhook`; errors there, or `webhook refused` in the API logs, mean the URL or the key pair is wrong. If video never arrives for anyone, check that LiveKit's media ports are open in every firewall |
 | Video works on Wi-Fi but not on mobile data | UDP media blocked somewhere | Check the server's firewall and the provider's panel for the LiveKit UDP and TCP media ports |
 | Deploy failed in the pipeline | New version unhealthy; the server already rolled back | Read the deploy step's log (it includes the container logs), fix forward |
 | Deploy refused, "isn't on the app's main branch" | The commit isn't on `main` (a branch, a fork) | Merge it first; only `main` deploys |

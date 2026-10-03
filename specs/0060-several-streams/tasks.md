@@ -49,7 +49,8 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
 
 ## Wrap-up
 
-- [ ] **T12** Docs: `docs/architecture.md` (room rules, seats and queue, facecam, API table, tokens allow the camera), decision 32 in `docs/decisions.md`, `CLAUDE.md` (test counts, room facts, `XOVE_ROOM_SEATS`) · verify: review
+- [x] **T12** Docs: `docs/architecture.md` (room rules, seats and queue, facecam, API table, tokens allow the camera), decision 32 in `docs/decisions.md`, `CLAUDE.md` (test counts, room facts, `XOVE_ROOM_SEATS`) · verify: review
+  - Done: `architecture.md` (seats and the queue, streams, watching, the facecam, sound, the API table, tokens allow the camera, webhooks, trust boundaries), `overview.md`, `testing.md`, `operations.md` (log lines), `getting-started.md` (`XOVE_ROOM_SEATS`), decision 32 (and 2, 3, 8, 10 marked), `CLAUDE.md` (what this is, test counts, the seats setting).
 - [ ] **T13** Review every AC (`/review`), fix what it finds, open the PR · verify: no gaps left
 - [ ] **T14** On staging after merge, written in the PR (Henrique, with friends):
   - six streams, a seventh refused (AC-1);
