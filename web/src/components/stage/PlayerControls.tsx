@@ -7,6 +7,8 @@ type Props = {
   sharerHeight: number;
   /** How many qualities the sharer sends, when known. */
   layers?: number;
+  /** The sharer's chosen quality: nothing above it is offered. */
+  cap?: "1080p" | "720p" | "480p";
   prefs: WatchPrefs;
   onChange: (prefs: WatchPrefs) => void;
   /** False where the page can't set the volume (iPhones and iPads): only mute is shown. */
@@ -14,8 +16,8 @@ type Props = {
 };
 
 /** The viewer's bar over the player, like YouTube's: volume and quality. Only changes this browser. */
-export function PlayerControls({ sharerHeight, layers, prefs, onChange, canSetVolume }: Props) {
-  const qualities = viewerQualities(sharerHeight, layers);
+export function PlayerControls({ sharerHeight, layers, cap, prefs, onChange, canSetVolume }: Props) {
+  const qualities = viewerQualities(sharerHeight, layers, cap);
   const silent = prefs.muted || prefs.volume === 0;
 
   return (

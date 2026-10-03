@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import type { SharePrefs } from "../../media/preferences";
-import { SHARE_QUALITIES, type ShareMode, type ShareQuality } from "../../media/shareSettings";
 import type { Friend } from "../../types";
 import { Button } from "../ui/Button";
 import { TakeoverConfirm } from "./TakeoverConfirm";
@@ -12,19 +10,11 @@ type Props = {
   onStart: () => void;
   onTake: () => void;
   onStop: () => void;
-  /** The quality and mode my screen is (or will be) sent with. */
-  prefs: SharePrefs;
-  onPrefsChange: (prefs: SharePrefs) => void;
   /** I'm sharing, but my browser gave no sound. */
   noSound?: boolean;
   /** A request is on its way: buttons wait. */
   busy?: boolean;
 };
-
-const MODES: { id: ShareMode; label: string }[] = [
-  { id: "smooth", label: "Smooth (games, videos)" },
-  { id: "sharp", label: "Sharp (text, code)" },
-];
 
 type Step = "idle" | "confirmTakeover";
 
@@ -38,8 +28,6 @@ export function ShareControls({
   onStart,
   onTake,
   onStop,
-  prefs,
-  onPrefsChange,
   noSound = false,
   busy = false,
 }: Props) {
@@ -61,42 +49,11 @@ export function ShareControls({
       <div className={styles.row}>
         <p className={styles.hint}>
           {isMeSharing
-            ? "Everyone sees what's on the stage. Share a tab or window to avoid the mirror effect; changing the quality reloads it for a second."
+            ? "Everyone sees what's on the stage. Change the quality or mode from your player."
             : someoneElseSharing
               ? `Want the stage? Taking it stops ${sharer.name}'s share.`
               : "The stage is free. Share a screen, window or tab."}
         </p>
-
-        <div className={styles.settings}>
-          <label className={styles.setting}>
-            <span>Send quality</span>
-            <select
-              value={prefs.quality}
-              disabled={busy}
-              onChange={(e) => onPrefsChange({ ...prefs, quality: e.target.value as ShareQuality })}
-            >
-              {SHARE_QUALITIES.map((q) => (
-                <option key={q.id} value={q.id}>
-                  {q.id} · {q.fps} fps
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.setting}>
-            <span>Mode</span>
-            <select
-              value={prefs.mode}
-              disabled={busy}
-              onChange={(e) => onPrefsChange({ ...prefs, mode: e.target.value as ShareMode })}
-            >
-              {MODES.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
 
         {isMeSharing ? (
           <Button variant="danger" onClick={onStop} disabled={busy}>

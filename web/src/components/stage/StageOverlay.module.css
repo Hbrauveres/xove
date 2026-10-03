@@ -1,4 +1,5 @@
 .overlay {
+  transition: opacity 0.25s ease;
   position: absolute;
   inset: 0;
   display: flex;
@@ -119,4 +120,22 @@
   .stats {
     display: none;
   }
+}
+
+/* Hidden with the player's bars when the mouse stops (see Stage). */
+:global([data-chrome="hidden"]) .overlay {
+  opacity: 0;
+}
+
+:global([data-chrome="hidden"]) .overlay button {
+  pointer-events: none;
+}
+
+/* A control with the keyboard focus keeps everything visible. */
+:global([data-chrome="hidden"]:focus-within) .overlay {
+  opacity: 1;
+}
+
+:global([data-chrome="hidden"]:focus-within) .overlay button {
+  pointer-events: auto;
 }

@@ -26,15 +26,19 @@ Nobody can choose anything either. The sharer can't pick how good their stream i
 
 **The sharer's controls**
 
-- **FR-5** When starting, the sharer picks the quality they send: 1080p at 30 fps (the default), 720p at 30 fps, or 480p at 30 fps.
+- **FR-5** Starting a share has two steps. First the browser's picker: the screen is captured but not sent. Then a small setup window shows a preview of it and its settings, and nothing reaches anyone until the sharer clicks "Start sharing" (Cancel drops it). There the sharer picks the quality they send: 1080p at 30 fps (the default), 720p at 30 fps, or 480p at 30 fps.
 - **FR-6** The sharer also picks a mode: **Smooth** (the default, for games and videos: when the connection is tight, the picture gets softer and motion keeps flowing) or **Sharp** (for text and code: the picture keeps its detail and the frame rate drops instead).
-- **FR-7** While sharing, the sharer can change the quality and the mode without stopping the share.
+- **FR-7** While sharing, the sharer can raise or lower the quality and switch the mode from their own player's bar (where viewers have theirs), without stopping the share and without a reload for viewers. The change goes to the API, and every viewer's app follows it by itself within a couple of seconds: their quality menu never offers more than the sharer's quality.
 - **FR-8** The sharer sees their own stream in the player, as viewers see it, instead of a notice. Its sound is muted for them, so it doesn't echo.
 
 **The viewer's controls**
 
 - **FR-9** Like YouTube, each viewer picks the quality they watch: "Auto" (the default: the best their connection can take), or a fixed quality from what the sharer sends down to 480p. Nobody can pick more than the sharer sends.
 - **FR-10** Each viewer has a volume control on the player, like YouTube's: a slider to turn the stream up or down, and a speaker icon that mutes it with one click (and unmutes it, back to the same volume). It only changes what they hear.
+
+**The player**
+
+- **FR-13** The LIVE label, the sharer's name and the player's bars show while the mouse moves over the player (or after a tap) and fade when it stops, like YouTube.
 
 **Remembered choices**
 
@@ -48,7 +52,7 @@ Nobody can choose anything either. The sharer can't pick how good their stream i
 
 - **AC-1** For each preset, the app asks LiveKit for the matching resolution and frame rate; in Smooth mode marked as motion and favouring frame rate, in Sharp mode marked as detail and favouring sharpness; with high ceilings that don't hold the picture back, and with lower layers down to 480p for viewers to choose (automated test of the publish settings).
 - **AC-2** The app asks for screen sound without echo cancellation, noise suppression or automatic volume, in stereo, at music quality and without silence skipping (automated test of the capture and publish settings).
-- **AC-3** Changing the quality or the mode while sharing changes what is sent, and the share keeps going (automated test, plus manual).
+- **AC-3** Picking a screen shows the setup window with a preview, and nothing is sent until "Start sharing"; Cancel sends nothing. Changing the quality or the mode while sharing, from the sharer's player, applies to the same stream, reaches the API, and viewers' quality menus follow it (automated tests, plus manual).
 - **AC-4** The sharer sees their own stream in the player, and its sound doesn't play for them (automated test).
 - **AC-5** A viewer's quality menu offers "Auto" and every quality from the sharer's down to 480p, and nothing above the sharer's; picking one changes what that viewer receives (automated test, plus `chrome://webrtc-internals` on staging, written in the PR).
 - **AC-6** The slider lowers and raises the stream's volume, and clicking the speaker icon mutes it and unmutes it back to the same volume, for that viewer only (automated test).
@@ -57,6 +61,7 @@ Nobody can choose anything either. The sharer can't pick how good their stream i
 - **AC-9** On staging, sharing music from a tab: the viewer hears stereo sound with no pumping or cuts, and the stats show stereo music-quality audio (manual, written in the PR).
 - **AC-10** On a slowed connection (Chrome's network throttling on the sharer): in Smooth mode, motion stays fluid and the picture gets softer instead of freezing; in Sharp mode, text stays readable and the frame rate drops (manual).
 - **AC-11** After a reload, the sharer's quality and mode and the viewer's quality and volume are the ones chosen before; with nothing saved, the defaults apply (automated test).
+- **AC-12** The player's labels and bars show when the mouse moves over it and fade when it stops or leaves (automated test).
 
 ## Out of scope
 
@@ -66,4 +71,4 @@ Nobody can choose anything either. The sharer can't pick how good their stream i
 
 ## Open questions
 
-None. Decided with Henrique on 2026-10-03: presets 1080p, 720p and 480p, all at 30 fps (no 60 fps for now); a Smooth and a Sharp mode, Smooth by default; choices remembered in each browser; a YouTube-style volume slider with a speaker icon that mutes.
+None. Changed with Henrique on 2026-10-04 after trying it: the setup window after the picker, settings in the sharer's player, live changes through the API, and a fading player overlay. Decided with Henrique on 2026-10-03: presets 1080p, 720p and 480p, all at 30 fps (no 60 fps for now); a Smooth and a Sharp mode, Smooth by default; choices remembered in each browser; a YouTube-style volume slider with a speaker icon that mutes.

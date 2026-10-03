@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { ShareControls } from "../components/controls/ShareControls";
+import { ShareSetup } from "../components/share/ShareSetup";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
@@ -53,6 +54,9 @@ export function RoomPage({ pollMs }: Props = {}) {
             isMeSharing={session.isMeSharing}
             connection={session.connection}
             onStartSharing={session.startSharing}
+            streamSettings={session.streamSettings}
+            sharePrefs={session.sharePrefs}
+            onSharePrefsChange={session.setSharePrefs}
           />
           <ShareControls
             sharer={session.sharer}
@@ -60,8 +64,6 @@ export function RoomPage({ pollMs }: Props = {}) {
             onStart={session.startSharing}
             onTake={session.startSharing}
             onStop={session.stop}
-            prefs={session.sharePrefs}
-            onPrefsChange={session.setSharePrefs}
             noSound={session.noSound}
             busy={session.busy}
           />
@@ -71,6 +73,16 @@ export function RoomPage({ pollMs }: Props = {}) {
             </p>
           )}
         </main>
+
+        {session.pendingShare && (
+          <ShareSetup
+            preview={session.pendingShare.video}
+            initial={session.sharePrefs}
+            hasSound={session.pendingShare.audio !== undefined}
+            onStart={session.confirmShare}
+            onCancel={session.cancelShare}
+          />
+        )}
 
         <aside className={styles.side}>
           <ViewerList people={session.people} meId={session.me.id} sharerId={session.share?.sharerId ?? null} />

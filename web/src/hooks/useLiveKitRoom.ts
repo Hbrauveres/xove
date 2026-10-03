@@ -5,14 +5,23 @@ import {
   RoomEvent,
   Track,
   VideoQuality,
-  type LocalTrack,
+  type LocalAudioTrack,
+  type LocalVideoTrack,
   type Participant,
   type RemoteTrackPublication,
 } from "livekit-client";
 import { ApiError, api } from "../api/client";
 import type { SharingConnection } from "../api/types";
 import type { SharePrefs } from "../media/preferences";
-import { SHARE_QUALITIES, screenCaptureOptions, screenPublishOptions } from "../media/shareSettings";
+import {
+  SHARE_QUALITIES,
+  capOf,
+  contentHintOf,
+  degradationOf,
+  screenCaptureOptions,
+  screenPublishOptions,
+  type ShareMode,
+} from "../media/shareSettings";
 import type { ActivityEvent, ConnectionState, MediaTrack, ScreenTracks } from "../types";
 
 export type RoomPerson = { identity: string; name: string };
@@ -20,14 +29,11 @@ export type RoomPerson = { identity: string; name: string };
 /** A share that just started: where it comes from, and whether the browser gave its sound. */
 export type StartedShare = SharingConnection & { hasSound: boolean };
 
-/**
- * A quality change in progress: the screen is already being sent again with the new
- * settings (`connection`). `finish` stops the old one; `cancel` drops the new one.
- */
-export type ShareChange = {
-  connection: SharingConnection;
-  finish: () => Promise<void>;
-  cancel: () => Promise<void>;
+/** A screen the browser is capturing but not sending yet: the sharer is choosing how to send it. */
+export type ScreenCapture = {
+  video: LocalVideoTrack;
+  /** Missing when the browser gave no sound. */
+  audio?: LocalAudioTrack;
 };
 
 export type LiveKitRoom = {
@@ -44,17 +50,19 @@ export type LiveKitRoom = {
   presence: ActivityEvent[];
   error: string | null;
   /**
-   * Opens the browser's screen picker and sends the screen with these settings.
-   * Resolves with the connection and track that are now sharing, or null if the
-   * person cancelled.
+   * Opens the browser's screen picker and captures the screen, without sending it.
+   * Resolves null if the person closed the picker.
    */
-  startScreenShare: (prefs: SharePrefs) => Promise<StartedShare | null>;
+  captureScreen: (mode: ShareMode) => Promise<ScreenCapture | null>;
   /**
-   * Sends the same captured screen again with new settings, without opening the
-   * picker. Resolves with the change to finish once the API knows the new track,
-   * or null if there's nothing being shared or it failed.
+   * Sends a captured screen with these settings. Resolves with the connection and
+   * track that are now sharing, or null if it couldn't (and then nothing is sent).
    */
-  changeScreenShare: (prefs: SharePrefs) => Promise<ShareChange | null>;
+  publishCapture: (capture: ScreenCapture, prefs: SharePrefs) => Promise<StartedShare | null>;
+  /** Stops a capture that was never sent. */
+  discardCapture: (capture: ScreenCapture) => void;
+  /** Changes the quality cap and the mode of the screen being sent, live: no reload for viewers. */
+  applyShareSettings: (prefs: SharePrefs) => Promise<void>;
   stopScreenShare: () => Promise<void>;
 };
 
@@ -169,7 +177,7 @@ export function useLiveKitRoom(): LiveKitRoom {
     };
   }, [sync]);
 
-  const startScreenShare = useCallback(async (prefs: SharePrefs) => {
+  const captureScreen = useCallback(async (mode: ShareMode): Promise<ScreenCapture | null> => {
     const room = roomRef.current;
     if (!room) {
       setError("Not connected to the video server yet.");
@@ -177,82 +185,28 @@ export function useLiveKitRoom(): LiveKitRoom {
     }
     try {
       setError(null);
-      await room.localParticipant.setScreenShareEnabled(
-        true,
-        screenCaptureOptions(prefs.quality, prefs.mode),
-        screenPublishOptions(prefs.quality, prefs.mode),
-      );
-      sync();
-      const local = room.localParticipant;
-      if (!local.isScreenShareEnabled) return null;
-      const trackSid = local.getTrackPublication(Track.Source.ScreenShare)?.trackSid;
-      if (!local.sid || !trackSid) {
-        // The API needs both to free the slot when this share ends.
-        await local.setScreenShareEnabled(false);
-        sync();
+      // Always the best quality: the sharer can lower it, or raise it back, while sharing.
+      const tracks = await room.localParticipant.createScreenTracks(screenCaptureOptions(mode));
+      const video = tracks.find((t) => t.kind === Track.Kind.Video) as LocalVideoTrack | undefined;
+      const audio = tracks.find((t) => t.kind === Track.Kind.Audio) as LocalAudioTrack | undefined;
+      if (!video) {
+        tracks.forEach((t) => t.stop());
         setError("Couldn't start sharing your screen.");
         return null;
       }
-      const hasSound = local.getTrackPublication(Track.Source.ScreenShareAudio) !== undefined;
-      return { participantSid: local.sid, trackSid, hasSound };
+      return { video, audio };
     } catch (e) {
       // Closing the browser's picker is a choice, not an error.
       if (e instanceof DOMException && e.name === "NotAllowedError") return null;
       setError("Couldn't start sharing your screen.");
       return null;
     }
-  }, [sync]);
+  }, []);
 
-  const changeScreenShare = useCallback(
-    async (prefs: SharePrefs): Promise<ShareChange | null> => {
-      const room = roomRef.current;
-      const local = room?.localParticipant;
-      const current = local?.getTrackPublication(Track.Source.ScreenShare)?.track as LocalTrack | undefined;
-      if (!room || !local || !current) return null;
-      let capture: MediaStreamTrack | undefined;
-      let published = false;
-      try {
-        // A copy of the same capture keeps the screen alive while the old track goes,
-        // and the browser's picker doesn't open again.
-        capture = current.mediaStreamTrack.clone();
-        const preset = SHARE_QUALITIES.find((q) => q.id === prefs.quality) ?? SHARE_QUALITIES[0];
-        capture.contentHint = prefs.mode === "smooth" ? "motion" : "detail";
-        await capture.applyConstraints({ width: preset.width, height: preset.height, frameRate: preset.fps }).catch(() => {
-          /* The browser keeps the old size: the new layers still cap what's sent. */
-        });
-        const next = await local.publishTrack(capture, {
-          ...screenPublishOptions(prefs.quality, prefs.mode),
-          source: Track.Source.ScreenShare,
-          name: "screen",
-        });
-        published = true;
-        sync();
-        if (!local.sid || !next.trackSid) {
-          await local.unpublishTrack(next.track as LocalTrack);
-          sync();
-          return null;
-        }
-        return {
-          connection: { participantSid: local.sid, trackSid: next.trackSid },
-          finish: async () => {
-            await local.unpublishTrack(current);
-            sync();
-          },
-          cancel: async () => {
-            await local.unpublishTrack(next.track as LocalTrack);
-            sync();
-          },
-        };
-      } catch {
-        // A copy that never went out would keep the capture (and the browser's
-        // sharing indicator) alive after the share ends.
-        if (!published) capture?.stop();
-        setError("Couldn't change the quality. Your screen is still being shared as before.");
-        return null;
-      }
-    },
-    [sync],
-  );
+  const discardCapture = useCallback((capture: ScreenCapture) => {
+    capture.video.stop();
+    capture.audio?.stop();
+  }, []);
 
   const stopScreenShare = useCallback(async () => {
     const room = roomRef.current;
@@ -260,6 +214,53 @@ export function useLiveKitRoom(): LiveKitRoom {
     await room.localParticipant.setScreenShareEnabled(false);
     sync();
   }, [sync]);
+
+  const publishCapture = useCallback(
+    async (capture: ScreenCapture, prefs: SharePrefs): Promise<StartedShare | null> => {
+      const room = roomRef.current;
+      if (!room) {
+        discardCapture(capture);
+        setError("Not connected to the video server yet.");
+        return null;
+      }
+      const local = room.localParticipant;
+      try {
+        const options = screenPublishOptions(prefs.mode);
+        capture.video.mediaStreamTrack.contentHint = contentHintOf(prefs.mode);
+        const video = await local.publishTrack(capture.video, { ...options, source: Track.Source.ScreenShare });
+        if (capture.audio) await local.publishTrack(capture.audio, { ...options, source: Track.Source.ScreenShareAudio });
+        capture.video.setPublishingQuality(capOf(prefs.quality));
+        sync();
+        if (!local.sid || !video.trackSid) {
+          // The API needs both to free the slot when this share ends.
+          await stopScreenShare();
+          setError("Couldn't start sharing your screen.");
+          return null;
+        }
+        return { participantSid: local.sid, trackSid: video.trackSid, hasSound: capture.audio !== undefined };
+      } catch {
+        await stopScreenShare();
+        discardCapture(capture);
+        setError("Couldn't start sharing your screen.");
+        return null;
+      }
+    },
+    [sync, stopScreenShare, discardCapture],
+  );
+
+  const applyShareSettings = useCallback(async (prefs: SharePrefs) => {
+    const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track as
+      | LocalVideoTrack
+      | undefined;
+    if (!track) return;
+    track.mediaStreamTrack.contentHint = contentHintOf(prefs.mode);
+    // Viewers' apps also stop asking for more than the cap (they read it from the
+    // API), so LiveKit stops sending the layers above it (dynacast).
+    track.setPublishingQuality(capOf(prefs.quality));
+    await track.setDegradationPreference(degradationOf(prefs.mode)).catch(() => {
+      /* An older browser keeps the previous preference; the content hint still applies. */
+    });
+  }, []);
 
   return {
     connection,
@@ -269,8 +270,10 @@ export function useLiveKitRoom(): LiveKitRoom {
     localScreen,
     presence,
     error,
-    startScreenShare,
-    changeScreenShare,
+    captureScreen,
+    publishCapture,
+    discardCapture,
+    applyShareSettings,
     stopScreenShare,
   };
 }
