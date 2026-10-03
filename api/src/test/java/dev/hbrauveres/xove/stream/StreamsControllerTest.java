@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.hbrauveres.xove.TestcontainersConfiguration;
+import dev.hbrauveres.xove.room.RoomSeats;
 import dev.hbrauveres.xove.user.User;
 import dev.hbrauveres.xove.user.UserRepository;
 import dev.hbrauveres.xove.user.UserService;
@@ -40,6 +41,7 @@ class StreamsControllerTest {
     @Autowired UserService userService;
     @Autowired UserRepository users;
     @Autowired Streams streams;
+    @Autowired RoomSeats seats;
 
     MockMvc mvc;
 
@@ -47,6 +49,7 @@ class StreamsControllerTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         streams.clear();
+        seats.clear();
 
         userService.recordGoogleLogin("sub-admin", "admin@example.com", "Admin", null);
         member("sub-friend", "friend@example.com", "Friend", "https://img/friend");
@@ -84,6 +87,20 @@ class StreamsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.streams").isEmpty())
                 .andExpect(jsonPath("$.free").value(6));
+    }
+
+    // Spec 0060: only someone in the room can start a stream, and the poll says if you're in.
+    @Test
+    void startingWithoutASeatIsRefused() throws Exception {
+        mvc.perform(get("/api/streams").with(as("sub-friend"))).andExpect(jsonPath("$.seated").value(false));
+
+        mvc.perform(post("/api/streams").with(as("sub-friend")).with(csrf())
+                        .contentType("application/json").content(body("sub-friend", "screen", "")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Enter the room first."));
+
+        mvc.perform(post("/api/room/enter").with(as("sub-friend")).with(csrf()));
+        mvc.perform(get("/api/streams").with(as("sub-friend"))).andExpect(jsonPath("$.seated").value(true));
     }
 
     @Test
@@ -270,6 +287,7 @@ class StreamsControllerTest {
     }
 
     private ResultActions start(String subject, String kind, String extra) throws Exception {
+        mvc.perform(post("/api/room/enter").with(as(subject)).with(csrf()));
         return mvc.perform(post("/api/streams").with(as(subject)).with(csrf())
                 .contentType("application/json").content(body(subject, kind, extra)));
     }

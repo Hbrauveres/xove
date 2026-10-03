@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.hbrauveres.xove.TestcontainersConfiguration;
+import dev.hbrauveres.xove.room.RoomSeats;
 import dev.hbrauveres.xove.stream.SharingConnection;
 import dev.hbrauveres.xove.stream.Stream;
 import dev.hbrauveres.xove.stream.StreamKind;
@@ -49,6 +50,7 @@ class LiveKitWebhookControllerTest {
     @Autowired UserService userService;
     @Autowired UserRepository users;
     @Autowired Streams streams;
+    @Autowired RoomSeats seats;
 
     MockMvc mvc;
     User ana;
@@ -60,6 +62,7 @@ class LiveKitWebhookControllerTest {
         ana = member("sub-ana", "ana@example.com", "Ana");
         bruno = member("sub-bruno", "bruno@example.com", "Bruno");
         streams.all().forEach(s -> streams.stop(s.userId(), s.kind()));
+        seats.clear();
     }
 
     // 0038 AC-1; 0060 AC-4: all of a person's streams end when their connection leaves.
@@ -194,6 +197,47 @@ class LiveKitWebhookControllerTest {
         assertThat(holder()).isEqualTo(ana.getId());
     }
 
+    // ---- seats (spec 0060) ----
+
+    // AC-4: the streams end at once, the seat is kept for 30 seconds after a closed tab.
+    @Test
+    void closingTheTabEndsTheStreamsAndKeepsTheSeatFor30Seconds() throws Exception {
+        seats.enter(ana.getId());
+        send(joined(ana, "PA_ana")).andExpect(status().isOk());
+        assertThat(seats.keptUntil(ana.getId())).isEmpty();
+        anaShares();
+
+        Instant before = Instant.now();
+        send(left(ana, "PA_ana", "CLIENT_INITIATED")).andExpect(status().isOk());
+
+        assertThat(streams.all()).isEmpty();
+        assertThat(seats.isSeated(ana.getId())).isTrue();
+        assertThat(seats.keptUntil(ana.getId())).hasValueSatisfying(until ->
+                assertThat(until).isBetween(before.plusSeconds(30), Instant.now().plusSeconds(30)));
+    }
+
+    @Test
+    void aDroppedConnectionKeepsTheSeatFor60Seconds() throws Exception {
+        seats.enter(ana.getId());
+        send(joined(ana, "PA_ana"));
+
+        Instant before = Instant.now();
+        send(left(ana, "PA_ana")).andExpect(status().isOk());
+
+        assertThat(seats.keptUntil(ana.getId())).hasValueSatisfying(until ->
+                assertThat(until).isBetween(before.plusSeconds(60), Instant.now().plusSeconds(60)));
+    }
+
+    @Test
+    void anotherConnectionLeavingKeepsTheSeatAsItIs() throws Exception {
+        seats.enter(ana.getId());
+        send(joined(ana, "PA_ana_new"));
+
+        send(left(ana, "PA_ana_old", "CLIENT_INITIATED")).andExpect(status().isOk());
+
+        assertThat(seats.keptUntil(ana.getId())).isEmpty();
+    }
+
     // ---- helpers ----
 
     private void anaShares() {
@@ -222,11 +266,23 @@ class LiveKitWebhookControllerTest {
                 .content(body));
     }
 
+    /** A connection that dropped: LiveKit gives a reason other than the client leaving. */
     private static String left(User who, String participantSid) {
+        return left(who, participantSid, "SIGNAL_CLOSE");
+    }
+
+    private static String left(User who, String participantSid, String reason) {
         return """
                 {"event":"participant_left","room":{"name":"xove"},\
-                "participant":{"identity":"user-%d","sid":"%s","state":"DISCONNECTED"},\
-                "id":"EV_1","createdAt":"1790545830"}""".formatted(who.getId(), participantSid);
+                "participant":{"identity":"user-%d","sid":"%s","state":"DISCONNECTED","disconnectReason":"%s"},\
+                "id":"EV_1","createdAt":"1790545830"}""".formatted(who.getId(), participantSid, reason);
+    }
+
+    private static String joined(User who, String participantSid) {
+        return """
+                {"event":"participant_joined","room":{"name":"xove"},\
+                "participant":{"identity":"user-%d","sid":"%s","state":"ACTIVE"},\
+                "id":"EV_3","createdAt":"1790545830"}""".formatted(who.getId(), participantSid);
     }
 
     private static String unpublished(User who, String participantSid, String trackSid, String source) {

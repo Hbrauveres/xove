@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The room's seats and the queue behind them (spec 0060). Plain Java: no Spring,
@@ -139,6 +140,16 @@ public class RoomSeats {
         return seats.containsKey(userId);
     }
 
+    /**
+     * When this person's seat will be given up, if they're away or haven't joined LiveKit yet;
+     * empty while they're connected, or without a seat.
+     */
+    public synchronized Optional<Instant> keptUntil(Long userId) {
+        tidy();
+        Seat seat = seats.get(userId);
+        return seat == null ? Optional.empty() : Optional.ofNullable(seat.until);
+    }
+
     private int free() {
         long offers = queue.stream().filter(w -> w.offerUntil != null).count();
         return (int) (capacity - seats.size() - offers);
@@ -186,7 +197,7 @@ public class RoomSeats {
     }
 
     /** Empties the room and the queue. Only for tests, which share one across a Spring context. */
-    synchronized void clear() {
+    public synchronized void clear() {
         seats.clear();
         queue.clear();
     }

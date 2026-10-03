@@ -1,6 +1,7 @@
 package dev.hbrauveres.xove.stream;
 
 import dev.hbrauveres.xove.auth.CurrentUser;
+import dev.hbrauveres.xove.room.RoomSeats;
 import dev.hbrauveres.xove.user.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -23,17 +24,19 @@ public class StreamsController {
     static final String UNKNOWN_KIND = "A stream is a screen or a camera.";
 
     private final Streams streams;
+    private final RoomSeats seats;
     private final CurrentUser currentUser;
 
-    public StreamsController(Streams streams, CurrentUser currentUser) {
+    public StreamsController(Streams streams, RoomSeats seats, CurrentUser currentUser) {
         this.streams = streams;
+        this.seats = seats;
         this.currentUser = currentUser;
     }
 
     @GetMapping
     public StreamsView current(@AuthenticationPrincipal OidcUser google) {
         User me = currentUser.member(google);
-        return StreamsView.of(streams, me.getId());
+        return view(me);
     }
 
     /**
@@ -54,8 +57,11 @@ public class StreamsController {
         if (!settings.isValidFor(kind)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, StreamSettings.invalidFor(kind));
         }
+        if (!seats.isSeated(me.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Enter the room first.");
+        }
         streams.start(me.getId(), me.getName(), me.getAvatarUrl(), kind, request.connection(), settings);
-        return StreamsView.of(streams, me.getId());
+        return view(me);
     }
 
     /** Its person changes what a stream is sent with; everyone sees it on their next poll. */
@@ -68,14 +74,18 @@ public class StreamsController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, StreamSettings.invalidFor(streamKind));
         }
         streams.changeSettings(me.getId(), streamKind, settings);
-        return StreamsView.of(streams, me.getId());
+        return view(me);
     }
 
     @PostMapping("/{kind}/stop")
     public StreamsView stop(@AuthenticationPrincipal OidcUser google, @PathVariable String kind) {
         User me = currentUser.member(google);
         streams.stop(me.getId(), kindOf(kind));
-        return StreamsView.of(streams, me.getId());
+        return view(me);
+    }
+
+    private StreamsView view(User me) {
+        return StreamsView.of(streams, me.getId(), seats.isSeated(me.getId()));
     }
 
     private static StreamKind kindOf(String kind) {

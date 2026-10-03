@@ -1,6 +1,7 @@
 package dev.hbrauveres.xove.livekit;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import dev.hbrauveres.xove.room.RoomSeats;
 import dev.hbrauveres.xove.stream.Streams;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -17,6 +18,8 @@ import tools.jackson.databind.json.JsonMapper;
  * LiveKit calls this when something happens in the room. When a person's
  * connection leaves, their streams end; when a screen or camera track stops,
  * that stream ends. Nobody is left looking at a frozen picture (specs 0038, 0060).
+ * Joining and leaving also tell the room's seats who is really there: a seat is
+ * kept 30 seconds after a closed tab, 60 seconds after a dropped connection.
  *
  * Only LiveKit can call it: every request must carry LiveKit's signature
  * (see {@link LiveKitWebhookVerifier}); no login, no CSRF token.
@@ -29,15 +32,20 @@ public class LiveKitWebhookController {
     /** The LiveKit track sources that are streams: their sound goes with the screen. */
     private static final Set<String> STREAM_SOURCES = Set.of("SCREEN_SHARE", "CAMERA");
 
+    /** LiveKit's reason when the browser left on purpose (the tab closed); anything else is a drop. */
+    private static final String CLOSED_TAB = "CLIENT_INITIATED";
+
     private final LiveKitWebhookVerifier verifier;
     private final Streams streams;
+    private final RoomSeats seats;
     private final JsonMapper json;
     private final LiveKitProperties properties;
 
-    public LiveKitWebhookController(LiveKitWebhookVerifier verifier, Streams streams, JsonMapper json,
+    public LiveKitWebhookController(LiveKitWebhookVerifier verifier, Streams streams, RoomSeats seats, JsonMapper json,
                                     LiveKitProperties properties) {
         this.verifier = verifier;
         this.streams = streams;
+        this.seats = seats;
         this.json = json;
         this.properties = properties;
     }
@@ -66,10 +74,14 @@ public class LiveKitWebhookController {
     private void handle(WebhookEvent event, Long userId) {
         String participantSid = event.participant().sid();
         switch (event.event()) {
+            case "participant_joined" -> seats.joined(userId, participantSid);
             case "participant_left" -> {
                 if (streams.connectionLeft(userId, participantSid)) {
                     log.info("streams ended: user {} left ({})", userId, participantSid);
                 }
+                String reason = event.participant().disconnectReason();
+                log.info("user {} left ({}), reason {}", userId, participantSid, reason);
+                seats.left(userId, participantSid, CLOSED_TAB.equals(reason));
             }
             case "track_unpublished" -> {
                 Track track = event.track();
@@ -106,7 +118,7 @@ public class LiveKitWebhookController {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record Participant(String identity, String sid) {
+    record Participant(String identity, String sid, String disconnectReason) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
