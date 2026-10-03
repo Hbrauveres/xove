@@ -46,6 +46,8 @@ export type RemoteMedia = {
   camera?: RemoteVideo;
   /** The sound of their screen, while it's downloaded. */
   sound?: MediaTrack;
+  /** They share their screen's sound. */
+  hasSound: boolean;
   /** Downloads the sound of their screen, or stops downloading it. */
   setSoundOn: (on: boolean) => void;
 };
@@ -158,6 +160,7 @@ export function useLiveKitRoom(): LiveKitRoom {
           screen,
           camera,
           sound,
+          hasSound: Boolean(soundPublication),
           setSoundOn: (on) => {
             if (soundPublication && soundPublication.isSubscribed !== on) soundPublication.setSubscribed(on);
           },

@@ -10,7 +10,7 @@ import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
-import { Thumbnails } from "./Thumbnails";
+import { MUTED, Thumbnails, type ThumbnailSound } from "./Thumbnails";
 import styles from "./Stage.module.css";
 
 type Props = {
@@ -79,6 +79,16 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
+  // Only the big person's sound plays, plus any thumbnail this viewer unmuted. The
+  // others aren't downloaded at all.
+  const [thumbnailSound, setThumbnailSound] = useState<Record<string, ThumbnailSound>>({});
+  useEffect(() => {
+    for (const s of sharers) {
+      if (s.isMe || !s.setSoundOn) continue;
+      s.setSoundOn(s.person.id === bigId || (thumbnailSound[s.person.id] ?? MUTED).muted === false);
+    }
+  }, [sharers, bigId, thumbnailSound]);
+
   const changeWatch = (next: WatchPrefs) => {
     setWatch(next);
     saveWatchPrefs(next);
@@ -124,12 +134,19 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
           <ScreenVideo video={main.local} label={`Your ${what(main)}`} />
           <div className={styles.player}>
             <div className={styles.bar}>
-              <ShareSettingsFields
-                kind={main.kind}
-                prefs={prefs[main.kind]}
-                onChange={(next) => onPrefsChange(main.kind, next)}
-                look="bar"
-              />
+              {/* My quality and mode for each of my streams: the screen's first. */}
+              {(["screen", "camera"] as StreamKind[])
+                .filter((kind) => big[kind])
+                .map((kind) => (
+                  <ShareSettingsFields
+                    key={kind}
+                    kind={kind}
+                    name={kind === "camera" && big.screen ? "Camera" : undefined}
+                    prefs={prefs[kind]}
+                    onChange={(next) => onPrefsChange(kind, next)}
+                    look="bar"
+                  />
+                ))}
             </div>
           </div>
         </>
@@ -207,7 +224,13 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
         )}
       </div>
 
-      <Thumbnails sharers={sharers.filter((s) => s !== big)} onPick={setPicked} />
+      <Thumbnails
+        sharers={sharers.filter((s) => s !== big)}
+        onPick={setPicked}
+        sound={thumbnailSound}
+        onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
+        canSetVolume={canSetVolume()}
+      />
     </section>
   );
 }

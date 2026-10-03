@@ -116,6 +116,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
         screen: feed("screen"),
         camera: feed("camera"),
         sound: media?.sound,
+        hasSound: media?.hasSound,
         setSoundOn: media?.setSoundOn,
       };
     });

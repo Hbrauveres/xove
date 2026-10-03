@@ -1206,3 +1206,107 @@ describe("room: the facecam", () => {
     expect(within(facecam()!).getByLabelText("Your shared screen")).toBeInTheDocument();
   });
 });
+
+// ---- sound and settings for each stream (spec 0060, AC-7, FR-11) ----
+
+describe("room: whose sound plays", () => {
+  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+  const thumbnails = () => screen.getByRole("list", { name: /other streams/i });
+
+  async function anaAndBrunoWithSound() {
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "screen", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "screen", undefined, minutesAgo(5)),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-3", { withSound: true });
+      lastRoom().publishScreen("user-7", { withSound: true });
+    });
+    await screen.findByLabelText("Ana's shared screen");
+    const room = lastRoom();
+    const sound = (id: string) => room.remoteParticipants.get(id)!.tracks.get("screen_share_audio")!;
+    return { server, room, sound };
+  }
+
+  it("plays only the big person's sound; a muted thumbnail's isn't even downloaded", async () => {
+    const { room, sound } = await anaAndBrunoWithSound();
+
+    expect(sound("user-3").attached).toHaveLength(1);
+    await waitFor(() => expect(room.soundPublication("user-7")!.setSubscribed).toHaveBeenLastCalledWith(false));
+    expect(sound("user-7").attached).toHaveLength(0);
+    expect(within(thumbnails()).getByRole("button", { name: "Unmute Bruno" })).toBeInTheDocument();
+  });
+
+  it("plays a thumbnail's sound too when it's unmuted, at its own volume", async () => {
+    const { room, sound } = await anaAndBrunoWithSound();
+    const user = userEvent.setup();
+    await waitFor(() => expect(room.soundPublication("user-7")!.isSubscribed).toBe(false));
+
+    await user.click(within(thumbnails()).getByRole("button", { name: "Unmute Bruno" }));
+
+    expect(room.soundPublication("user-7")!.setSubscribed).toHaveBeenLastCalledWith(true);
+    await waitFor(() => expect(sound("user-7").attached).toHaveLength(1));
+    fireEvent.change(within(thumbnails()).getByLabelText("Bruno's volume"), { target: { value: "0.4" } });
+    expect((sound("user-7").attached[0] as HTMLAudioElement).volume).toBeCloseTo(0.4);
+    expect(sound("user-3").attached).toHaveLength(1);
+
+    await user.click(within(thumbnails()).getByRole("button", { name: "Mute Bruno" }));
+    expect(room.soundPublication("user-7")!.setSubscribed).toHaveBeenLastCalledWith(false);
+  });
+
+  it("plays the new big person's sound after a swap, and mutes the one that left", async () => {
+    const { room, sound } = await anaAndBrunoWithSound();
+    const user = userEvent.setup();
+
+    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+
+    await waitFor(() => expect(sound("user-7").attached).toHaveLength(1));
+    expect(room.soundPublication("user-3")!.setSubscribed).toHaveBeenLastCalledWith(false);
+  });
+});
+
+describe("room: my settings for each of my streams", () => {
+  afterEach(() => localStorage.clear());
+
+  it("changes the camera's quality live from my player, apart from the screen's", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
+    await user.click(within(setup).getByRole("button", { name: /start camera/i }));
+    await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
+    const camera = lastRoom().localParticipant.lastCamera!;
+
+    const cameraQuality = within(stage()).getByLabelText("Camera quality") as HTMLSelectElement;
+    expect([...cameraQuality.options].map((o) => o.value)).toEqual(["720p", "480p"]);
+    await user.selectOptions(cameraQuality, "480p");
+
+    await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
+    expect(camera.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    expect(myLiveStream(server, "screen")?.settings.quality).toBe("1080p");
+    expect(within(stage()).getByLabelText("Send quality")).toHaveValue("1080p");
+    expect(localStorage.getItem("xove.camera.quality")).toBe("480p");
+  });
+});
+
+describe("room: the feed names each stream", () => {
+  it("says when someone turns their camera on and off", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+
+    act(() => {
+      server.streams = [someoneSharing("Bruno Lima", 7, "camera")];
+    });
+    expect(await screen.findByText(/bruno turned on their camera/i)).toBeInTheDocument();
+
+    act(() => {
+      server.streams = [];
+    });
+    expect(await screen.findByText(/bruno turned off their camera/i)).toBeInTheDocument();
+  });
+});

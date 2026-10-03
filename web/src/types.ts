@@ -50,8 +50,10 @@ export type Sharer = {
   since: number;
   screen?: LiveFeed;
   camera?: LiveFeed;
-  /** The sound of their screen, when it's someone else's and it arrived. */
+  /** The sound of their screen, when it's someone else's and it's downloaded. */
   sound?: MediaTrack;
+  /** They share their screen's sound (whether it's downloaded or not). */
+  hasSound?: boolean;
   /** Downloads their sound, or not (a muted thumbnail's isn't downloaded). Only for someone else. */
   setSoundOn?: (on: boolean) => void;
 };
