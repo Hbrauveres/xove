@@ -22,6 +22,31 @@ type Props = {
 export function ShareSetup({ preview, initial, hasSound, onStart, onCancel }: Props) {
   const [prefs, setPrefs] = useState(initial);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  // Whatever had the focus before (the share button): it gets it back on close.
+  const [opener] = useState(() => document.activeElement as HTMLElement | null);
+  useEffect(() => () => opener?.focus(), [opener]);
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      onCancel();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    // The window is modal: Tab cycles through its own controls only.
+    const controls = [...(windowRef.current?.querySelectorAll<HTMLElement>("select, button") ?? [])].filter(
+      (el) => !el.hasAttribute("disabled"),
+    );
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last?.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first?.focus();
+    }
+  };
 
   useEffect(() => {
     const el = videoRef.current;
@@ -33,8 +58,8 @@ export function ShareSetup({ preview, initial, hasSound, onStart, onCancel }: Pr
   }, [preview]);
 
   return (
-    <div className={styles.backdrop} onKeyDown={(e) => e.key === "Escape" && onCancel()}>
-      <div className={styles.window} role="dialog" aria-modal="true" aria-labelledby="share-setup-title">
+    <div className={styles.backdrop} onKeyDown={onKeyDown}>
+      <div ref={windowRef} className={styles.window} role="dialog" aria-modal="true" aria-labelledby="share-setup-title">
         <h2 id="share-setup-title" className={styles.title}>
           Start sharing
         </h2>

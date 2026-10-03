@@ -16,7 +16,6 @@ type Props = {
   busy?: boolean;
 };
 
-
 type Step = "idle" | "confirmTakeover";
 
 /**

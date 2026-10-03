@@ -45,7 +45,7 @@ public class ScreenController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Your browser didn't say which video connection is sharing. Reload the page and try again.");
         }
-        StreamSettings settings = request.settings() == null ? StreamSettings.DEFAULT : request.settings();
+        StreamSettings settings = request.settings();
         if (!settings.isValid()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, StreamSettings.INVALID);
         }

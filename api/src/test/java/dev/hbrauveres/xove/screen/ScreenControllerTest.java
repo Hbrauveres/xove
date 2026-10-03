@@ -180,6 +180,16 @@ class ScreenControllerTest {
     }
 
     @Test
+    void aMissingSettingTakesItsDefault() throws Exception {
+        mvc.perform(post("/api/screen/take").with(as("sub-friend")).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"participantSid\":\"PA_l\",\"trackSid\":\"TR_s\",\"mode\":\"sharp\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.quality").value("1080p"))
+                .andExpect(jsonPath("$.settings.mode").value("sharp"));
+    }
+
+    @Test
     void nobodySharingMeansNoSettings() throws Exception {
         mvc.perform(get("/api/screen").with(as("sub-friend")))
                 .andExpect(jsonPath("$.settings").doesNotExist());

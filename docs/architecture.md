@@ -166,7 +166,7 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `GET /api/admin/members` | Admin | Members |
 | `DELETE /api/admin/members/{id}` | Admin | Removes a member and ends all their sessions |
 | `GET /api/screen` | Member | `{ holder: { userId, name, avatarUrl, since } or null, mine, settings: { quality, mode } or null }` |
-| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Body `{ participantSid, trackSid, quality?, mode? }`: the LiveKit connection and screen track the share comes from (never shown to anyone; 400 without them), and what it's sent with (1080p Smooth by default) |
+| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Body `{ participantSid, trackSid, quality?, mode? }`: the LiveKit connection and screen track the share comes from (never shown to anyone; 400 without them), and what it's sent with (a missing quality is 1080p, a missing mode Smooth) |
 | `POST /api/screen/settings` | The sharer | Changes what the share is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if it isn't your share |
 | `POST /api/screen/release` | Member | Frees the slot; 409 if it isn't yours |
 | `POST /api/livekit/token` | Member | `{ url, room, identity, token }` to join the video room |

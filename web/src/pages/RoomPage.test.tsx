@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
@@ -646,5 +646,118 @@ describe("room: the player's labels and bars", () => {
 
     fireEvent.pointerMove(frame);
     await waitFor(() => expect(frame).toHaveAttribute("data-chrome", "hidden"), { timeout: 4000 });
+  });
+});
+
+describe("room: the player on touch screens and keyboards", () => {
+  const watchBruno = async () => {
+    const server = installFakeApi({ me: member });
+    server.screenHolder = someoneSharing("Bruno Lima", 7);
+    const view = renderRoom();
+    await connected();
+    await screen.findByText("Bruno is sharing");
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const video = await screen.findByLabelText("Bruno's shared screen");
+    return { view, frame: video.closest("[data-chrome]")! };
+  };
+
+  it("keeps the controls after a tap, so they can be tapped", async () => {
+    const { frame } = await watchBruno();
+
+    // A finger lifting off fires pointerleave right away.
+    fireEvent.pointerDown(frame, { pointerType: "touch" });
+    fireEvent.pointerLeave(frame, { pointerType: "touch" });
+
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+  });
+
+  it("keeps the controls while one of them has the keyboard focus", async () => {
+    const { frame } = await watchBruno();
+
+    act(() => {
+      within(stage()).getByRole("button", { name: "Full screen" }).focus();
+    });
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+
+    await new Promise((resolve) => setTimeout(resolve, 2700));
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+  });
+
+  it("doesn't hide anything over an empty stage", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await screen.findByText(/the stage is free/i);
+
+    expect(stage().querySelector("[data-chrome]")).toBeNull();
+  });
+});
+
+describe("room: a picked screen that's never sent", () => {
+  it("stops being captured when the page is left with the setup window open", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    await pickScreen(user);
+    const capture = lastRoom().localParticipant.lastCapture;
+
+    cleanup();
+
+    expect(capture.every((t) => t.stopped)).toBe(true);
+  });
+
+  it("stops the sound too when the browser's bar ends the screen during the setup", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    await pickScreen(user);
+    const capture = lastRoom().localParticipant.lastCapture;
+
+    act(() => {
+      lastRoom().browserStopsMyShare();
+    });
+
+    await waitFor(() => expect(capture.every((t) => t.stopped)).toBe(true));
+  });
+});
+
+describe("room: quick changes while sharing", () => {
+  afterEach(() => localStorage.clear());
+
+  it("applies changes in order, and the last one wins everywhere", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    const video = lastRoom().localParticipant.screens[0].track;
+    const select = sharerBar().getByLabelText("Send quality");
+
+    fireEvent.change(select, { target: { value: "720p" } });
+    fireEvent.change(select, { target: { value: "480p" } });
+
+    await waitFor(() => expect(server.screenSettings.quality).toBe("480p"));
+    const sent = server.calls.filter((c) => c.path === "/api/screen/settings").map((c) => (c.body as { quality: string }).quality);
+    expect(sent).toEqual(["720p", "480p"]);
+    expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    expect(select).toHaveValue("480p");
+  });
+});
+
+describe("room: the setup window and the keyboard", () => {
+  it("keeps the focus inside while open, and gives it back when closed", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    const shareButton = within(controls()).getByRole("button", { name: /share my screen/i });
+    await user.click(shareButton);
+    const setup = await setupWindow();
+
+    expect(within(setup).getByRole("button", { name: /start sharing/i })).toHaveFocus();
+    await user.tab(); // Cancel
+    await user.tab(); // past the last control: back to the first one
+    expect(within(setup).getByLabelText("Send quality")).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(within(setup).getByRole("button", { name: /cancel/i })).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(within(controls()).getByRole("button", { name: /share my screen/i })).toHaveFocus();
   });
 });

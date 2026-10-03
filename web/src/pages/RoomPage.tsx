@@ -57,7 +57,6 @@ export function RoomPage({ pollMs }: Props = {}) {
             streamSettings={session.streamSettings}
             sharePrefs={session.sharePrefs}
             onSharePrefsChange={session.setSharePrefs}
-            busy={session.busy}
           />
           <ShareControls
             sharer={session.sharer}

@@ -137,7 +137,19 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   const [sharePrefs, setPrefsState] = useState<SharePrefs>(loadSharePrefs);
   const [noSound, setNoSound] = useState(false);
 
-  const [pendingShare, setPendingShare] = useState<ScreenCapture | null>(null);
+  const [pendingShare, setPendingState] = useState<ScreenCapture | null>(null);
+  // Also kept in a ref, so leaving the page can stop a capture that was never sent.
+  const pendingRef = useRef<ScreenCapture | null>(null);
+  const setPendingShare = useCallback((capture: ScreenCapture | null) => {
+    pendingRef.current = capture;
+    setPendingState(capture);
+  }, []);
+
+  // The settings the API last accepted for my share: what a refused change goes back to.
+  const accepted = useRef<SharePrefs>(sharePrefs);
+  // Changes made while sharing run one after the other, in the order they were made.
+  const changes = useRef<Promise<void>>(Promise.resolve());
+  const latestChange = useRef(0);
 
   // Step 1, from the click: the browser's picker. The screen is captured, not sent.
   const shareScreen = useCallback(async () => {
@@ -150,7 +162,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
       starting.current = false;
       setStarting(false);
     }
-  }, [lk, sharePrefs.mode]);
+  }, [lk, sharePrefs.mode, setPendingShare]);
 
   // Step 2, from the setup window: send it with the chosen settings, then take the slot.
   const confirmShare = useCallback(
@@ -167,48 +179,70 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
         if (!sharing) return;
         const { hasSound, ...connection } = sharing;
         const ok = await slot.take(connection, prefs);
-        if (!ok) await lk.stopScreenShare();
-        else setNoSound(!hasSound);
+        if (!ok) {
+          await lk.stopScreenShare();
+          return;
+        }
+        accepted.current = prefs;
+        setNoSound(!hasSound);
       } finally {
         starting.current = false;
         setStarting(false);
       }
     },
-    [lk, slot, pendingShare],
+    [lk, slot, pendingShare, setPendingShare],
   );
 
   const cancelShare = useCallback(() => {
     if (pendingShare) lk.discardCapture(pendingShare);
     setPendingShare(null);
-  }, [lk, pendingShare]);
+  }, [lk, pendingShare, setPendingShare]);
 
-  // The browser's own "Stop sharing" bar while the setup window is open.
+  // The browser's own "Stop sharing" bar while the setup window is open: stop the
+  // sound as well, and close the window.
   useEffect(() => {
-    const track = pendingShare?.video.mediaStreamTrack;
-    if (!track) return;
-    const ended = () => setPendingShare(null);
+    const capture = pendingShare;
+    const track = capture?.video.mediaStreamTrack;
+    if (!capture || !track) return;
+    const ended = () => {
+      lk.discardCapture(capture);
+      setPendingShare(null);
+    };
     track.addEventListener("ended", ended);
     return () => track.removeEventListener("ended", ended);
-  }, [pendingShare]);
+  }, [pendingShare, lk, setPendingShare]);
+
+  // Leaving the page with the setup window open: nothing was sent, so stop capturing.
+  const discardCapture = lk.discardCapture;
+  useEffect(
+    () => () => {
+      if (pendingRef.current) discardCapture(pendingRef.current);
+    },
+    [discardCapture],
+  );
 
   // While sharing, a new quality or mode applies live: LiveKit right away, and the
-  // API, which tells every viewer's app on its next poll. If the API refuses, the
-  // old settings go back.
+  // API, which tells every viewer's app on its next poll. Changes go one after the
+  // other; if the API refuses the latest one, the last accepted settings go back.
   const setSharePrefs = useCallback(
     (prefs: SharePrefs) => {
-      const before = sharePrefs;
       setPrefsState(prefs);
       saveSharePrefs(prefs);
       if (!(mine && lk.publishing)) return;
-      void (async () => {
+      const change = ++latestChange.current;
+      changes.current = changes.current.then(async () => {
         await lk.applyShareSettings(prefs);
-        if (await slot.changeSettings(prefs)) return;
-        await lk.applyShareSettings(before);
-        setPrefsState(before);
-        saveSharePrefs(before);
-      })();
+        if (await slot.changeSettings(prefs)) {
+          accepted.current = prefs;
+          return;
+        }
+        if (change !== latestChange.current) return; // a newer change follows
+        await lk.applyShareSettings(accepted.current);
+        setPrefsState(accepted.current);
+        saveSharePrefs(accepted.current);
+      });
     },
-    [mine, lk, slot, sharePrefs],
+    [mine, lk, slot],
   );
 
   const stop = useCallback(async () => {

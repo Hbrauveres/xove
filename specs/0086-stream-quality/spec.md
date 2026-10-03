@@ -60,8 +60,8 @@ Nobody can choose anything either. The sharer can't pick how good their stream i
 - **AC-8** On staging, sharing a video or a game in Chrome at the default quality: the viewer's browser shows about 30 frames per second (`chrome://webrtc-internals`, written in the PR), and it looks smooth (manual).
 - **AC-9** On staging, sharing music from a tab: the viewer hears stereo sound with no pumping or cuts, and the stats show stereo music-quality audio (manual, written in the PR).
 - **AC-10** On a slowed connection (Chrome's network throttling on the sharer): in Smooth mode, motion stays fluid and the picture gets softer instead of freezing; in Sharp mode, text stays readable and the frame rate drops (manual).
-- **AC-12** The player's labels and bars show when the mouse moves over it and fade when it stops or leaves (automated test).
 - **AC-11** After a reload, the sharer's quality and mode and the viewer's quality and volume are the ones chosen before; with nothing saved, the defaults apply (automated test).
+- **AC-12** The player's labels and bars show when the mouse moves over it and fade when it stops or leaves (automated test).
 
 ## Out of scope
 
