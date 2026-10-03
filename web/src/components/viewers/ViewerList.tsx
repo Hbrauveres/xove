@@ -5,11 +5,12 @@ import styles from "./ViewerList.module.css";
 type Props = {
   people: Friend[];
   meId: string;
-  sharerId: string | null;
+  /** Everyone with a live stream. */
+  sharingIds: string[];
 };
 
 /** Everyone on the allowlist: who's here, who's on air, who's away. */
-export function ViewerList({ people, meId, sharerId }: Props) {
+export function ViewerList({ people, meId, sharingIds }: Props) {
   const online = people.filter((p) => p.online);
   const away = people.filter((p) => !p.online);
 
@@ -20,7 +21,7 @@ export function ViewerList({ people, meId, sharerId }: Props) {
       </h2>
       <ul className={styles.list}>
         {online.map((p) => {
-          const onAir = p.id === sharerId;
+          const onAir = sharingIds.includes(p.id);
           return (
             <li key={p.id} className={styles.person}>
               <Avatar person={p} size={30} onAir={onAir} />

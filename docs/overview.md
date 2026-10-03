@@ -21,20 +21,22 @@ Admins are configured on the server (a list of emails). Admins are always member
 
 - **See who's here:** everyone connected right now, and a feed of who joined, left, started or stopped sharing.
 - **Share your screen:** the browser's own picker opens; pick a screen, window or tab.
-- **Take the screen:** if someone else is sharing, you can take over after confirming. Their share stops and yours starts.
-- **Stop sharing:** with the button or the browser's own "Stop sharing" bar.
-- **Watch:** the current share fills the stage, with a timer and a full-screen button.
+- **Turn on your camera:** alongside your screen or on its own. Your camera then shows as a facecam over your screen.
+- **Several at once:** up to 6 streams live (screens and cameras), nobody is pushed out.
+- **Stop:** with the buttons or the browser's own "Stop sharing" bar.
+- **Watch:** one person fills the stage, with a timer and a full-screen button; the others are thumbnails. Click one to watch it big. Only the big one's sound plays, unless you unmute a thumbnail.
+- **Wait your turn:** up to 20 people in the room. When it's full, you get a place in the queue and a popup when a seat frees.
 
-Only one person shares at a time. That rule lives on the server, so every browser agrees on who holds the screen.
+The limits live on the server, so every browser agrees on who is in and what's live.
 
 ## What Xovê deliberately doesn't do (version 1)
 
-- **No camera and no microphone.** Screen and screen audio only. Voice happens wherever the group already talks.
+- **No microphone.** Screens, their sound, and cameras. Voice happens wherever the group already talks.
 - **No rooms.** One shared space.
 - **No recording.** Nothing is stored except accounts, access requests and sessions.
 - **No public sign-up.** Every member is approved by a person.
 
-Several screens at once and cameras are possible later: the design keeps "one screen slot" as a limit, not an assumption.
+Several screens and cameras came with [spec 0060](../specs/0060-several-streams/spec.md).
 
 ## Environments
 

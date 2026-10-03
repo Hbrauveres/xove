@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { loadSharePrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
-import type { ActivityEvent, ActivityKind, ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../types";
-import type { StreamSettings } from "../api/types";
-import { useLiveKitRoom, type ScreenCapture } from "./useLiveKitRoom";
-import { useScreenSlot } from "./useScreenSlot";
+import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
+import type { ActivityEvent, ConnectionState, Friend, LiveFeed, Sharer, StreamKind } from "../types";
+import type { LiveStream } from "../api/types";
+import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
+import { useStreams } from "./useStreams";
 
 /**
  * Everything the room page shows, from two sources:
- * - the API decides who holds the screen slot (useScreenSlot);
+ * - the API decides which streams are live (useStreams);
  * - LiveKit carries the video and knows who is connected (useLiveKitRoom).
  */
 export type RoomSession = {
@@ -16,35 +16,39 @@ export type RoomSession = {
   people: Friend[];
   /** Everyone the feed may mention, including people who already left. */
   knownPeople: Friend[];
-  share: ShareState;
-  sharer: Friend | null;
-  isMeSharing: boolean;
-  /** The sharer's video and audio, when it's someone else and it has arrived. */
-  screen: ScreenTracks | null;
-  /** My own screen while I share, for the preview. */
-  myScreen: MediaTrack | undefined;
-  /** The quality and mode I send (remembered); changing them while sharing applies live. */
-  sharePrefs: SharePrefs;
-  setSharePrefs: (prefs: SharePrefs) => void;
-  /** What the current share is sent with, as the API says (for viewers' quality menus). */
-  streamSettings: StreamSettings | null;
-  /** A screen I picked but haven't started sending: the setup window shows it. */
-  pendingShare: ScreenCapture | null;
-  /** Starts sending the picked screen with these settings. */
-  confirmShare: (prefs: SharePrefs) => void;
-  /** Drops the picked screen without sending it. */
-  cancelShare: () => void;
-  /** I'm sharing, but my browser gave no sound with the screen. */
+  /** Everyone with a live stream, the longest sharing first (spec 0060). */
+  sharers: Sharer[];
+  /** Which of my streams are live. */
+  mine: Record<StreamKind, boolean>;
+  /** Stream places left of the 6. */
+  free: number;
+  /** How I send my screen and my camera (remembered); changing them while live applies at once. */
+  prefs: Record<StreamKind, SharePrefs>;
+  setPrefs: (kind: StreamKind, prefs: SharePrefs) => void;
+  /** A screen or camera I picked but haven't started sending: the setup window shows it. */
+  pending: Capture | null;
+  /** Starts sending the picked screen or camera with these settings. */
+  confirm: (prefs: SharePrefs) => void;
+  /** Drops the picked screen or camera without sending it. */
+  cancelPending: () => void;
+  /** Opens the browser's picker (screen) or asks for the camera. */
+  start: (kind: StreamKind) => void;
+  stop: (kind: StreamKind) => void;
+  /** I'm sharing my screen, but my browser gave no sound with it. */
   noSound: boolean;
+  /** False when the API doesn't know I'm in the room (it restarted): enter again. Null until known. */
+  seated: boolean | null;
+  /** My connection to the video room, to confirm my seat when entering again. */
+  participantSid: () => string | undefined;
   activity: ActivityEvent[];
   connection: ConnectionState;
-  startSharing: () => void;
-  stop: () => void;
   error: string | null;
   busy: boolean;
 };
 
 export const identityOf = (userId: number) => `user-${userId}`;
+
+const KINDS: StreamKind[] = ["screen", "camera"];
 
 /** Same person, same colour, in every browser. */
 const hueOf = (id: string) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
@@ -58,159 +62,207 @@ const person = (id: string, name: string | null | undefined): Friend => ({
   online: true,
 });
 
-let slotSeq = 0;
-const slotEvent = (kind: ActivityKind, actorId: string, targetId?: string): ActivityEvent => ({
-  id: `slot${++slotSeq}`,
+let streamSeq = 0;
+const streamEvent = (kind: "started" | "stopped", actorId: string, stream: StreamKind): ActivityEvent => ({
+  id: `stream${++streamSeq}`,
   at: Date.now(),
   kind,
   actorId,
-  targetId,
+  stream,
 });
 
+const loadPrefs = (): Record<StreamKind, SharePrefs> => ({ screen: loadSharePrefs(), camera: loadCameraPrefs() });
+const savePrefs = (kind: StreamKind, prefs: SharePrefs) =>
+  kind === "screen" ? saveSharePrefs(prefs) : saveCameraPrefs(prefs);
+
 export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
-  const slot = useScreenSlot(pollMs);
+  const api = useStreams(pollMs);
   const lk = useLiveKitRoom();
 
-  // Every poll returns a new object, so memos key on the plain values inside it.
-  const holder = slot.state?.holder ?? null;
-  const mine = slot.state?.mine ?? false;
-  const holderId = holder?.userId ?? null;
-  const holderName = holder?.name ?? null;
-  const since = holder?.since ?? null;
-  const holderIdentity = holderId === null ? null : identityOf(holderId);
+  const loaded = api.state !== null;
+  const live = api.state?.streams;
+  const seated = api.state?.seated ?? null;
 
-  const sharer = useMemo<Friend | null>(() => {
-    if (holderIdentity === null) return null;
-    return mine ? me : person(holderIdentity, holderName);
-  }, [holderIdentity, holderName, mine, me]);
-
-  const share = useMemo<ShareState>(
-    () => (sharer && since ? { sharerId: sharer.id, startedAt: Date.parse(since) } : null),
-    [sharer, since],
+  const myLive = useMemo<Record<StreamKind, boolean>>(
+    () => ({
+      screen: live?.some((s) => s.mine && s.kind === "screen") ?? false,
+      camera: live?.some((s) => s.mine && s.kind === "camera") ?? false,
+    }),
+    [live],
   );
+
+  // Everyone with a stream, in the order the API lists them (oldest first).
+  const sharers = useMemo<Sharer[]>(() => {
+    const byPerson = new Map<number, LiveStream[]>();
+    for (const s of live ?? []) byPerson.set(s.userId, [...(byPerson.get(s.userId) ?? []), s]);
+    return [...byPerson.values()].map((streams) => {
+      const first = streams[0];
+      const isMe = first.mine;
+      const identity = identityOf(first.userId);
+      const media = isMe ? undefined : lk.remote[identity];
+      const feed = (kind: StreamKind): LiveFeed | undefined => {
+        const s = streams.find((x) => x.kind === kind);
+        if (!s) return undefined;
+        return {
+          kind,
+          startedAt: Date.parse(s.since),
+          settings: s.settings,
+          remote: media?.[kind],
+          local: isMe ? lk.local[kind] : undefined,
+        };
+      };
+      return {
+        person: isMe ? me : person(identity, first.name),
+        isMe,
+        since: Date.parse(first.since),
+        screen: feed("screen"),
+        camera: feed("camera"),
+        sound: media?.sound,
+        hasSound: media?.hasSound,
+        setSoundOn: media?.setSoundOn,
+      };
+    });
+  }, [live, lk.remote, lk.local, me]);
 
   const people = useMemo(() => [me, ...lk.others.map((o) => person(o.identity, o.name))], [me, lk.others]);
 
   // People who were here or shared earlier, so the feed can still name them.
   const [seen, setSeen] = useState<Friend[]>([]);
   useEffect(() => {
-    const fresh = [...people.slice(1), ...(sharer && !mine ? [sharer] : [])];
+    const fresh = [...people.slice(1), ...sharers.filter((s) => !s.isMe).map((s) => s.person)];
     setSeen((prev) => {
       const missing = fresh.filter((f) => !prev.some((p) => p.id === f.id));
       return missing.length ? [...prev, ...missing] : prev;
     });
-  }, [people, sharer, mine]);
+  }, [people, sharers]);
   const knownPeople = useMemo(
     () => [...people, ...seen.filter((s) => !people.some((p) => p.id === s.id))],
     [people, seen],
   );
 
-  // Turn changes of the slot into feed events. The first answer is the
+  // Turn changes of the live streams into feed events. The first answer is the
   // starting point, not a change, so it logs nothing.
-  const [slotEvents, setSlotEvents] = useState<ActivityEvent[]>([]);
-  const previous = useRef<string | null | undefined>(undefined);
-  const loaded = slot.state !== null;
-  const sharerId = sharer?.id ?? null;
+  const [streamEvents, setStreamEvents] = useState<ActivityEvent[]>([]);
+  const previous = useRef<Set<string> | undefined>(undefined);
+  const streamKeys = useMemo(
+    () => (live ? [...live].map((s) => `${s.mine ? me.id : identityOf(s.userId)}|${s.kind}`).sort().join(",") : null),
+    [live, me.id],
+  );
   useEffect(() => {
-    if (!loaded) return;
+    if (streamKeys === null) return;
+    const now = new Set(streamKeys ? streamKeys.split(",") : []);
     const before = previous.current;
-    previous.current = sharerId;
-    if (before === undefined || before === sharerId) return;
-
-    let event: ActivityEvent;
-    if (before === null && sharerId) event = slotEvent("started", sharerId);
-    else if (before && sharerId === null) event = slotEvent("stopped", before);
-    else event = slotEvent("took", sharerId as string, before as string);
-    setSlotEvents((prev) => [...prev.slice(-29), event]);
-  }, [loaded, sharerId]);
+    previous.current = now;
+    if (!before) return;
+    const events: ActivityEvent[] = [];
+    for (const key of now) {
+      if (!before.has(key)) {
+        const [actor, kind] = key.split("|");
+        events.push(streamEvent("started", actor, kind as StreamKind));
+      }
+    }
+    for (const key of before) {
+      if (!now.has(key)) {
+        const [actor, kind] = key.split("|");
+        events.push(streamEvent("stopped", actor, kind as StreamKind));
+      }
+    }
+    if (events.length) setStreamEvents((prev) => [...prev, ...events].slice(-30));
+  }, [streamKeys]);
 
   const activity = useMemo(
-    () => [...lk.presence, ...slotEvents].sort((a, b) => a.at - b.at),
-    [lk.presence, slotEvents],
+    () => [...lk.presence, ...streamEvents].sort((a, b) => a.at - b.at),
+    [lk.presence, streamEvents],
   );
 
-  // ---- keeping the slot and the video in step ----
+  // ---- keeping my streams and the API in step ----
 
-  // True between opening the picker and the API confirming the slot.
-  const starting = useRef(false);
+  // True between opening the picker and the API confirming the stream.
+  const starting = useRef<Record<StreamKind, boolean>>({ screen: false, camera: false });
   const [isStarting, setStarting] = useState(false);
-  const [sharePrefs, setPrefsState] = useState<SharePrefs>(loadSharePrefs);
+  const markStarting = (kind: StreamKind, on: boolean) => {
+    starting.current[kind] = on;
+    setStarting(starting.current.screen || starting.current.camera);
+  };
+  const [prefs, setPrefsState] = useState<Record<StreamKind, SharePrefs>>(loadPrefs);
   const [noSound, setNoSound] = useState(false);
 
-  const [pendingShare, setPendingState] = useState<ScreenCapture | null>(null);
+  const [pending, setPendingState] = useState<Capture | null>(null);
   // Also kept in a ref, so leaving the page can stop a capture that was never sent.
-  const pendingRef = useRef<ScreenCapture | null>(null);
-  const setPendingShare = useCallback((capture: ScreenCapture | null) => {
+  const pendingRef = useRef<Capture | null>(null);
+  const setPending = useCallback((capture: Capture | null) => {
     pendingRef.current = capture;
     setPendingState(capture);
   }, []);
 
-  // The settings the API last accepted for my share: what a refused change goes back to.
-  const accepted = useRef<SharePrefs>(sharePrefs);
-  // Changes made while sharing run one after the other, in the order they were made.
+  // The settings the API last accepted for each of my streams: what a refused change goes back to.
+  const accepted = useRef<Record<StreamKind, SharePrefs>>(prefs);
+  // Changes made while live run one after the other, in the order they were made.
+  // Each stream knows its own latest change, so a refused one goes back even when the
+  // other stream changed meanwhile.
   const changes = useRef<Promise<void>>(Promise.resolve());
-  const latestChange = useRef(0);
+  const latestChange = useRef<Record<StreamKind, number>>({ screen: 0, camera: 0 });
 
-  // Step 1, from the click: the browser's picker. The screen is captured, not sent.
-  const shareScreen = useCallback(async () => {
-    starting.current = true;
-    setStarting(true);
-    try {
-      const capture = await lk.captureScreen(sharePrefs.mode);
-      if (capture) setPendingShare(capture);
-    } finally {
-      starting.current = false;
-      setStarting(false);
-    }
-  }, [lk, sharePrefs.mode, setPendingShare]);
-
-  // Step 2, from the setup window: send it with the chosen settings, then take the slot.
-  const confirmShare = useCallback(
-    async (prefs: SharePrefs) => {
-      const capture = pendingShare;
-      if (!capture) return;
-      setPendingShare(null);
-      setPrefsState(prefs);
-      saveSharePrefs(prefs);
-      starting.current = true;
-      setStarting(true);
+  // Step 1, from the click: the browser's picker, or the camera. Captured, not sent.
+  const start = useCallback(
+    async (kind: StreamKind) => {
+      markStarting(kind, true);
       try {
-        const sharing = await lk.publishCapture(capture, prefs);
-        if (!sharing) return;
-        const { hasSound, ...connection } = sharing;
-        const ok = await slot.take(connection, prefs);
-        if (!ok) {
-          await lk.stopScreenShare();
-          return;
-        }
-        accepted.current = prefs;
-        setNoSound(!hasSound);
+        const capture = await lk.capture(kind, prefs[kind].mode);
+        if (capture) setPending(capture);
       } finally {
-        starting.current = false;
-        setStarting(false);
+        markStarting(kind, false);
       }
     },
-    [lk, slot, pendingShare, setPendingShare],
+    [lk, prefs, setPending],
   );
 
-  const cancelShare = useCallback(() => {
-    if (pendingShare) lk.discardCapture(pendingShare);
-    setPendingShare(null);
-  }, [lk, pendingShare, setPendingShare]);
+  // Step 2, from the setup window: send it with the chosen settings, then tell the API.
+  const confirm = useCallback(
+    async (chosen: SharePrefs) => {
+      const capture = pending;
+      if (!capture) return;
+      const kind = capture.kind;
+      setPending(null);
+      setPrefsState((prev) => ({ ...prev, [kind]: chosen }));
+      savePrefs(kind, chosen);
+      markStarting(kind, true);
+      try {
+        const sending = await lk.publishCapture(capture, chosen);
+        if (!sending) return;
+        const { hasSound, ...connection } = sending;
+        const ok = (await api.start(kind, connection, chosen)) === "ok";
+        if (!ok) {
+          await lk.stop(kind);
+          return;
+        }
+        accepted.current = { ...accepted.current, [kind]: chosen };
+        if (kind === "screen") setNoSound(!hasSound);
+      } finally {
+        markStarting(kind, false);
+      }
+    },
+    [lk, api, pending, setPending],
+  );
 
-  // The browser's own "Stop sharing" bar while the setup window is open: stop the
-  // sound as well, and close the window.
+  const cancelPending = useCallback(() => {
+    if (pending) lk.discardCapture(pending);
+    setPending(null);
+  }, [lk, pending, setPending]);
+
+  // The browser's own "Stop sharing" bar (or the camera going away) while the setup
+  // window is open: stop the sound as well, and close the window.
   useEffect(() => {
-    const capture = pendingShare;
+    const capture = pending;
     const track = capture?.video.mediaStreamTrack;
     if (!capture || !track) return;
     const ended = () => {
       lk.discardCapture(capture);
-      setPendingShare(null);
+      setPending(null);
     };
     track.addEventListener("ended", ended);
     return () => track.removeEventListener("ended", ended);
-  }, [pendingShare, lk, setPendingShare]);
+  }, [pending, lk, setPending]);
 
   // Leaving the page with the setup window open: nothing was sent, so stop capturing.
   const discardCapture = lk.discardCapture;
@@ -221,70 +273,89 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     [discardCapture],
   );
 
-  // While sharing, a new quality or mode applies live: LiveKit right away, and the
+  // While live, a new quality or mode applies at once: LiveKit right away, and the
   // API, which tells every viewer's app on its next poll. Changes go one after the
   // other; if the API refuses the latest one, the last accepted settings go back.
-  const setSharePrefs = useCallback(
-    (prefs: SharePrefs) => {
-      setPrefsState(prefs);
-      saveSharePrefs(prefs);
-      if (!(mine && lk.publishing)) return;
-      const change = ++latestChange.current;
+  const setPrefs = useCallback(
+    (kind: StreamKind, next: SharePrefs) => {
+      setPrefsState((prev) => ({ ...prev, [kind]: next }));
+      savePrefs(kind, next);
+      if (!(myLive[kind] && lk.publishing[kind])) return;
+      const change = ++latestChange.current[kind];
       changes.current = changes.current.then(async () => {
-        await lk.applyShareSettings(prefs);
-        if (await slot.changeSettings(prefs)) {
-          accepted.current = prefs;
+        await lk.applySettings(kind, next);
+        if (await api.changeSettings(kind, next)) {
+          accepted.current = { ...accepted.current, [kind]: next };
           return;
         }
-        if (change !== latestChange.current) return; // a newer change follows
-        await lk.applyShareSettings(accepted.current);
-        setPrefsState(accepted.current);
-        saveSharePrefs(accepted.current);
+        if (change !== latestChange.current[kind]) return; // a newer change of this stream follows
+        const back = accepted.current[kind];
+        await lk.applySettings(kind, back);
+        setPrefsState((prev) => ({ ...prev, [kind]: back }));
+        savePrefs(kind, back);
       });
     },
-    [mine, lk, slot],
+    [myLive, lk, api],
   );
 
-  const stop = useCallback(async () => {
-    await lk.stopScreenShare();
-    await slot.release();
-  }, [lk, slot]);
+  const stop = useCallback(
+    async (kind: StreamKind) => {
+      await lk.stop(kind);
+      await api.stop(kind);
+    },
+    [lk, api],
+  );
 
-  // Someone took the screen from me: stop sending mine.
+  // The API lost a stream I'm still sending (it restarted, and every deploy restarts
+  // it): register it again. If the places filled up meanwhile, stop sending it; any
+  // other failure (the API still starting) is tried again on the next poll.
+  const registering = useRef<Record<StreamKind, boolean>>({ screen: false, camera: false });
   useEffect(() => {
-    if (loaded && lk.publishing && !mine && !starting.current) void lk.stopScreenShare();
-  }, [loaded, lk.publishing, mine, lk]);
-
-  // The slot says I'm sharing but nothing is being sent (the browser's own
-  // "Stop sharing" bar, or a page reload): give the slot back.
-  useEffect(() => {
-    if (mine && lk.connection === "connected" && !lk.publishing && !starting.current && !slot.busy) {
-      void slot.release();
+    if (!loaded || !seated) return;
+    for (const kind of KINDS) {
+      if (!lk.publishing[kind] || myLive[kind] || starting.current[kind] || registering.current[kind]) continue;
+      const connection = lk.connectionOf(kind);
+      if (!connection) continue;
+      registering.current[kind] = true;
+      void api
+        .start(kind, connection, accepted.current[kind])
+        .then((outcome) => (outcome === "full" ? lk.stop(kind) : undefined))
+        .finally(() => {
+          registering.current[kind] = false;
+        });
     }
-  }, [mine, lk.connection, lk.publishing, slot]);
+  }, [loaded, seated, lk, myLive, api]);
+
+  // The API lists a stream of mine that nothing is sending (the browser's own "Stop
+  // sharing" bar, the camera going away, or a page reload): end it.
+  useEffect(() => {
+    if (lk.connection !== "connected" || api.busy) return;
+    for (const kind of KINDS) {
+      if (myLive[kind] && !lk.publishing[kind] && !starting.current[kind]) void api.stop(kind);
+    }
+  }, [myLive, lk.connection, lk.publishing, api]);
 
   return {
     me,
     people,
     knownPeople,
-    share,
-    sharer,
-    isMeSharing: mine,
-    screen: holderIdentity && !mine ? lk.screens[holderIdentity] ?? null : null,
-    myScreen: mine ? lk.localScreen : undefined,
-    sharePrefs,
-    setSharePrefs,
-    streamSettings: slot.state?.settings ?? null,
-    pendingShare,
-    confirmShare: (prefs: SharePrefs) => void confirmShare(prefs),
-    cancelShare,
+    sharers,
+    mine: myLive,
+    free: api.state?.free ?? 6,
+    prefs,
+    setPrefs,
+    pending,
+    confirm: (chosen: SharePrefs) => void confirm(chosen),
+    cancelPending,
+    start: (kind: StreamKind) => void start(kind),
+    stop: (kind: StreamKind) => void stop(kind),
     // Only while my screen is actually going out.
-    noSound: noSound && mine && lk.publishing,
+    noSound: noSound && myLive.screen && lk.publishing.screen,
+    seated,
+    participantSid: lk.participantSid,
     activity,
     connection: lk.connection,
-    startSharing: () => void shareScreen(),
-    stop: () => void stop(),
-    error: slot.error ?? lk.error,
-    busy: slot.busy || isStarting,
+    error: api.error ?? lk.error,
+    busy: api.busy || isStarting,
   };
 }

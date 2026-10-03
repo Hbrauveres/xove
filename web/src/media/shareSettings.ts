@@ -1,4 +1,4 @@
-import type { ScreenShareCaptureOptions, TrackPublishOptions, VideoPreset } from "livekit-client";
+import type { ScreenShareCaptureOptions, TrackPublishOptions, VideoCaptureOptions, VideoPreset } from "livekit-client";
 
 /**
  * How a shared screen is captured and sent (spec 0086). LiveKit's defaults are
@@ -89,7 +89,44 @@ export function screenPublishOptions(mode: ShareMode): TrackPublishOptions {
   };
 }
 
-/** The highest layer to send for a chosen quality, as LiveKit counts them (0 = lowest). */
+/**
+ * A camera (spec 0060) goes up to 720p: no need for more, and it spares the upload of
+ * someone sending a screen and a camera together.
+ */
+export const CAMERA_QUALITIES: readonly SharePreset[] = SHARE_QUALITIES.filter((q) => q.height <= 720);
+
+export const DEFAULT_CAMERA: { quality: ShareQuality; mode: ShareMode } = { quality: "720p", mode: "smooth" };
+
+/**
+ * What the browser asks the camera for: 720p at 30 fps (the mode's content hint is set
+ * on the track when it's sent). The microphone is never asked for.
+ */
+export function cameraCaptureOptions(): VideoCaptureOptions {
+  const preset = CAMERA_QUALITIES[0];
+  return { resolution: { width: preset.width, height: preset.height, frameRate: preset.fps } };
+}
+
+/** How a camera is sent: like a screen (VP9, VP8 fallback), with a 720p and a 480p layer. */
+export function cameraPublishOptions(mode: ShareMode): TrackPublishOptions {
+  const [preset, ...lower] = CAMERA_QUALITIES;
+  return {
+    videoCodec: "vp9",
+    backupCodec: { codec: "vp8" },
+    simulcast: true,
+    scalabilityMode: "L1T3",
+    videoEncoding: { maxBitrate: preset.maxBitrate, maxFramerate: preset.fps },
+    videoSimulcastLayers: lower.map(
+      (l) => ({ width: l.width, height: l.height, encoding: { maxBitrate: l.maxBitrate, maxFramerate: l.fps } }) as VideoPreset,
+    ),
+    degradationPreference: degradationOf(mode),
+  };
+}
+
+/**
+ * The highest layer to send for a chosen quality, as LiveKit counts them (0 = lowest).
+ * A screen has three layers (480p, 720p, 1080p), a camera two (480p, 720p): the
+ * numbers line up for both.
+ */
 export function capOf(quality: ShareQuality): 0 | 1 | 2 {
   return quality === "1080p" ? 2 : quality === "720p" ? 1 : 0;
 }

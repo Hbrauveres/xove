@@ -4,7 +4,7 @@ Read this first in any session about this repository.
 
 ## What this is
 
-Xovê: a private web app where one person shares their screen and invited friends watch it. React web app (`web/`), Java 21 + Spring Boot API (`api/`), PostgreSQL, a self-hosted LiveKit server, all in Docker Compose on one VPS behind a shared Caddy proxy (configured in the separate private `infra` repo).
+Xovê: a private web app where invited friends share their screens and cameras (up to 6 at once, 20 people in the room) and watch each other. React web app (`web/`), Java 21 + Spring Boot API (`api/`), PostgreSQL, a self-hosted LiveKit server, all in Docker Compose on one VPS behind a shared Caddy proxy (configured in the separate private `infra` repo).
 
 - Project wiki: `docs/` (start at `docs/README.md`). Architecture, testing, pipeline, deployment, operations, decisions.
 - What's next: the backlog in GitHub Issues, on the "Xovê" project board, grouped by milestone (one per roadmap step). Each issue holds its requirements until its spec is written. The early build plan (`xove-plan.md`) is retired.
@@ -38,8 +38,9 @@ Every change follows `specs/README.md`: GitHub issue → `spec.md` (approved by 
 
 ## Useful facts
 
-- Test counts at the last checkpoint: API 109, web 103 (2026-10-04, spec 0086).
+- Test counts at the last checkpoint: API 147, web 158 (2026-10-03, spec 0060).
 - LiveKit runs from the `infra` repo, one server per environment: staging `rtc-stage.xove.app` (room `xove-stage`), production `rtc.xove.app` (room `xove`).
+- The room's seats come from `XOVE_ROOM_SEATS` in `infra/config/<env>.yaml`: 20 in production, 3 in staging (to try the queue with 4 people).
 - Staging: `stage.xove.app` (behind an extra gate), deployed on every merge. Production: `xove.app`, released only by a version tag `vX.Y.Z` (`release.yml`); its "Run workflow" button rolls production back. `v0.0.x` are test releases until backups exist (#42).
 - Images: `ghcr.io/hbrauveres/xove-api`, `ghcr.io/hbrauveres/xove-web`, tagged `sha-<12 chars of the commit>`.
 - On the server, deploys run from the `infra` repo, not a checkout of this one: `/srv/infra/ops/deploy.sh xove <env> status | deploy <sha> | rollback`. By hand only for staging; each environment has its own deploy key.

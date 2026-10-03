@@ -23,12 +23,14 @@ describe("api client", () => {
     expect(server.calls.at(-1)!.headers["X-XSRF-TOKEN"]).toBeUndefined();
   });
 
-  it("says which connection and track are sharing when taking the screen", async () => {
+  it("says what a stream shows and which connection and track send it when starting one", async () => {
     const server = installFakeApi();
 
-    await api.screen.take({ participantSid: "PA_me", trackSid: "TR_screen" }, { quality: "720p", mode: "sharp" });
+    await api.streams.start("screen", { participantSid: "PA_me", trackSid: "TR_screen" }, { quality: "720p", mode: "sharp" });
 
+    expect(server.calls.at(-1)!.path).toBe("/api/streams");
     expect(server.calls.at(-1)!.body).toEqual({
+      kind: "screen",
       participantSid: "PA_me",
       trackSid: "TR_screen",
       quality: "720p",

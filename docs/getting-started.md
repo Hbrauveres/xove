@@ -85,7 +85,7 @@ docker run -d --name xove-dev-livekit -p 7880:7880 -p 7881:7881 -p 7882:7882/udp
   --keys "$LIVEKIT_API_KEY: $LIVEKIT_API_SECRET"
 ```
 
-Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a sharer who closes the tab keeps the slot until someone takes over. On the servers, LiveKit runs from the `infra` repo, one per environment, with webhooks.
+Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a closed tab's streams stay listed until the page comes back, and a seat isn't confirmed by LiveKit: it runs out after a minute and the open page asks for it again with its video connection, which confirms it. On the servers, LiveKit runs from the `infra` repo, one per environment, with webhooks.
 
 ## Run the whole stack in Docker
 
@@ -111,6 +111,7 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | `LIVEKIT_URL` | api | Address browsers use to reach LiveKit (`wss://…` on servers) |
 | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api | The pair shared with that environment's LiveKit (run from `infra`): the API signs tokens with it, LiveKit checks them and signs its webhooks. Secret ≥ 32 characters |
 | `LIVEKIT_ROOM` | api | This environment's room (staging `xove-stage`, production `xove`); defaults to `xove` |
+| `XOVE_ROOM_SEATS` | api | People in the room at once, sharers included: 1 to 20 (production 20, staging 3); defaults to 20. Anything else stops the API at start-up |
 
 Their values live in the `infra` repo, one file per environment (`config/dev.yaml`, `stage.yaml`…), with secrets as 1Password references. There's no `.env` in this repo; see [operations](operations.md) for how the servers build theirs.
 

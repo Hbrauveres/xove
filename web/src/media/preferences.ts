@@ -1,4 +1,4 @@
-import { DEFAULT_SHARE, SHARE_QUALITIES, type ShareMode, type ShareQuality } from "./shareSettings";
+import { CAMERA_QUALITIES, DEFAULT_CAMERA, DEFAULT_SHARE, SHARE_QUALITIES, type ShareMode, type ShareQuality } from "./shareSettings";
 
 /**
  * Choices each browser remembers for next time (spec 0086). Only conveniences:
@@ -13,12 +13,15 @@ export type WatchPrefs = { quality: WatchQuality; volume: number; muted: boolean
 const KEYS = {
   shareQuality: "xove.share.quality",
   shareMode: "xove.share.mode",
+  cameraQuality: "xove.camera.quality",
+  cameraMode: "xove.camera.mode",
   watchQuality: "xove.watch.quality",
   watchVolume: "xove.watch.volume",
   watchMuted: "xove.watch.muted",
 } as const;
 
 const qualities = SHARE_QUALITIES.map((q) => q.id as string);
+const cameraQualities = CAMERA_QUALITIES.map((q) => q.id as string);
 
 function read(key: string): string | null {
   try {
@@ -48,6 +51,21 @@ export function loadSharePrefs(): SharePrefs {
 export function saveSharePrefs(prefs: SharePrefs) {
   write(KEYS.shareQuality, prefs.quality);
   write(KEYS.shareMode, prefs.mode);
+}
+
+/** The camera's quality and mode (spec 0060): 720p at most. */
+export function loadCameraPrefs(): SharePrefs {
+  const quality = read(KEYS.cameraQuality);
+  const mode = read(KEYS.cameraMode);
+  return {
+    quality: quality && cameraQualities.includes(quality) ? (quality as ShareQuality) : DEFAULT_CAMERA.quality,
+    mode: mode === "smooth" || mode === "sharp" ? mode : DEFAULT_CAMERA.mode,
+  };
+}
+
+export function saveCameraPrefs(prefs: SharePrefs) {
+  write(KEYS.cameraQuality, prefs.quality);
+  write(KEYS.cameraMode, prefs.mode);
 }
 
 export function loadWatchPrefs(): WatchPrefs {

@@ -1,39 +1,39 @@
 import { useEffect, useRef } from "react";
-import type { ScreenTracks } from "../../types";
+import type { MediaTrack } from "../../types";
 import styles from "./ScreenVideo.module.css";
 
 type Props = {
-  screen: ScreenTracks;
+  video?: MediaTrack;
+  /** The screen's sound, when it's someone else's and it plays. */
+  sound?: MediaTrack;
   label: string;
   /** 0 to 1. */
   volume?: number;
   muted?: boolean;
 };
 
-/** Plays someone's shared screen (and its sound, if they shared it). */
-export function ScreenVideo({ screen, label, volume = 1, muted = false }: Props) {
+/** Plays someone's shared screen or camera (and the screen's sound, if they shared it). */
+export function ScreenVideo({ video, sound, label, volume = 1, muted = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const el = videoRef.current;
-    const track = screen.video;
-    if (!el || !track) return;
-    track.attach(el);
+    if (!el || !video) return;
+    video.attach(el);
     return () => {
-      track.detach(el);
+      video.detach(el);
     };
-  }, [screen.video]);
+  }, [video]);
 
   useEffect(() => {
     const el = audioRef.current;
-    const track = screen.audio;
-    if (!el || !track) return;
-    track.attach(el);
+    if (!el || !sound) return;
+    sound.attach(el);
     return () => {
-      track.detach(el);
+      sound.detach(el);
     };
-  }, [screen.audio]);
+  }, [sound]);
 
   // Only this browser's playback: the sharer and other viewers aren't affected.
   useEffect(() => {
@@ -41,12 +41,12 @@ export function ScreenVideo({ screen, label, volume = 1, muted = false }: Props)
     if (!el) return;
     el.volume = volume;
     el.muted = muted;
-  }, [volume, muted, screen.audio]);
+  }, [volume, muted, sound]);
 
   return (
     <>
       <video ref={videoRef} className={styles.video} aria-label={label} autoPlay playsInline muted />
-      <audio ref={audioRef} autoPlay />
+      {sound && <audio ref={audioRef} autoPlay />}
     </>
   );
 }

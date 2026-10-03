@@ -1,25 +1,44 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
 import { ShareControls } from "../components/controls/ShareControls";
+import { WaitingRoom } from "../components/room/WaitingRoom";
 import { ShareSetup } from "../components/share/ShareSetup";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
+import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import type { Friend } from "../types";
 import styles from "./RoomPage.module.css";
 
 type Props = {
-  /** How often to ask the API who is sharing. Tests pass a short one. */
+  /** How often to ask the API which streams are live. Tests pass a short one. */
   pollMs?: number;
 };
 
-/** The whole app is one room: the stage, its controls, and who's here. Members only. */
+/**
+ * The whole app is one room: the stage, its controls, and who's here. Members only.
+ * Up to 20 people at once (spec 0060): whoever comes next waits for a seat.
+ */
 export function RoomPage({ pollMs }: Props = {}) {
-  const { state, signOut } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
+  const seat = useRoomSeat(pollMs);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
+
+  // The video room only with a seat: the API hands out LiveKit tokens to seated people only.
+  if (seat.status?.status !== "in") return <WaitingRoom seat={seat} onSignOut={handleSignOut} />;
+  return <Room pollMs={pollMs} seat={seat} onSignOut={handleSignOut} />;
+}
+
+function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: () => void }) {
+  const { state } = useAuth();
   const me = state.status === "signedIn" ? state.me : null;
 
   const meAsFriend = useMemo<Friend>(
@@ -29,10 +48,16 @@ export function RoomPage({ pollMs }: Props = {}) {
   const session = useRoomSession(meAsFriend, pollMs);
   const onlineCount = session.people.length;
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/", { replace: true });
-  };
+  // The API forgot my seat (it restarted): ask again, with my video connection, which
+  // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
+  const { reenter } = seat;
+  const { seated, participantSid } = session;
+  useEffect(() => {
+    if (seated !== false) return;
+    reenter(participantSid());
+    const timer = window.setInterval(() => reenter(participantSid()), pollMs ?? SEAT_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [seated, reenter, participantSid, pollMs]);
 
   return (
     <div className={styles.shell}>
@@ -40,29 +65,23 @@ export function RoomPage({ pollMs }: Props = {}) {
         me={session.me}
         connection={session.connection}
         onlineCount={onlineCount}
-        onSignOut={handleSignOut}
+        onSignOut={onSignOut}
         isAdmin={me?.admin ?? false}
       />
 
       <div className={styles.layout}>
         <main className={styles.main}>
           <Stage
-            share={session.share}
-            sharer={session.sharer}
-            screen={session.screen}
-            myScreen={session.myScreen}
-            isMeSharing={session.isMeSharing}
+            sharers={session.sharers}
             connection={session.connection}
-            onStartSharing={session.startSharing}
-            streamSettings={session.streamSettings}
-            sharePrefs={session.sharePrefs}
-            onSharePrefsChange={session.setSharePrefs}
+            onStartSharing={() => session.start("screen")}
+            prefs={session.prefs}
+            onPrefsChange={session.setPrefs}
           />
           <ShareControls
-            sharer={session.sharer}
-            isMeSharing={session.isMeSharing}
-            onStart={session.startSharing}
-            onTake={session.startSharing}
+            mine={session.mine}
+            free={session.free}
+            onStart={session.start}
             onStop={session.stop}
             noSound={session.noSound}
             busy={session.busy}
@@ -74,18 +93,19 @@ export function RoomPage({ pollMs }: Props = {}) {
           )}
         </main>
 
-        {session.pendingShare && (
+        {session.pending && (
           <ShareSetup
-            preview={session.pendingShare.video}
-            initial={session.sharePrefs}
-            hasSound={session.pendingShare.audio !== undefined}
-            onStart={session.confirmShare}
-            onCancel={session.cancelShare}
+            kind={session.pending.kind}
+            preview={session.pending.video}
+            initial={session.prefs[session.pending.kind]}
+            hasSound={session.pending.audio !== undefined}
+            onStart={session.confirm}
+            onCancel={session.cancelPending}
           />
         )}
 
         <aside className={styles.side}>
-          <ViewerList people={session.people} meId={session.me.id} sharerId={session.share?.sharerId ?? null} />
+          <ViewerList people={session.people} meId={session.me.id} sharingIds={session.sharers.map((s) => s.person.id)} />
           <ActivityFeed events={session.activity} people={session.knownPeople} meId={session.me.id} />
         </aside>
       </div>

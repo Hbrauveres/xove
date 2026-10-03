@@ -1,0 +1,80 @@
+/* The small window over the big player (spec 0060). */
+.facecam {
+  position: absolute;
+  z-index: 2;
+  width: 24%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  outline: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  touch-action: none;
+}
+
+.facecam:active {
+  cursor: grabbing;
+}
+
+.facecam:focus-visible {
+  outline: 2px solid var(--tally);
+}
+
+.facecam video {
+  object-fit: cover;
+}
+
+/* Its buttons look like the player's: semi-transparent, and they fade with them. */
+.controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  transition: opacity 0.25s ease;
+}
+
+.button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(8, 10, 14, 0.72);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.button:hover,
+.button:focus-visible {
+  background: rgba(8, 10, 14, 0.9);
+}
+
+:global([data-chrome="hidden"]) .controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+:global([data-chrome="hidden"]:focus-within) .controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Collapsed: a small tab at the player's right edge. */
+.tab {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: rgba(8, 10, 14, 0.72);
+  color: var(--text);
+  cursor: pointer;
+}

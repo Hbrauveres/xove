@@ -1,8 +1,8 @@
 import { vi } from "vitest";
-import type { AccessRequestView, Me, MemberView, ScreenHolder, StreamSettings } from "../api/types";
+import type { AccessRequestView, LiveStream, Me, MemberView, StreamKind, StreamSettings } from "../api/types";
 
 type Reply = { status: number; body?: unknown };
-export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown };
+export type Call = { method: string; path: string; headers: Record<string, string>; body: unknown; keepalive?: boolean };
 
 /** The signed-in user's id inside the fake API. /api/me doesn't expose ids, so tests never need it. */
 export const MY_USER_ID = 999;
@@ -16,10 +16,12 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     me: initial.me ?? null,
     requests: initial.requests ?? [],
     members: initial.members ?? [],
-    /** Who holds the screen slot. Tests set it directly to play "someone else". */
-    screenHolder: null as ScreenHolder | null,
-    /** What the share is sent with; tests set it to play the sharer changing it. */
-    screenSettings: { quality: "1080p", mode: "smooth" } as StreamSettings,
+    /** The live streams, oldest first. Tests set them directly to play other people sharing. */
+    streams: [] as FakeStream[],
+    /** False plays an API that restarted and forgot this person's seat. */
+    seated: true,
+    /** What POST /api/room/enter answers: tests set "waiting" or "offered" to play a full room. */
+    seat: { status: "in" } as SeatAnswer,
     calls: [] as Call[],
     /** Force the next matching request to fail: key is "POST /api/access-requests". */
     failures: new Map<string, Reply>(),
@@ -40,44 +42,70 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
       void body;
       return { status: 201 };
     }
-    const screenState = () => ({
+    const streamsState = () => ({
       status: 200,
       body: {
-        holder: server.screenHolder,
-        mine: server.screenHolder?.userId === MY_USER_ID,
-        settings: server.screenHolder ? server.screenSettings : null,
+        streams: server.streams.map((st) => ({ ...st, mine: st.userId === MY_USER_ID })),
+        free: 6 - server.streams.length,
+        seated: server.seated,
       },
     });
-    if (key === "GET /api/screen") return screenState();
+    const conflict = (detail: string, reason?: string) => ({ status: 409, body: { status: 409, detail, reason } });
+    const isMine = (kind: string) => (st: FakeStream) => st.userId === MY_USER_ID && st.kind === kind;
+
+    if (key === "GET /api/streams") return streamsState();
     if (key === "POST /api/livekit/token") {
       return {
         status: 200,
         body: { url: "wss://rtc.test", room: "xove", identity: `user-${MY_USER_ID}`, token: "test-token" },
       };
     }
-    if (key === "POST /api/screen/take") {
-      const wanted = body as Partial<StreamSettings> | undefined;
-      server.screenSettings = { quality: wanted?.quality ?? "1080p", mode: wanted?.mode ?? "smooth" };
-      if (server.screenHolder?.userId !== MY_USER_ID) {
-        const since = new Date().toISOString();
-        server.screenHolder = { userId: MY_USER_ID, name: server.me?.name ?? null, avatarUrl: null, since };
+    if (key === "POST /api/streams") {
+      const wanted = body as { kind: StreamKind } & Partial<StreamSettings>;
+      if (!server.seated) return conflict("Enter the room first.");
+      const settings: StreamSettings = {
+        quality: wanted.quality ?? (wanted.kind === "camera" ? "720p" : "1080p"),
+        mode: wanted.mode ?? "smooth",
+      };
+      const own = server.streams.find(isMine(wanted.kind));
+      if (own) {
+        own.settings = settings;
+        return streamsState();
       }
-      return screenState();
+      if (server.streams.length >= 6) return conflict("The room already has 6 streams.", "full");
+      server.streams = [...server.streams, myStream(wanted.kind, server.me?.name ?? null, settings)];
+      return streamsState();
     }
-    if (key === "POST /api/screen/settings") {
-      if (server.screenHolder?.userId !== MY_USER_ID) {
-        return { status: 409, body: { status: 409, detail: "Only the person sharing can change how their screen is sent." } };
+    const perKind = path.match(/^\/api\/streams\/(screen|camera)\/(settings|stop)$/);
+    if (method === "POST" && perKind) {
+      const [, kind, action] = perKind;
+      const own = server.streams.find(isMine(kind));
+      if (action === "stop") {
+        server.streams = server.streams.filter((st) => !isMine(kind)(st));
+        return streamsState();
       }
-      server.screenSettings = body as StreamSettings;
-      return screenState();
+      if (!own) return conflict("Only the person sharing can change how their stream is sent.");
+      own.settings = body as StreamSettings;
+      return streamsState();
     }
-    if (key === "POST /api/screen/release") {
-      if (server.screenHolder && server.screenHolder.userId !== MY_USER_ID) {
-        return { status: 409, body: { status: 409, detail: "Only the person sharing can stop the share." } };
+
+    if (key === "POST /api/room/enter") {
+      // A page connected to the video room confirms its seat (after an API restart).
+      if ((body as { participantSid?: string } | undefined)?.participantSid && server.seat.status === "in") {
+        server.seated = true;
       }
-      server.screenHolder = null;
-      return screenState();
+      if (server.seat.status === "in") server.seated = true;
+      return { status: 200, body: server.seat };
     }
+    if (key === "POST /api/room/accept") {
+      if (server.seat.status !== "offered") {
+        return conflict("There's no seat waiting for you. Keep this page open: you'll get one when it's your turn.");
+      }
+      server.seat = { status: "in" };
+      server.seated = true;
+      return { status: 200, body: server.seat };
+    }
+    if (key === "POST /api/room/cancel" || key === "POST /api/room/leave") return { status: 204 };
 
     if (key === "GET /api/admin/access-requests") return { status: 200, body: server.requests };
     if (key === "GET /api/admin/members") return { status: 200, body: server.members };
@@ -100,7 +128,7 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     const path = String(input);
     const headers = (init?.headers ?? {}) as Record<string, string>;
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-    server.calls.push({ method, path, headers, body });
+    server.calls.push({ method, path, headers, body, keepalive: init?.keepalive });
 
     const reply = route(method, path, body);
     const text = reply.body === undefined ? "" : JSON.stringify(reply.body);
@@ -114,12 +142,35 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
   return server;
 }
 
-export const someoneSharing = (name: string, userId = 7): ScreenHolder => ({
-  userId,
+/** One live stream as the fake API keeps it. */
+export type FakeStream = Omit<LiveStream, "mine">;
+
+export type SeatAnswer =
+  | { status: "in" }
+  | { status: "waiting"; place: number }
+  | { status: "offered"; until: string; seconds: number };
+
+/** Someone else's live stream: a screen at 1080p Smooth unless said otherwise, started a minute ago. */
+export const someoneSharing = (
+  name: string,
+  userId = 7,
+  kind: StreamKind = "screen",
+  settings: StreamSettings = { quality: kind === "camera" ? "720p" : "1080p", mode: "smooth" },
+  since = new Date(Date.now() - 60_000),
+): FakeStream => ({ kind, userId, name, avatarUrl: null, since: since.toISOString(), settings });
+
+const myStream = (kind: StreamKind, name: string | null, settings: StreamSettings): FakeStream => ({
+  kind,
+  userId: MY_USER_ID,
   name,
   avatarUrl: null,
-  since: new Date(Date.now() - 60_000).toISOString(),
+  since: new Date().toISOString(),
+  settings,
 });
+
+/** My stream of this kind, as the fake API has it. */
+export const myLiveStream = (server: { streams: FakeStream[] }, kind: StreamKind = "screen") =>
+  server.streams.find((st) => st.userId === MY_USER_ID && st.kind === kind);
 
 export const aUser = (overrides: Partial<Me> = {}): Me => ({
   email: "friend@example.com",

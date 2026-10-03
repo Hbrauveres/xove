@@ -27,30 +27,38 @@ export type MemberView = {
   admin: boolean;
 };
 
-/** Who holds the screen slot. `since` is an ISO timestamp. */
-export type ScreenHolder = {
-  userId: number;
-  name: string | null;
-  avatarUrl: string | null;
-  since: string;
-};
+/** What a stream shows (spec 0060). Never a microphone. */
+export type StreamKind = "screen" | "camera";
 
-/** What the sharer's stream is sent with (spec 0086); the sharer can change it while sharing. */
+/** What a stream is sent with (spec 0086); its person can change it while sharing. A camera goes up to 720p. */
 export type StreamSettings = {
   quality: "1080p" | "720p" | "480p";
   mode: "smooth" | "sharp";
 };
 
-/** GET /api/screen, and what take/release answer with. */
-export type ScreenState = {
-  holder: ScreenHolder | null;
-  /** Null when nobody is sharing. */
-  settings: StreamSettings | null;
-  /** True when the holder is the person asking. */
+/** One live stream, as GET /api/streams lists it. `since` is an ISO timestamp. */
+export type LiveStream = {
+  kind: StreamKind;
+  userId: number;
+  name: string | null;
+  avatarUrl: string | null;
+  since: string;
+  settings: StreamSettings;
+  /** True when it's the asking person's. */
   mine: boolean;
 };
 
-/** Which LiveKit connection and screen track a share comes from. Required to take the screen. */
+/** GET /api/streams, and what start/settings/stop answer with. */
+export type StreamsState = {
+  /** Oldest first. */
+  streams: LiveStream[];
+  /** Places left of the 6. */
+  free: number;
+  /** False when the API doesn't know this person is in the room (after a restart): enter again. */
+  seated: boolean;
+};
+
+/** Which LiveKit connection and track a stream comes from. Required to start one. */
 export type SharingConnection = {
   participantSid: string;
   trackSid: string;
@@ -63,3 +71,13 @@ export type LiveKitAccess = {
   identity: string;
   token: string;
 };
+
+/**
+ * POST /api/room/enter (spec 0060): in the room, waiting in the queue at `place`
+ * (1 is next), or a seat held for this person until `until` (ISO timestamp), which is
+ * `seconds` from now (the countdown uses the seconds: a browser's clock may be wrong).
+ */
+export type SeatStatus =
+  | { status: "in" }
+  | { status: "waiting"; place: number }
+  | { status: "offered"; until: string; seconds: number };

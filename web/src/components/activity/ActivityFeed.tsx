@@ -22,6 +22,8 @@ export function ActivityFeed({ events, people, meId }: Props) {
     return people.find((p) => p.id === id)?.name ?? "Someone";
   };
 
+  const whose = (e: ActivityEvent) => (e.actorId === meId ? "your" : "their");
+
   const describe = (e: ActivityEvent) => {
     const actor = nameOf(e.actorId);
     switch (e.kind) {
@@ -30,13 +32,9 @@ export function ActivityFeed({ events, people, meId }: Props) {
       case "left":
         return `${actor} left`;
       case "started":
-        return `${actor} started sharing`;
+        return e.stream === "camera" ? `${actor} turned on ${whose(e)} camera` : `${actor} started sharing`;
       case "stopped":
-        return `${actor} stopped sharing`;
-      case "took": {
-        const target = e.targetId === meId ? "you" : nameOf(e.targetId);
-        return `${actor} took the screen from ${target}`;
-      }
+        return e.stream === "camera" ? `${actor} turned off ${whose(e)} camera` : `${actor} stopped sharing`;
     }
   };
 
