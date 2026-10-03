@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { StreamSettings } from "../../api/types";
+import { loadWatchPrefs, saveWatchPrefs, type SharePrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../../types";
+import { ShareSettingsFields } from "../share/ShareSettingsFields";
 import { EmptyStage } from "./EmptyStage";
 import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
@@ -19,16 +21,53 @@ type Props = {
   isMeSharing: boolean;
   connection: ConnectionState;
   onStartSharing: () => void;
+  /** What the current share is sent with, as the API says: caps what viewers can pick. */
+  streamSettings: StreamSettings | null;
+  /** My own quality and mode while I share, changed from my player's bar. */
+  sharePrefs: SharePrefs;
+  onSharePrefsChange: (prefs: SharePrefs) => void;
+  /** A request is on its way: the sharer's choices wait. */
+  busy?: boolean;
 };
+
+/** How long the player's labels and bars stay after the mouse stops moving. */
+export const CHROME_IDLE_MS = 2500;
 
 /** iPhones and iPads ignore a page's volume (only their buttons change it). */
 const canSetVolume = () =>
   !/iPad|iPhone|iPod/.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 /** The 16:9 area where the shared screen plays. */
-export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection, onStartSharing }: Props) {
+export function Stage({
+  share,
+  sharer,
+  screen,
+  myScreen,
+  isMeSharing,
+  connection,
+  onStartSharing,
+  streamSettings,
+  sharePrefs,
+  onSharePrefsChange,
+  busy = false,
+}: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
+
+  // The LIVE label, the name and the bars show while the mouse moves over the player
+  // (or after a tap), and fade when it stops, like YouTube.
+  const [chromeShown, setChromeShown] = useState(false);
+  const idleTimer = useRef<number | undefined>(undefined);
+  const showChrome = useCallback(() => {
+    setChromeShown(true);
+    window.clearTimeout(idleTimer.current);
+    idleTimer.current = window.setTimeout(() => setChromeShown(false), CHROME_IDLE_MS);
+  }, []);
+  const hideChrome = useCallback(() => {
+    window.clearTimeout(idleTimer.current);
+    setChromeShown(false);
+  }, []);
+  useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
   const changeWatch = (next: WatchPrefs) => {
     setWatch(next);
@@ -36,12 +75,17 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
   };
 
   // Ask for the chosen quality as soon as someone's screen arrives, and whenever it
-  // changes. A remembered quality this sharer doesn't offer counts as Auto.
+  // or the sharer's cap changes. A remembered quality this sharer doesn't offer
+  // counts as Auto, and Auto never asks for more than the sharer's cap (so LiveKit
+  // stops sending layers above it).
   const setQuality = screen?.setQuality;
-  const quality = effectiveQuality(watch.quality, viewerQualities(screen?.height ?? 0, screen?.layers));
+  const cap = streamSettings?.quality;
+  const offered = viewerQualities(screen?.height ?? 0, screen?.layers, cap);
+  const chosen = effectiveQuality(watch.quality, offered);
+  const request = chosen === "auto" && cap && cap !== "1080p" ? offered[0] : chosen;
   useEffect(() => {
-    setQuality?.(quality);
-  }, [setQuality, quality]);
+    setQuality?.(request);
+  }, [setQuality, request]);
 
   const goFullscreen = () => {
     frameRef.current?.requestFullscreen?.().catch(() => {
@@ -56,7 +100,14 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
     const content = isMeSharing ? (
       myScreen ? (
-        <ScreenVideo screen={{ video: myScreen }} label="Your shared screen" />
+        <>
+          <ScreenVideo screen={{ video: myScreen }} label="Your shared screen" />
+          <div className={styles.player}>
+            <div className={styles.bar}>
+              <ShareSettingsFields prefs={sharePrefs} onChange={onSharePrefsChange} disabled={busy} look="bar" />
+            </div>
+          </div>
+        </>
       ) : (
         <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
       )
@@ -72,6 +123,7 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
           <PlayerControls
             sharerHeight={screen.height ?? 0}
             layers={screen.layers}
+            cap={cap}
             prefs={watch}
             onChange={changeWatch}
             canSetVolume={canSetVolume()}
@@ -98,7 +150,15 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
 
   return (
     <section className={styles.stage} aria-label="Shared screen">
-      <div ref={frameRef} className={`${styles.frame} ${isMeSharing ? styles.onAir : ""}`}>
+      <div
+        ref={frameRef}
+        className={`${styles.frame} ${isMeSharing ? styles.onAir : ""}`}
+        data-chrome={chromeShown ? "shown" : "hidden"}
+        onPointerMove={showChrome}
+        onPointerDown={showChrome}
+        onPointerLeave={hideChrome}
+        onFocus={showChrome}
+      >
         {body()}
 
         {connection === "reconnecting" && (

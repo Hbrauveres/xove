@@ -26,6 +26,7 @@ export const ConnectionState = {
 } as const;
 
 export const Track = {
+  Kind: { Video: "video", Audio: "audio" },
   Source: {
     Camera: "camera",
     Microphone: "microphone",
@@ -50,25 +51,48 @@ export class FakeTrack {
 /** The browser's captured screen, as a MediaStreamTrack. */
 export class FakeMediaStreamTrack {
   contentHint = "";
-  constraints: MediaTrackConstraints | null = null;
   stopped = false;
-  clone() {
-    return new FakeMediaStreamTrack();
+  readonly listeners: (() => void)[] = [];
+  addEventListener(event: string, listener: () => void) {
+    if (event === "ended") this.listeners.push(listener);
   }
-  async applyConstraints(constraints: MediaTrackConstraints) {
-    this.constraints = constraints;
+  removeEventListener(event: string, listener: () => void) {
+    if (event === "ended") this.listeners.splice(this.listeners.indexOf(listener), 1);
+  }
+  /** The browser ended the capture (its own "Stop sharing" bar). */
+  end() {
+    this.stopped = true;
+    for (const listener of [...this.listeners]) listener();
   }
   stop() {
     this.stopped = true;
   }
 }
 
-/** A screen track this browser publishes. */
-export class FakeLocalScreenTrack extends FakeTrack {
+/** A track this browser captured: the screen, or its sound. */
+export class FakeLocalTrack extends FakeTrack {
   readonly mediaStreamTrack: FakeMediaStreamTrack;
-  constructor(mediaStreamTrack = new FakeMediaStreamTrack()) {
+  readonly kind: "video" | "audio";
+  readonly source: string;
+  stopped = false;
+  constructor(kind: "video" | "audio", source: string, mediaStreamTrack = new FakeMediaStreamTrack()) {
     super();
+    this.kind = kind;
+    this.source = source;
     this.mediaStreamTrack = mediaStreamTrack;
+  }
+  stop() {
+    this.stopped = true;
+    this.mediaStreamTrack.stop();
+  }
+}
+
+/** The captured screen. */
+export class FakeLocalScreenTrack extends FakeLocalTrack {
+  readonly setPublishingQuality = vi.fn();
+  readonly setDegradationPreference = vi.fn(async () => undefined);
+  constructor(mediaStreamTrack = new FakeMediaStreamTrack()) {
+    super("video", Track.Source.ScreenShare, mediaStreamTrack);
   }
 }
 
@@ -110,10 +134,10 @@ export class Room {
 
   readonly localParticipant = {
     sid: "PA_me",
-    /** The screen tracks this browser is publishing (two for a moment while the quality changes). */
+    /** The screen tracks this browser publishes. */
     screens: [] as { trackSid: string | undefined; track: FakeLocalScreenTrack; options?: unknown }[],
-    /** Published with the screen when the picker gives sound. */
-    screenAudio: null as { trackSid: string; track: FakeTrack } | null,
+    /** Published with the screen when the picker gave sound. */
+    screenAudio: null as { trackSid: string; track: FakeLocalTrack; options?: unknown } | null,
     get isScreenShareEnabled() {
       return this.screens.length > 0;
     },
@@ -121,45 +145,58 @@ export class Room {
     screenTrackSid: "TR_my_screen" as string | undefined,
     /** Tests set this to false to play a browser or surface that gives no sound. */
     nextPickerAudio: true,
+    /** Tests set this to "cancel" to play someone closing the browser's picker. */
+    nextPicker: "share" as "share" | "cancel",
+    /** The last screen captured (whether it was published or not). */
+    lastCapture: [] as FakeLocalTrack[],
     getTrackPublication: (source: string) => {
       const local = this.localParticipant;
       if (source === Track.Source.ScreenShare) return local.screens[0];
       if (source === Track.Source.ScreenShareAudio) return local.screenAudio ?? undefined;
       return undefined;
     },
-    /** Tests set this to "cancel" to play someone closing the browser's picker. */
-    nextPicker: "share" as "share" | "cancel",
-    setScreenShareEnabled: vi.fn(async (enabled: boolean, _capture?: unknown, publish?: unknown) => {
+    /** The browser's picker: captures the screen (and its sound), sends nothing yet. */
+    createScreenTracks: vi.fn(async (_options?: unknown) => {
       const local = this.localParticipant;
-      if (enabled && local.nextPicker === "cancel") {
-        throw new DOMException("Permission denied", "NotAllowedError");
-      }
-      if (enabled) {
-        local.screens = [{ trackSid: local.screenTrackSid, track: new FakeLocalScreenTrack(), options: publish }];
-        local.screenAudio = local.nextPickerAudio ? { trackSid: "TR_my_sound", track: new FakeTrack() } : null;
-      } else {
-        local.screens = [];
-        local.screenAudio = null;
-      }
-      this.emit(enabled ? RoomEvent.LocalTrackPublished : RoomEvent.LocalTrackUnpublished);
-      return undefined;
+      if (local.nextPicker === "cancel") throw new DOMException("Permission denied", "NotAllowedError");
+      const tracks: FakeLocalTrack[] = [new FakeLocalScreenTrack()];
+      if (local.nextPickerAudio) tracks.push(new FakeLocalTrack("audio", Track.Source.ScreenShareAudio));
+      local.lastCapture = tracks;
+      return tracks;
     }),
-    /** Publishing another screen track: what a quality change does. */
-    publishTrack: vi.fn(async (mediaStreamTrack: FakeMediaStreamTrack, options?: unknown) => {
+    publishTrack: vi.fn(async (track: FakeLocalTrack, options?: unknown) => {
       const local = this.localParticipant;
-      const publication = {
-        trackSid: `TR_my_screen_${++publishSeq}`,
-        track: new FakeLocalScreenTrack(mediaStreamTrack),
-        options,
-      };
-      local.screens.push(publication);
+      if (track instanceof FakeLocalScreenTrack) {
+        const publication = {
+          trackSid: local.screens.length === 0 ? local.screenTrackSid : `TR_my_screen_${++publishSeq}`,
+          track,
+          options,
+        };
+        local.screens.push(publication);
+        this.emit(RoomEvent.LocalTrackPublished);
+        return publication;
+      }
+      local.screenAudio = { trackSid: "TR_my_sound", track, options };
       this.emit(RoomEvent.LocalTrackPublished);
-      return publication;
+      return local.screenAudio;
     }),
-    unpublishTrack: vi.fn(async (track: FakeLocalScreenTrack) => {
+    unpublishTrack: vi.fn(async (track: FakeLocalTrack) => {
       const local = this.localParticipant;
       local.screens = local.screens.filter((s) => s.track !== track);
+      if (local.screenAudio?.track === track) local.screenAudio = null;
+      track.stop();
       this.emit(RoomEvent.LocalTrackUnpublished);
+      return undefined;
+    }),
+    setScreenShareEnabled: vi.fn(async (enabled: boolean) => {
+      const local = this.localParticipant;
+      if (!enabled) {
+        for (const s of local.screens) s.track.stop();
+        local.screenAudio?.track.stop();
+        local.screens = [];
+        local.screenAudio = null;
+        this.emit(RoomEvent.LocalTrackUnpublished);
+      }
       return undefined;
     }),
   };
@@ -230,8 +267,10 @@ export class Room {
 
   /** The person clicked the browser's own "Stop sharing" bar. */
   browserStopsMyShare() {
-    this.localParticipant.screens = [];
-    this.localParticipant.screenAudio = null;
+    const local = this.localParticipant;
+    for (const track of local.lastCapture) track.mediaStreamTrack.end();
+    local.screens = [];
+    local.screenAudio = null;
     this.emit(RoomEvent.LocalTrackUnpublished);
   }
 }

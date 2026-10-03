@@ -1,0 +1,32 @@
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.form {
+  flex-direction: column;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.field select {
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.bar .field select {
+  background: transparent;
+  padding: 4px 6px;
+}
