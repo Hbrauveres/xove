@@ -397,3 +397,23 @@ describe("room: the sharer's quality and mode", () => {
     expect(screen.queryByText(/no sound is being shared/i)).not.toBeInTheDocument();
   });
 });
+
+describe("room: the sharer sees what they send", () => {
+  it("plays my own screen on the stage, without its sound", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await screen.findByText("You are sharing");
+
+    const video = await screen.findByLabelText("Your shared screen");
+    const local = lastRoom().localParticipant;
+    expect(local.screens[0].track.attached).toContain(video);
+    expect(video).toHaveProperty("muted", true);
+    // My own sound would echo: it isn't played back to me.
+    expect(local.screenAudio?.track.attached ?? []).toHaveLength(0);
+  });
+});

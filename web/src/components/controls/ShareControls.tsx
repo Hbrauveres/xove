@@ -61,7 +61,7 @@ export function ShareControls({
       <div className={styles.row}>
         <p className={styles.hint}>
           {isMeSharing
-            ? "Everyone here can see your screen. Changing the quality reloads it for a second."
+            ? "Everyone sees what's on the stage. Share a tab or window to avoid the mirror effect; changing the quality reloads it for a second."
             : someoneElseSharing
               ? `Want the stage? Taking it stops ${sharer.name}'s share.`
               : "The stage is free. Share a screen, window or tab."}

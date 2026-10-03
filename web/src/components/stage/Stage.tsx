@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { ConnectionState, Friend, ScreenTracks, ShareState } from "../../types";
+import type { ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
@@ -11,13 +11,15 @@ type Props = {
   sharer: Friend | null;
   /** The sharer's tracks, once they arrive. Null when it's me or nothing yet. */
   screen: ScreenTracks | null;
+  /** My own screen while I share: the preview, played without its sound. */
+  myScreen?: MediaTrack;
   isMeSharing: boolean;
   connection: ConnectionState;
   onStartSharing: () => void;
 };
 
 /** The 16:9 area where the shared screen plays. */
-export function Stage({ share, sharer, screen, isMeSharing, connection, onStartSharing }: Props) {
+export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection, onStartSharing }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
 
   const goFullscreen = () => {
@@ -29,9 +31,14 @@ export function Stage({ share, sharer, screen, isMeSharing, connection, onStartS
   const body = () => {
     if (!share || !sharer) return <EmptyStage onStartSharing={onStartSharing} />;
 
-    // No preview of my own screen: it would show the stage inside the stage, forever.
+    // My own screen as everyone sees it, without its sound (it would echo). Sharing
+    // the whole screen shows the page inside itself: sharing a tab or window avoids it.
     const content = isMeSharing ? (
-      <StageNotice title="You're sharing your screen" text="Everyone here sees it. Stop from the button below or from your browser's bar." />
+      myScreen ? (
+        <ScreenVideo screen={{ video: myScreen }} label="Your shared screen" />
+      ) : (
+        <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
+      )
     ) : screen?.video ? (
       <ScreenVideo screen={screen} label={`${sharer.name}'s shared screen`} />
     ) : (

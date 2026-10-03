@@ -49,6 +49,7 @@ export function RoomPage({ pollMs }: Props = {}) {
             share={session.share}
             sharer={session.sharer}
             screen={session.screen}
+            myScreen={session.myScreen}
             isMeSharing={session.isMeSharing}
             connection={session.connection}
             onStartSharing={session.startSharing}
