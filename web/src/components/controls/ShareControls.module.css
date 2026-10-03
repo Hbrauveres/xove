@@ -33,3 +33,9 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

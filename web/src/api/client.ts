@@ -1,4 +1,13 @@
-import type { AccessRequestView, LiveKitAccess, Me, MemberView, ScreenState, SharingConnection, StreamSettings } from "./types";
+import type {
+  AccessRequestView,
+  LiveKitAccess,
+  Me,
+  MemberView,
+  SharingConnection,
+  StreamKind,
+  StreamSettings,
+  StreamsState,
+} from "./types";
 
 /** An error the API answered with. `message` is safe to show to the user. */
 export class ApiError extends Error {
@@ -63,12 +72,13 @@ export const api = {
   requestAccess: (message: string) =>
     request<void>("POST", "/api/access-requests", { message: message.trim() || null }),
 
-  screen: {
-    current: () => request<ScreenState>("GET", "/api/screen"),
-    take: (connection: SharingConnection, settings: StreamSettings) =>
-      request<ScreenState>("POST", "/api/screen/take", { ...connection, ...settings }),
-    settings: (settings: StreamSettings) => request<ScreenState>("POST", "/api/screen/settings", settings),
-    release: () => request<ScreenState>("POST", "/api/screen/release"),
+  streams: {
+    current: () => request<StreamsState>("GET", "/api/streams"),
+    start: (kind: StreamKind, connection: SharingConnection, settings: StreamSettings) =>
+      request<StreamsState>("POST", "/api/streams", { kind, ...connection, ...settings }),
+    settings: (kind: StreamKind, settings: StreamSettings) =>
+      request<StreamsState>("POST", `/api/streams/${kind}/settings`, settings),
+    stop: (kind: StreamKind) => request<StreamsState>("POST", `/api/streams/${kind}/stop`),
   },
 
   liveKitToken: () => request<LiveKitAccess>("POST", "/api/livekit/token"),

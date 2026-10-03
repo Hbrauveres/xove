@@ -12,7 +12,7 @@ import type { Friend } from "../types";
 import styles from "./RoomPage.module.css";
 
 type Props = {
-  /** How often to ask the API who is sharing. Tests pass a short one. */
+  /** How often to ask the API which streams are live. Tests pass a short one. */
   pollMs?: number;
 };
 
@@ -47,22 +47,16 @@ export function RoomPage({ pollMs }: Props = {}) {
       <div className={styles.layout}>
         <main className={styles.main}>
           <Stage
-            share={session.share}
-            sharer={session.sharer}
-            screen={session.screen}
-            myScreen={session.myScreen}
-            isMeSharing={session.isMeSharing}
+            sharers={session.sharers}
             connection={session.connection}
-            onStartSharing={session.startSharing}
-            streamSettings={session.streamSettings}
-            sharePrefs={session.sharePrefs}
-            onSharePrefsChange={session.setSharePrefs}
+            onStartSharing={() => session.start("screen")}
+            prefs={session.prefs}
+            onPrefsChange={session.setPrefs}
           />
           <ShareControls
-            sharer={session.sharer}
-            isMeSharing={session.isMeSharing}
-            onStart={session.startSharing}
-            onTake={session.startSharing}
+            mine={session.mine}
+            free={session.free}
+            onStart={session.start}
             onStop={session.stop}
             noSound={session.noSound}
             busy={session.busy}
@@ -74,18 +68,19 @@ export function RoomPage({ pollMs }: Props = {}) {
           )}
         </main>
 
-        {session.pendingShare && (
+        {session.pending && (
           <ShareSetup
-            preview={session.pendingShare.video}
-            initial={session.sharePrefs}
-            hasSound={session.pendingShare.audio !== undefined}
-            onStart={session.confirmShare}
-            onCancel={session.cancelShare}
+            kind={session.pending.kind}
+            preview={session.pending.video}
+            initial={session.prefs[session.pending.kind]}
+            hasSound={session.pending.audio !== undefined}
+            onStart={session.confirm}
+            onCancel={session.cancelPending}
           />
         )}
 
         <aside className={styles.side}>
-          <ViewerList people={session.people} meId={session.me.id} sharerId={session.share?.sharerId ?? null} />
+          <ViewerList people={session.people} meId={session.me.id} sharingIds={session.sharers.map((s) => s.person.id)} />
           <ActivityFeed events={session.activity} people={session.knownPeople} meId={session.me.id} />
         </aside>
       </div>

@@ -1,88 +1,66 @@
-import { useEffect, useState } from "react";
-import type { Friend } from "../../types";
+import type { StreamKind } from "../../types";
 import { Button } from "../ui/Button";
-import { TakeoverConfirm } from "./TakeoverConfirm";
 import styles from "./ShareControls.module.css";
 
 type Props = {
-  sharer: Friend | null;
-  isMeSharing: boolean;
-  onStart: () => void;
-  onTake: () => void;
-  onStop: () => void;
-  /** I'm sharing, but my browser gave no sound. */
+  /** Which of my streams are live. */
+  mine: Record<StreamKind, boolean>;
+  /** Stream places left of the 6. */
+  free: number;
+  onStart: (kind: StreamKind) => void;
+  onStop: (kind: StreamKind) => void;
+  /** I'm sharing my screen, but my browser gave no sound. */
   noSound?: boolean;
   /** A request is on its way: buttons wait. */
   busy?: boolean;
 };
 
-type Step = "idle" | "confirmTakeover";
-
 /**
- * The one control that matters: share, take over, or stop.
- * Taking the screen from someone asks first; then the browser's own picker opens.
+ * Share my screen and turn on my camera, or stop them (spec 0060). Up to 6 streams
+ * at once: nobody is pushed out, so when they're all taken the buttons wait.
  */
-export function ShareControls({
-  sharer,
-  isMeSharing,
-  onStart,
-  onTake,
-  onStop,
-  noSound = false,
-  busy = false,
-}: Props) {
-  const [step, setStep] = useState<Step>("idle");
-  const someoneElseSharing = sharer !== null && !isMeSharing;
-
-  // If the sharer stops while you're confirming, there's nothing left to take over.
-  useEffect(() => {
-    if (step === "confirmTakeover" && !someoneElseSharing) setStep("idle");
-  }, [step, someoneElseSharing]);
-
-  const confirmTakeover = () => {
-    setStep("idle");
-    onTake();
-  };
+export function ShareControls({ mine, free, onStart, onStop, noSound = false, busy = false }: Props) {
+  const full = free <= 0;
+  const live = mine.screen || mine.camera;
 
   return (
     <section className={styles.controls} aria-label="Screen sharing">
       <div className={styles.row}>
         <p className={styles.hint}>
-          {isMeSharing
-            ? "Everyone sees what's on the stage. Change the quality or mode from your player."
-            : someoneElseSharing
-              ? `Want the stage? Taking it stops ${sharer.name}'s share.`
-              : "The stage is free. Share a screen, window or tab."}
+          {full && !(mine.screen && mine.camera)
+            ? "6 streams are live, the most at once. You can start yours when one stops."
+            : live
+              ? "Everyone can watch you. Change the quality or mode from your player."
+              : "Share a screen, window or tab, or turn on your camera."}
         </p>
 
-        {isMeSharing ? (
-          <Button variant="danger" onClick={onStop} disabled={busy}>
-            Stop sharing
-          </Button>
-        ) : someoneElseSharing ? (
-          <Button variant="ghost" onClick={() => setStep("confirmTakeover")} disabled={busy || step !== "idle"}>
-            Take the screen
-          </Button>
-        ) : (
-          <Button onClick={onStart} disabled={busy}>
-            Share my screen
-          </Button>
-        )}
+        <div className={styles.buttons}>
+          {mine.screen ? (
+            <Button variant="danger" onClick={() => onStop("screen")} disabled={busy}>
+              Stop sharing
+            </Button>
+          ) : (
+            <Button onClick={() => onStart("screen")} disabled={busy || full}>
+              Share my screen
+            </Button>
+          )}
+          {mine.camera ? (
+            <Button variant="danger" onClick={() => onStop("camera")} disabled={busy}>
+              Turn off camera
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={() => onStart("camera")} disabled={busy || full}>
+              Turn on camera
+            </Button>
+          )}
+        </div>
       </div>
 
-      {isMeSharing && noSound && (
+      {mine.screen && noSound && (
         <p className={styles.notice} role="status">
           No sound is being shared. To share sound, share a browser tab (or your whole screen on Windows) and tick
           "Share audio" in the picker. Firefox and Safari can't share sound.
         </p>
-      )}
-
-      {step === "confirmTakeover" && sharer && (
-        <TakeoverConfirm
-          sharerName={sharer.name}
-          onConfirm={confirmTakeover}
-          onCancel={() => setStep("idle")}
-        />
       )}
     </section>
   );

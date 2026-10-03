@@ -1,8 +1,11 @@
 import type { SharePrefs } from "../../media/preferences";
-import { SHARE_QUALITIES, type ShareMode, type ShareQuality } from "../../media/shareSettings";
+import { CAMERA_QUALITIES, SHARE_QUALITIES, type ShareMode, type ShareQuality } from "../../media/shareSettings";
+import type { StreamKind } from "../../types";
 import styles from "./ShareSettingsFields.module.css";
 
 type Props = {
+  /** A camera goes up to 720p (spec 0060). */
+  kind?: StreamKind;
   prefs: SharePrefs;
   onChange: (prefs: SharePrefs) => void;
   disabled?: boolean;
@@ -16,7 +19,8 @@ const MODES: { id: ShareMode; label: string }[] = [
 ];
 
 /** The sharer's two choices: the best quality viewers can get, and motion or detail first. */
-export function ShareSettingsFields({ prefs, onChange, disabled = false, look = "form" }: Props) {
+export function ShareSettingsFields({ kind = "screen", prefs, onChange, disabled = false, look = "form" }: Props) {
+  const qualities = kind === "camera" ? CAMERA_QUALITIES : SHARE_QUALITIES;
   return (
     <div className={`${styles.fields} ${styles[look]}`}>
       <label className={styles.field}>
@@ -26,7 +30,7 @@ export function ShareSettingsFields({ prefs, onChange, disabled = false, look = 
           disabled={disabled}
           onChange={(e) => onChange({ ...prefs, quality: e.target.value as ShareQuality })}
         >
-          {SHARE_QUALITIES.map((q) => (
+          {qualities.map((q) => (
             <option key={q.id} value={q.id}>
               {q.id} · {q.fps} fps
             </option>
