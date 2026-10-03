@@ -48,7 +48,7 @@ Nothing to do outside the repo before starting. Henrique's part is at the end: m
     - They show while the mouse moves over a playing video, and fade after 2.5 s or when the mouse leaves.
     - On touch, a tap keeps them up long enough to use them.
     - Nothing fades while a control has the keyboard focus, or over the empty stage or a notice.
-- [ ] **T12** Review every AC (`/review`), then the checks on staging after merge, written in the PR · verify: no gaps left
+- [x] **T12** Review every AC (`/review`), then the checks on staging after merge, written in the PR · verify: no gaps left
   - Review: three rounds; all findings fixed (the touch and keyboard behaviour, capture leaks, the order of quick changes, a missing setting's default).
   - On staging after merge:
     - About 30 fps with VP9 and three layers, and the reason for any drop (AC-8).
@@ -56,6 +56,7 @@ Nothing to do outside the repo before starting. Henrique's part is at the end: m
     - Smooth and Sharp under throttling, and Sharp's frame rate (AC-10).
     - A viewer's fixed quality really lowers what they receive (AC-5).
     - A live change of the cap reaches viewers within a couple of seconds (AC-3).
+  - Done 2026-10-04: Henrique checked everything above on staging after #88 merged; all as planned.
 
 ## Coverage
 
