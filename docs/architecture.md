@@ -113,7 +113,8 @@ The slot lives in the API's memory: one API instance, a handful of people, nothi
 
 How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` ([spec 0086](../specs/0086-stream-quality/spec.md)). LiveKit's defaults suit slides and voice calls; these suit games and videos.
 
-- **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is sent in VP9 as one layer per quality, from the chosen one down to 480p.
+- **Starting:** the browser's picker captures the screen, then a setup window shows a preview and the settings. Nothing is sent until "Start sharing".
+- **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is always captured at 1080p and sent in VP9 with all three layers; the chosen quality is a **cap**: the layers above it aren't sent.
   - **No tight limits:** each layer may use up to 8, 4 and 2 Mbit/s. That's above what a screen usually needs, so only the sharer's computer and connection, and each viewer's, limit the picture. The browser and LiveKit lower the bitrate by themselves when a connection can't keep up.
   - The sharer uploads all the layers (up to about 14 Mbit/s at 1080p on a great connection); each viewer downloads one.
   - The VPS's monthly traffic (8 TB) is watched in Hostinger's panel.
@@ -121,12 +122,16 @@ How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` (
 - **And a mode:**
   - **Smooth** (the default): marked as motion. When the connection is tight, the picture gets softer and the frame rate holds.
   - **Sharp:** marked as detail. The picture keeps its detail and the frame rate drops.
-- **Changing them mid-share:** the same capture is published again with the new settings, and the API is told the new track before the old one goes, so the slot isn't freed. Viewers see a reload of a second or two.
+- **Changing them mid-share,** from the sharer's own player bar, is live: same stream, no reload.
+  - The sharer's browser applies the new cap and mode right away, and tells the API (`POST /api/screen/settings`).
+  - Every viewer's app reads the settings with the screen slot (every 2 seconds) and follows them: its quality menu offers nothing above the cap, and Auto asks for no more than the cap.
+  - Since no viewer asks for the layers above the cap, LiveKit stops sending them (dynacast), so the sharer's upload really drops.
 - **Sound** is captured without the microphone filters (echo cancellation, noise suppression, automatic volume), in stereo, and sent at 128 kbit/s without silence skipping. Chrome gives sound only from a tab, or from the whole screen on Windows; Firefox and Safari give none, and the sharer sees a notice.
 - **Viewers** have a bar over the player:
   - The speaker icon mutes, and unmutes back to the same volume.
   - The volume slider is hidden on iPhones and iPads, which ignore a page's volume.
   - The quality menu offers "Auto" (adaptive stream: what fits the player and the connection) or a fixed quality from the sharer's down to 480p. A fixed quality asks the server for that size, so the viewer really downloads less.
+- **The LIVE label, the name and the bars** fade when the mouse stops moving over the player, and come back when it moves (or after a tap).
 - **Each browser remembers** its choices in `localStorage` (`xove.share.*`, `xove.watch.*`).
 
 To check a share on staging, open `chrome://webrtc-internals` in the viewer's or the sharer's browser. It shows the codec, frame rate, resolution, bitrate, and why quality drops: "cpu" means the sharer's computer can't keep up, "bandwidth" means the connection can't.
@@ -160,8 +165,9 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `POST /api/admin/access-requests/{id}/decline` | Admin | Declines; the user can ask again |
 | `GET /api/admin/members` | Admin | Members |
 | `DELETE /api/admin/members/{id}` | Admin | Removes a member and ends all their sessions |
-| `GET /api/screen` | Member | `{ holder: { userId, name, avatarUrl, since } or null, mine }` |
-| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Body `{ participantSid, trackSid }`: the LiveKit connection and screen track the share comes from, never shown to anyone; 400 without them |
+| `GET /api/screen` | Member | `{ holder: { userId, name, avatarUrl, since } or null, mine, settings: { quality, mode } or null }` |
+| `POST /api/screen/take` | Member | Takes the slot (takes over if someone holds it). Body `{ participantSid, trackSid, quality?, mode? }`: the LiveKit connection and screen track the share comes from (never shown to anyone; 400 without them), and what it's sent with (1080p Smooth by default) |
+| `POST /api/screen/settings` | The sharer | Changes what the share is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if it isn't your share |
 | `POST /api/screen/release` | Member | Frees the slot; 409 if it isn't yours |
 | `POST /api/livekit/token` | Member | `{ url, room, identity, token }` to join the video room |
 | `POST /api/livekit/webhook` | LiveKit (signature, no login) | Room events; frees the slot when the sharing connection leaves or its screen track stops. 401 on a bad signature |
