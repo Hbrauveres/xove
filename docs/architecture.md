@@ -42,6 +42,7 @@ web/                  React application
   src/api/            HTTP client and API types
   src/auth/           session state and route guards
   src/hooks/          useScreenSlot, useLiveKitRoom, useRoomSession
+  src/media/          how screens are sent (presets, modes, sound) and remembered choices
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
@@ -103,10 +104,28 @@ The rules the room follows:
 2. **Take over:** after a confirmation, the slot moves to you. The previous sharer's browser notices it's no longer the holder and stops sending.
 3. **Stop:** the Stop button or the browser's own bar stops the video and releases the slot. Only the holder can release it.
 4. **Reload while sharing:** the page sees it holds the slot but sends nothing, and releases it.
-5. **Everyone else** polls the slot every 2 seconds and plays the holder's screen track from LiveKit. The sharer sees a notice instead of their own screen.
+5. **Everyone else** polls the slot every 2 seconds and plays the holder's screen track from LiveKit. The sharer sees their own screen, as viewers do, without its sound.
 6. **Sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API frees the slot when it's about the connection or screen track that is sharing. A closed tab frees the stage within a few seconds; a lost connection as soon as LiveKit gives up on it (tens of seconds). Only one connection per person: opening the room on a second device disconnects the first. Spec: [`specs/0038-stale-slot`](../specs/0038-stale-slot/spec.md).
 
 The slot lives in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart frees it.
+
+### Video and sound quality
+
+How a screen is sent is decided in one place, `web/src/media/shareSettings.ts` ([spec 0086](../specs/0086-stream-quality/spec.md)). LiveKit's defaults suit slides and voice calls; these suit games and videos.
+
+- **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is sent in VP9 as one layer per quality, from the chosen one down to 480p: about 2.5, 1.2 and 0.6 Mbit/s. Browsers that can't send VP9 (Firefox) send VP8 instead.
+- **And a mode:**
+  - **Smooth** (the default): marked as motion. When the connection is tight, the picture gets softer and the frame rate holds.
+  - **Sharp:** marked as detail. The picture keeps its detail and the frame rate drops.
+- **Changing them mid-share:** the same capture is published again with the new settings, and the API is told the new track before the old one goes, so the slot isn't freed. Viewers see a reload of a second or two.
+- **Sound** is captured without the microphone filters (echo cancellation, noise suppression, automatic volume), in stereo, and sent at 128 kbit/s without silence skipping. Chrome gives sound only from a tab, or from the whole screen on Windows; Firefox and Safari give none, and the sharer sees a notice.
+- **Viewers** have a bar over the player:
+  - The speaker icon mutes, and unmutes back to the same volume.
+  - The volume slider is hidden on iPhones and iPads, which ignore a page's volume.
+  - The quality menu offers "Auto" (adaptive stream: what fits the player and the connection) or a fixed quality from the sharer's down to 480p. A fixed quality asks the server for that size, so the viewer really downloads less.
+- **Each browser remembers** its choices in `localStorage` (`xove.share.*`, `xove.watch.*`).
+
+To check a share on staging, open `chrome://webrtc-internals` in the viewer's or the sharer's browser. It shows the codec, frame rate, resolution, bitrate, and why quality drops: "cpu" means the sharer's computer can't keep up, "bandwidth" means the connection can't.
 
 **LiveKit webhooks.** Each environment's LiveKit posts every room event to its own API (`http://xove-<env>-api:8080/api/livekit/webhook`), signed with that environment's API key (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, ignores events from any room other than its own, and only acts on `participant_left` and `track_unpublished` (screen share).
 
