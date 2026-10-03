@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { screenCaptureOptions, screenPublishOptions } from "../media/shareSettings";
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, someoneSharing } from "../test/fakeApi";
 import { lastRoom } from "../test/fakeLiveKit";
@@ -134,7 +135,7 @@ describe("room: sharing", () => {
     await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
 
     expect(await screen.findByText("You are sharing")).toBeInTheDocument();
-    expect(lastRoom().localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(true, expect.anything());
+    expect(lastRoom().localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(true, expect.anything(), expect.anything());
     const take = server.calls.find((c) => c.method === "POST" && c.path === "/api/screen/take");
     expect(take?.headers["X-XSRF-TOKEN"]).toBe("abc123");
   });
@@ -275,5 +276,44 @@ describe("room: sharing", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Members only");
     expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(false);
+  });
+});
+
+// Spec 0086: smooth video and clear sound.
+describe("room: what the screen is sent with", () => {
+  afterEach(() => localStorage.clear());
+
+  const shareMyScreen = async () => {
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await screen.findByText("You are sharing");
+    return user;
+  };
+
+  it("sends 1080p Smooth, with the sound as played, by default", async () => {
+    installFakeApi({ me: member });
+    await shareMyScreen();
+
+    expect(lastRoom().localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(
+      true,
+      screenCaptureOptions("1080p", "smooth"),
+      screenPublishOptions("1080p", "smooth"),
+    );
+  });
+
+  it("sends the quality and mode chosen last time", async () => {
+    localStorage.setItem("xove.share.quality", "720p");
+    localStorage.setItem("xove.share.mode", "sharp");
+    installFakeApi({ me: member });
+    await shareMyScreen();
+
+    expect(lastRoom().localParticipant.setScreenShareEnabled).toHaveBeenCalledWith(
+      true,
+      screenCaptureOptions("720p", "sharp"),
+      screenPublishOptions("720p", "sharp"),
+    );
   });
 });
