@@ -9,8 +9,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.hbrauveres.xove.TestcontainersConfiguration;
-import dev.hbrauveres.xove.screen.ScreenSlot;
-import dev.hbrauveres.xove.screen.SharingConnection;
+import dev.hbrauveres.xove.stream.SharingConnection;
+import dev.hbrauveres.xove.stream.Stream;
+import dev.hbrauveres.xove.stream.StreamKind;
+import dev.hbrauveres.xove.stream.StreamSettings;
+import dev.hbrauveres.xove.stream.Streams;
 import dev.hbrauveres.xove.user.User;
 import dev.hbrauveres.xove.user.UserRepository;
 import dev.hbrauveres.xove.user.UserService;
@@ -28,7 +31,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-/** LiveKit tells the API who left; the slot follows (spec 0038). */
+/** LiveKit tells the API who left and which tracks stopped; the streams follow (specs 0038, 0060). */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = {
@@ -45,7 +48,7 @@ class LiveKitWebhookControllerTest {
     @Autowired WebApplicationContext context;
     @Autowired UserService userService;
     @Autowired UserRepository users;
-    @Autowired ScreenSlot slot;
+    @Autowired Streams streams;
 
     MockMvc mvc;
     User ana;
@@ -56,28 +59,40 @@ class LiveKitWebhookControllerTest {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         ana = member("sub-ana", "ana@example.com", "Ana");
         bruno = member("sub-bruno", "bruno@example.com", "Bruno");
-        slot.release(slot.current().map(h -> h.userId()).orElse(null));
+        streams.all().forEach(s -> streams.stop(s.userId(), s.kind()));
     }
 
-    // AC-1
+    // 0038 AC-1; 0060 AC-4: all of a person's streams end when their connection leaves.
     @Test
-    void freesTheSlotWhenTheSharingConnectionLeaves() throws Exception {
+    void endsAllOfAPersonsStreamsWhenTheirConnectionLeaves() throws Exception {
         anaShares();
+        anaTurnsOnHerCamera();
 
         send(left(ana, "PA_ana")).andExpect(status().isOk());
 
-        mvc.perform(get("/api/screen").with(oidcLogin().idToken(t -> t.subject("sub-bruno"))))
-                .andExpect(jsonPath("$.holder").doesNotExist());
+        mvc.perform(get("/api/streams").with(oidcLogin().idToken(t -> t.subject("sub-bruno"))))
+                .andExpect(jsonPath("$.streams").isEmpty());
     }
 
-    // AC-2
+    // 0038 AC-2
     @Test
-    void freesTheSlotWhenTheScreenTrackIsUnpublished() throws Exception {
+    void endsTheScreenWhenItsTrackIsUnpublished() throws Exception {
         anaShares();
 
         send(unpublished(ana, "PA_ana", "TR_ana_screen", "SCREEN_SHARE")).andExpect(status().isOk());
 
-        assertThat(slot.current()).isEmpty();
+        assertThat(streams.all()).isEmpty();
+    }
+
+    // 0060: a camera ends the same way, and only it.
+    @Test
+    void endsOnlyTheCameraWhenItsTrackIsUnpublished() throws Exception {
+        anaShares();
+        anaTurnsOnHerCamera();
+
+        send(unpublished(ana, "PA_ana", "TR_ana_camera", "CAMERA")).andExpect(status().isOk());
+
+        assertThat(streams.all()).extracting(Stream::kind).containsExactly(StreamKind.SCREEN);
     }
 
     // AC-3
@@ -97,7 +112,7 @@ class LiveKitWebhookControllerTest {
         anaShares();
 
         send(unpublished(ana, "PA_ana", "TR_ana_audio", "SCREEN_SHARE_AUDIO")).andExpect(status().isOk());
-        send(unpublished(ana, "PA_ana", "TR_ana_screen", "CAMERA")).andExpect(status().isOk());
+        send(unpublished(ana, "PA_ana", "TR_ana_screen", "MICROPHONE")).andExpect(status().isOk());
 
         assertThat(holder()).isEqualTo(ana.getId());
     }
@@ -125,7 +140,7 @@ class LiveKitWebhookControllerTest {
     void acceptsEventsWhenNobodyShares() throws Exception {
         send(left(ana, "PA_ana")).andExpect(status().isOk());
 
-        assertThat(slot.current()).isEmpty();
+        assertThat(streams.all()).isEmpty();
     }
 
     // AC-7
@@ -182,11 +197,18 @@ class LiveKitWebhookControllerTest {
     // ---- helpers ----
 
     private void anaShares() {
-        slot.take(ana.getId(), "Ana", null, new SharingConnection("PA_ana", "TR_ana_screen"));
+        streams.start(ana.getId(), "Ana", null, StreamKind.SCREEN, new SharingConnection("PA_ana", "TR_ana_screen"),
+                StreamSettings.defaultFor(StreamKind.SCREEN));
     }
 
+    private void anaTurnsOnHerCamera() {
+        streams.start(ana.getId(), "Ana", null, StreamKind.CAMERA, new SharingConnection("PA_ana", "TR_ana_camera"),
+                StreamSettings.defaultFor(StreamKind.CAMERA));
+    }
+
+    /** Whose stream is live: there's only ever Ana's in these tests. */
     private Long holder() {
-        return slot.current().orElseThrow().userId();
+        return streams.all().getFirst().userId();
     }
 
     private ResultActions send(String body) throws Exception {

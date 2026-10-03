@@ -1,7 +1,8 @@
 package dev.hbrauveres.xove.livekit;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import dev.hbrauveres.xove.screen.ScreenSlot;
+import dev.hbrauveres.xove.stream.Streams;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -13,9 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * LiveKit calls this when something happens in the room. When the connection
- * that is sharing leaves, or its screen track stops, the slot is freed, so
- * nobody is left looking at a dead stage.
+ * LiveKit calls this when something happens in the room. When a person's
+ * connection leaves, their streams end; when a screen or camera track stops,
+ * that stream ends. Nobody is left looking at a frozen picture (specs 0038, 0060).
  *
  * Only LiveKit can call it: every request must carry LiveKit's signature
  * (see {@link LiveKitWebhookVerifier}); no login, no CSRF token.
@@ -25,15 +26,18 @@ public class LiveKitWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(LiveKitWebhookController.class);
 
+    /** The LiveKit track sources that are streams: their sound goes with the screen. */
+    private static final Set<String> STREAM_SOURCES = Set.of("SCREEN_SHARE", "CAMERA");
+
     private final LiveKitWebhookVerifier verifier;
-    private final ScreenSlot slot;
+    private final Streams streams;
     private final JsonMapper json;
     private final LiveKitProperties properties;
 
-    public LiveKitWebhookController(LiveKitWebhookVerifier verifier, ScreenSlot slot, JsonMapper json,
+    public LiveKitWebhookController(LiveKitWebhookVerifier verifier, Streams streams, JsonMapper json,
                                     LiveKitProperties properties) {
         this.verifier = verifier;
-        this.slot = slot;
+        this.streams = streams;
         this.json = json;
         this.properties = properties;
     }
@@ -63,19 +67,19 @@ public class LiveKitWebhookController {
         String participantSid = event.participant().sid();
         switch (event.event()) {
             case "participant_left" -> {
-                if (slot.connectionLeft(userId, participantSid)) {
-                    log.info("slot freed: user {} left ({})", userId, participantSid);
+                if (streams.connectionLeft(userId, participantSid)) {
+                    log.info("streams ended: user {} left ({})", userId, participantSid);
                 }
             }
             case "track_unpublished" -> {
                 Track track = event.track();
-                if (track != null && "SCREEN_SHARE".equals(track.source())
-                        && slot.screenUnpublished(userId, participantSid, track.sid())) {
-                    log.info("slot freed: user {} stopped the screen track ({})", userId, track.sid());
+                if (track != null && STREAM_SOURCES.contains(track.source())
+                        && streams.trackUnpublished(userId, track.sid())) {
+                    log.info("stream ended: user {} stopped a {} track ({})", userId, track.source(), track.sid());
                 }
             }
             default -> {
-                // Other room events don't concern the slot.
+                // Other room events don't concern the streams.
             }
         }
     }
