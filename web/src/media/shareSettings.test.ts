@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  CAMERA_QUALITIES,
+  DEFAULT_CAMERA,
   DEFAULT_SHARE,
   SHARE_QUALITIES,
+  cameraCaptureOptions,
+  cameraPublishOptions,
   capOf,
   effectiveQuality,
   screenCaptureOptions,
@@ -100,5 +104,37 @@ describe("what a viewer can pick", () => {
   it("treats a remembered quality that isn't offered as Auto", () => {
     expect(effectiveQuality("1080p", ["720p", "480p"])).toBe("auto");
     expect(effectiveQuality("720p", ["720p", "480p"])).toBe("720p");
+  });
+});
+
+// Spec 0060: a camera goes up to 720p.
+describe("camera presets", () => {
+  it("offers 720p and 480p at 30 fps, 720p Smooth by default", () => {
+    expect(CAMERA_QUALITIES.map((q) => [q.id, q.height, q.fps])).toEqual([
+      ["720p", 720, 30],
+      ["480p", 480, 30],
+    ]);
+    expect(DEFAULT_CAMERA).toEqual({ quality: "720p", mode: "smooth" });
+  });
+
+  it("asks the camera for 720p at 30 fps", () => {
+    expect(cameraCaptureOptions().resolution).toEqual({ width: 1280, height: 720, frameRate: 30 });
+  });
+
+  it.each(modes)("%s: VP9 with a VP8 fallback, a 720p and a 480p layer", (mode) => {
+    const publish = cameraPublishOptions(mode);
+
+    expect(publish.videoCodec).toBe("vp9");
+    expect(publish.backupCodec).toEqual({ codec: "vp8" });
+    expect(publish.simulcast).toBe(true);
+    expect(publish.scalabilityMode).toBe("L1T3");
+    expect(publish.videoEncoding).toEqual({ maxBitrate: 4_000_000, maxFramerate: 30 });
+    expect(publish.videoSimulcastLayers?.map((l) => l.height)).toEqual([480]);
+    expect(publish.degradationPreference).toBe(mode === "smooth" ? "maintain-framerate" : "maintain-resolution");
+  });
+
+  it("caps a camera at its own layers: 720p is the top one", () => {
+    expect(capOf("720p")).toBe(1);
+    expect(capOf("480p")).toBe(0);
   });
 });

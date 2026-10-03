@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
-import { capOf, screenCaptureOptions, screenPublishOptions } from "../media/shareSettings";
+import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureOptions, screenPublishOptions } from "../media/shareSettings";
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, myLiveStream, someoneSharing } from "../test/fakeApi";
 import { FakeLocalScreenTrack, lastRoom } from "../test/fakeLiveKit";
@@ -878,12 +878,14 @@ describe("room: waiting for a seat", () => {
     renderRoom();
     await screen.findByText(/you're number 2 in line/i);
 
-    act(() => {
-      window.dispatchEvent(new Event("pagehide"));
+    const leave = () => server.calls.find((c) => c.method === "POST" && c.path === "/api/room/leave");
+    await waitFor(() => {
+      act(() => {
+        window.dispatchEvent(new Event("pagehide"));
+      });
+      expect(leave()).toBeDefined();
     });
-
-    const leave = server.calls.find((c) => c.method === "POST" && c.path === "/api/room/leave");
-    expect(leave?.keepalive).toBe(true);
+    expect(leave()?.keepalive).toBe(true);
   });
 
   it("enters again when the API forgot the seat (after a restart), staying in the room", async () => {
@@ -917,5 +919,125 @@ describe("room: waiting for a seat", () => {
 
     expect(await screen.findByText(/you're next/i)).toBeInTheDocument();
     expect(room.disconnected).toBe(true);
+  });
+});
+
+// ---- cameras (spec 0060) ----
+
+describe("room: my camera", () => {
+  afterEach(() => localStorage.clear());
+
+  const cameraWindow = () => screen.findByRole("dialog", { name: /turn on your camera/i });
+
+  /** Clicks "Turn on camera" and starts it from the setup window. */
+  async function turnOnCamera(user: User) {
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await cameraWindow();
+    await user.click(within(setup).getByRole("button", { name: /start camera/i }));
+    await waitFor(() => expect(within(controls()).getByRole("button", { name: /turn off camera/i })).toBeInTheDocument());
+  }
+
+  // AC-3
+  it("asks for the camera only after the click, and never for a microphone", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    const local = lastRoom().localParticipant;
+    expect(local.createTracks).not.toHaveBeenCalled();
+
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await cameraWindow();
+
+    expect(local.createTracks).toHaveBeenCalledTimes(1);
+    expect(local.createTracks).toHaveBeenCalledWith({ video: cameraCaptureOptions(), audio: false });
+    expect(local.createScreenTracks).not.toHaveBeenCalled();
+    expect(local.lastCamera!.attached).toContain(within(setup).getByLabelText("Preview of your camera"));
+    expect(local.publishTrack).not.toHaveBeenCalled();
+  });
+
+  it("offers 720p and 480p, starts at 720p, and sends the camera with its settings", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await cameraWindow();
+    const quality = within(setup).getByLabelText("Send quality") as HTMLSelectElement;
+
+    expect([...quality.options].map((o) => o.value)).toEqual(["720p", "480p"]);
+    expect(quality).toHaveValue("720p");
+    await user.selectOptions(quality, "480p");
+    await user.click(within(setup).getByRole("button", { name: /start camera/i }));
+
+    await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
+    const local = lastRoom().localParticipant;
+    const camera = local.lastCamera!;
+    expect(local.publishTrack).toHaveBeenCalledWith(camera, { ...cameraPublishOptions("smooth"), source: "camera" });
+    expect(camera.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    const start = server.calls.find((c) => c.method === "POST" && c.path === "/api/streams");
+    expect(start?.body).toEqual({ kind: "camera", participantSid: "PA_me", trackSid: "TR_my_camera", quality: "480p", mode: "smooth" });
+    expect(localStorage.getItem("xove.camera.quality")).toBe("480p");
+  });
+
+  // AC-2
+  it("shares the screen and the camera together, as 2 of the 6 places", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+
+    await startSharing(user);
+    await turnOnCamera(user);
+
+    expect(server.streams.map((st) => st.kind)).toEqual(["screen", "camera"]);
+    expect(6 - server.streams.length).toBe(4);
+    expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(true);
+  });
+
+  it("turns the camera off: stops sending it and ends its stream, the screen stays", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    await turnOnCamera(user);
+    const local = lastRoom().localParticipant;
+    const camera = local.lastCamera!;
+
+    await user.click(within(controls()).getByRole("button", { name: /turn off camera/i }));
+
+    await waitFor(() => expect(myLiveStream(server, "camera")).toBeUndefined());
+    expect(local.unpublishTrack).toHaveBeenCalledWith(camera, true);
+    expect(camera.stopped).toBe(true);
+    expect(myLiveStream(server, "screen")).toBeDefined();
+  });
+
+  it("says so when the browser blocks the camera, and sends nothing", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    lastRoom().localParticipant.nextCamera = "NotAllowedError";
+
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/didn't allow the camera/i);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(server.streams).toHaveLength(0);
+  });
+
+  it("says so when there's no camera", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    lastRoom().localParticipant.nextCamera = "NotFoundError";
+
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No camera found.");
+  });
+
+  it("shows someone's camera on the stage when that's all they share", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7, "camera")];
+    renderRoom();
+    await connected();
+
+    act(() => {
+      lastRoom().publishCamera("user-7");
+    });
+
+    expect(await screen.findByLabelText("Bruno's camera")).toBeInTheDocument();
+    expect(screen.getByText(/bruno turned on their camera|bruno is sharing/i)).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadSharePrefs, loadWatchPrefs, saveSharePrefs, saveWatchPrefs } from "./preferences";
+import { loadCameraPrefs, loadSharePrefs, loadWatchPrefs, saveCameraPrefs, saveSharePrefs, saveWatchPrefs } from "./preferences";
 
 afterEach(() => localStorage.clear());
 
@@ -17,6 +17,24 @@ describe("the sharer's choices", () => {
     localStorage.setItem("xove.share.quality", "4k");
     localStorage.setItem("xove.share.mode", "blurry");
     expect(loadSharePrefs()).toEqual({ quality: "1080p", mode: "smooth" });
+  });
+});
+
+describe("the camera's choices (spec 0060)", () => {
+  it("default to 720p Smooth", () => {
+    expect(loadCameraPrefs()).toEqual({ quality: "720p", mode: "smooth" });
+  });
+
+  it("are remembered apart from the screen's", () => {
+    saveSharePrefs({ quality: "1080p", mode: "sharp" });
+    saveCameraPrefs({ quality: "480p", mode: "smooth" });
+    expect(loadCameraPrefs()).toEqual({ quality: "480p", mode: "smooth" });
+    expect(loadSharePrefs()).toEqual({ quality: "1080p", mode: "sharp" });
+  });
+
+  it("never go above 720p", () => {
+    localStorage.setItem("xove.camera.quality", "1080p");
+    expect(loadCameraPrefs().quality).toBe("720p");
   });
 });
 
