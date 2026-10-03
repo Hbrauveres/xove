@@ -16,13 +16,14 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
   - camera qualities 720p or 480p only.
   - · covers FR-1, FR-2, FR-3, FR-5, FR-11, FR-15 · verify: `StreamsTest`
   - Done: `Streams` with its records in the new `stream` package; a camera's settings are 720p or 480p (default 720p Smooth). `StartRequest` and `StreamsView` come with the HTTP part (T3). 17 tests.
-- [ ] **T2** `room/RoomSeats.java`, plain Java with a clock:
+- [x] **T2** `room/RoomSeats.java`, plain Java with a clock:
   - 20 seats, then the queue in order of arrival;
   - away from the room: 30 s after a closed tab, 60 s after a drop; away from the queue: 30 s after "leave", 60 s after the last poll; same seat or place when back in time;
   - a free seat is offered to the first in the queue for 60 s; accept takes it, cancel leaves the queue, no answer moves them to the end and offers it to the next;
   - a seat never used is given up after 60 s;
   - everything expires when someone asks, nothing runs by itself.
   - · covers FR-12, FR-13, FR-14 · verify: `RoomSeatsTest`
+  - Done: `RoomSeats` with `SeatStatus` (in, waiting with the place, offered until); an offer held for its person even while away; 22 tests.
 - [ ] **T3** Streams over HTTP: `StreamsController` (`GET /api/streams`, `POST /api/streams`, `/{kind}/settings`, `/{kind}/stop`) replaces `ScreenController` and `ScreenSlot`; the token allows `camera` and never the microphone; the webhook ends streams on `track_unpublished` (screen and camera) and `participant_left` · covers FR-1 to FR-5, FR-15 · verify: `StreamsControllerTest`, `LiveKitTokensTest`, `LiveKitWebhookControllerTest`
 - [ ] **T4** Seats over HTTP: `RoomController` (`POST /api/room/enter`, `accept`, `cancel`, `leave`); a token only with a seat (409 otherwise); `GET /api/streams` says `seated`; the webhook marks a seat used on `participant_joined` and starts the 30 or 60 s on `participant_left` (`disconnectReason`) · covers FR-12, FR-13, FR-14 · verify: `RoomControllerTest`, `LiveKitControllerTest`, `LiveKitWebhookControllerTest`
 
