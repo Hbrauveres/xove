@@ -1,6 +1,8 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import type { ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../../types";
 import { EmptyStage } from "./EmptyStage";
+import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
@@ -18,9 +20,25 @@ type Props = {
   onStartSharing: () => void;
 };
 
+/** iPhones and iPads ignore a page's volume (only their buttons change it). */
+const canSetVolume = () =>
+  !/iPad|iPhone|iPod/.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 /** The 16:9 area where the shared screen plays. */
 export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection, onStartSharing }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
+
+  const changeWatch = (next: WatchPrefs) => {
+    setWatch(next);
+    saveWatchPrefs(next);
+  };
+
+  // Ask for the chosen quality as soon as someone's screen arrives, and whenever it changes.
+  const setQuality = screen?.setQuality;
+  useEffect(() => {
+    setQuality?.(watch.quality);
+  }, [setQuality, watch.quality]);
 
   const goFullscreen = () => {
     frameRef.current?.requestFullscreen?.().catch(() => {
@@ -40,7 +58,22 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
         <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
       )
     ) : screen?.video ? (
-      <ScreenVideo screen={screen} label={`${sharer.name}'s shared screen`} />
+      <>
+        <ScreenVideo
+          screen={screen}
+          label={`${sharer.name}'s shared screen`}
+          volume={watch.volume}
+          muted={watch.muted}
+        />
+        <div className={styles.player}>
+          <PlayerControls
+            sharerHeight={screen.height ?? 0}
+            prefs={watch}
+            onChange={changeWatch}
+            canSetVolume={canSetVolume()}
+          />
+        </div>
+      </>
     ) : (
       <StageNotice spinner title={`Loading ${sharer.name}'s screen…`} text="The video starts in a moment." />
     );

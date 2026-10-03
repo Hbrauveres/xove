@@ -15,6 +15,8 @@ export const RoomEvent = {
   LocalTrackUnpublished: "localTrackUnpublished",
 } as const;
 
+export const VideoQuality = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
+
 export const ConnectionState = {
   Disconnected: "disconnected",
   Connecting: "connecting",
@@ -72,8 +74,17 @@ export class FakeLocalScreenTrack extends FakeTrack {
 
 let publishSeq = 0;
 
+/** What a viewer asks the server for, per screen. */
+export type FakeRemotePublication = {
+  track: FakeTrack;
+  dimensions?: { width: number; height: number };
+  setVideoQuality: ReturnType<typeof vi.fn>;
+  setVideoDimensions: ReturnType<typeof vi.fn>;
+};
+
 export class FakeParticipant {
   readonly tracks = new Map<string, FakeTrack>();
+  readonly publications = new Map<string, FakeRemotePublication>();
   readonly identity: string;
   readonly name: string;
 
@@ -83,7 +94,8 @@ export class FakeParticipant {
   }
   getTrackPublication(source: string) {
     const track = this.tracks.get(source);
-    return track ? { track } : undefined;
+    if (!track) return undefined;
+    return this.publications.get(source) ?? { track };
   }
 }
 
@@ -188,12 +200,29 @@ export class Room {
     this.emit(RoomEvent.ParticipantDisconnected, p);
   }
 
-  publishScreen(identity: string) {
+  publishScreen(identity: string, options: { height?: number; withSound?: boolean } = {}) {
     const p = this.remoteParticipants.get(identity) ?? this.join(identity, identity);
     const track = new FakeTrack();
+    const height = options.height ?? 1080;
     p.tracks.set(Track.Source.ScreenShare, track);
+    p.publications.set(Track.Source.ScreenShare, {
+      track,
+      dimensions: { width: Math.round((height * 16) / 9), height },
+      setVideoQuality: vi.fn(),
+      setVideoDimensions: vi.fn(),
+    });
+    if (options.withSound) {
+      const sound = new FakeTrack();
+      p.tracks.set(Track.Source.ScreenShareAudio, sound);
+      this.emit(RoomEvent.TrackSubscribed, sound, {}, p);
+    }
     this.emit(RoomEvent.TrackSubscribed, track, {}, p);
     return track;
+  }
+
+  /** What this browser asked the server for, for someone's screen. */
+  screenPublication(identity: string) {
+    return this.remoteParticipants.get(identity)?.publications.get(Track.Source.ScreenShare);
   }
 
   /** The person clicked the browser's own "Stop sharing" bar. */

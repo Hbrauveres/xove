@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
@@ -25,6 +25,7 @@ function renderRoom() {
 
 const controls = () => screen.getByRole("region", { name: /screen sharing/i });
 const connected = () => screen.findByText("Connected");
+const stage = () => screen.getByRole("region", { name: /shared screen/i });
 
 describe("room: joining the video room", () => {
   it("connects to LiveKit with the address and token from the API", async () => {
@@ -415,5 +416,79 @@ describe("room: the sharer sees what they send", () => {
     expect(video).toHaveProperty("muted", true);
     // My own sound would echo: it isn't played back to me.
     expect(local.screenAudio?.track.attached ?? []).toHaveLength(0);
+  });
+});
+
+describe("room: the viewer's quality and volume", () => {
+  afterEach(() => localStorage.clear());
+
+  const watchBruno = async (options: { height?: number; withSound?: boolean } = {}) => {
+    const server = installFakeApi({ me: member });
+    server.screenHolder = someoneSharing("Bruno Lima", 7);
+    const view = renderRoom();
+    await connected();
+    await screen.findByText("Bruno is sharing");
+    act(() => {
+      lastRoom().publishScreen("user-7", options);
+    });
+    await screen.findByLabelText("Bruno's shared screen");
+    return view;
+  };
+
+  it("asks the server for less when a lower quality is picked, and for the best again on Auto", async () => {
+    await watchBruno();
+    const user = userEvent.setup();
+    const publication = lastRoom().screenPublication("user-7")!;
+
+    await user.selectOptions(within(stage()).getByLabelText("Quality"), "480p");
+    expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
+
+    await user.selectOptions(within(stage()).getByLabelText("Quality"), "auto");
+    expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
+  });
+
+  it("only offers what the sharer sends", async () => {
+    await watchBruno({ height: 720 });
+    const options = [...(within(stage()).getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
+    expect(options).toEqual(["auto", "720p", "480p"]);
+  });
+
+  it("plays the sound at the chosen volume, mutes it, and remembers both", async () => {
+    const view = await watchBruno({ withSound: true });
+    const user = userEvent.setup();
+    const sound = lastRoom().remoteParticipants.get("user-7")!.tracks.get("screen_share_audio")!;
+    const audio = () => sound.attached[0] as HTMLAudioElement;
+
+    fireEvent.change(screen.getByLabelText("Volume"), { target: { value: "0.3" } });
+    expect(audio().volume).toBeCloseTo(0.3);
+    await user.click(screen.getByRole("button", { name: "Mute" }));
+    expect(audio().muted).toBe(true);
+
+    view.unmount();
+    await watchBruno({ withSound: true });
+    expect(screen.getByRole("button", { name: "Unmute" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Volume")).toHaveValue("0");
+    await user.click(screen.getByRole("button", { name: "Unmute" }));
+    expect(screen.getByLabelText("Volume")).toHaveValue("0.3");
+  });
+
+  it("asks for the remembered quality as soon as the screen arrives", async () => {
+    localStorage.setItem("xove.watch.quality", "720p");
+    await watchBruno();
+
+    expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
+    expect(within(stage()).getByLabelText("Quality")).toHaveValue("720p");
+  });
+
+  it("doesn't show the viewer's bar to the sharer", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/the stage is free/i);
+    const user = userEvent.setup();
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await screen.findByLabelText("Your shared screen");
+
+    expect(screen.queryByRole("button", { name: "Mute" })).not.toBeInTheDocument();
   });
 });

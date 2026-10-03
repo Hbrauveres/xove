@@ -23,6 +23,10 @@ export type MediaTrack = {
 export type ScreenTracks = {
   video?: MediaTrack;
   audio?: MediaTrack;
+  /** Height of the best quality the sharer sends, when LiveKit knows it. */
+  height?: number;
+  /** Asks the server for this quality ("auto": whatever fits). Only for someone else's screen. */
+  setQuality?: (quality: "auto" | "1080p" | "720p" | "480p") => void;
 };
 
 /** Numbers the real app would read from LiveKit's track stats. */

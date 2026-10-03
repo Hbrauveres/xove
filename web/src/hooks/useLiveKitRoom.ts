@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ConnectionState as LkState, Room, RoomEvent, Track, type LocalTrack, type Participant } from "livekit-client";
+import {
+  ConnectionState as LkState,
+  Room,
+  RoomEvent,
+  Track,
+  VideoQuality,
+  type LocalTrack,
+  type Participant,
+  type RemoteTrackPublication,
+} from "livekit-client";
 import { ApiError, api } from "../api/client";
 import type { SharingConnection } from "../api/types";
 import type { SharePrefs } from "../media/preferences";
@@ -92,9 +101,24 @@ export function useLiveKitRoom(): LiveKitRoom {
 
     const next: Record<string, ScreenTracks> = {};
     for (const p of people) {
-      const video = p.getTrackPublication(Track.Source.ScreenShare)?.track;
+      const publication = p.getTrackPublication(Track.Source.ScreenShare) as RemoteTrackPublication | undefined;
+      const video = publication?.track;
       const audio = p.getTrackPublication(Track.Source.ScreenShareAudio)?.track;
-      if (video || audio) next[p.identity] = { video, audio };
+      if (video || audio) {
+        next[p.identity] = {
+          video,
+          audio,
+          height: publication?.dimensions?.height,
+          setQuality: (quality) => {
+            if (!publication) return;
+            const preset = SHARE_QUALITIES.find((q) => q.id === quality);
+            // A fixed quality caps what the server sends this viewer; Auto lets adaptive
+            // stream pick what fits the player and the connection.
+            if (preset) publication.setVideoDimensions({ width: preset.width, height: preset.height });
+            else publication.setVideoQuality(VideoQuality.HIGH);
+          },
+        };
+      }
     }
     setScreens(next);
     setPublishing(room.localParticipant.isScreenShareEnabled);
