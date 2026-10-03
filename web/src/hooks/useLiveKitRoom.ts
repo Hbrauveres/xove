@@ -109,6 +109,7 @@ export function useLiveKitRoom(): LiveKitRoom {
           video,
           audio,
           height: publication?.dimensions?.height,
+          layers: publication?.trackInfo?.layers?.length || undefined,
           setQuality: (quality) => {
             if (!publication) return;
             const preset = SHARE_QUALITIES.find((q) => q.id === quality);
@@ -208,10 +209,12 @@ export function useLiveKitRoom(): LiveKitRoom {
       const local = room?.localParticipant;
       const current = local?.getTrackPublication(Track.Source.ScreenShare)?.track as LocalTrack | undefined;
       if (!room || !local || !current) return null;
+      let capture: MediaStreamTrack | undefined;
+      let published = false;
       try {
         // A copy of the same capture keeps the screen alive while the old track goes,
         // and the browser's picker doesn't open again.
-        const capture = current.mediaStreamTrack.clone();
+        capture = current.mediaStreamTrack.clone();
         const preset = SHARE_QUALITIES.find((q) => q.id === prefs.quality) ?? SHARE_QUALITIES[0];
         capture.contentHint = prefs.mode === "smooth" ? "motion" : "detail";
         await capture.applyConstraints({ width: preset.width, height: preset.height, frameRate: preset.fps }).catch(() => {
@@ -222,6 +225,7 @@ export function useLiveKitRoom(): LiveKitRoom {
           source: Track.Source.ScreenShare,
           name: "screen",
         });
+        published = true;
         sync();
         if (!local.sid || !next.trackSid) {
           await local.unpublishTrack(next.track as LocalTrack);
@@ -240,6 +244,9 @@ export function useLiveKitRoom(): LiveKitRoom {
           },
         };
       } catch {
+        // A copy that never went out would keep the capture (and the browser's
+        // sharing indicator) alive after the share ends.
+        if (!published) capture?.stop();
         setError("Couldn't change the quality. Your screen is still being shared as before.");
         return null;
       }

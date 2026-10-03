@@ -1,10 +1,12 @@
 import type { WatchPrefs, WatchQuality } from "../../media/preferences";
-import { viewerQualities } from "../../media/shareSettings";
+import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import styles from "./PlayerControls.module.css";
 
 type Props = {
   /** Height of the sharer's best layer, to know which qualities exist. */
   sharerHeight: number;
+  /** How many qualities the sharer sends, when known. */
+  layers?: number;
   prefs: WatchPrefs;
   onChange: (prefs: WatchPrefs) => void;
   /** False where the page can't set the volume (iPhones and iPads): only mute is shown. */
@@ -12,8 +14,8 @@ type Props = {
 };
 
 /** The viewer's bar over the player, like YouTube's: volume and quality. Only changes this browser. */
-export function PlayerControls({ sharerHeight, prefs, onChange, canSetVolume }: Props) {
-  const qualities = viewerQualities(sharerHeight);
+export function PlayerControls({ sharerHeight, layers, prefs, onChange, canSetVolume }: Props) {
+  const qualities = viewerQualities(sharerHeight, layers);
   const silent = prefs.muted || prefs.volume === 0;
 
   return (
@@ -52,7 +54,7 @@ export function PlayerControls({ sharerHeight, prefs, onChange, canSetVolume }: 
         <span className={styles.label}>Quality</span>
         <select
           aria-label="Quality"
-          value={qualities.includes(prefs.quality as never) || prefs.quality === "auto" ? prefs.quality : "auto"}
+          value={effectiveQuality(prefs.quality, qualities)}
           onChange={(e) => onChange({ ...prefs, quality: e.target.value as WatchQuality })}
         >
           <option value="auto">Auto</option>

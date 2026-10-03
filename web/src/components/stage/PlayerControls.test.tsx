@@ -34,6 +34,12 @@ describe("player controls: quality", () => {
     expect(options).toEqual(["auto", "720p", "480p"]);
   });
 
+  it("offers only the sharer's quality when they send just one", () => {
+    render(<PlayerControls sharerHeight={1080} layers={1} prefs={{ quality: "auto", volume: 1, muted: false }} onChange={() => {}} canSetVolume />);
+    const options = [...(screen.getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
+    expect(options).toEqual(["auto", "1080p"]);
+  });
+
   it("reports the quality picked", async () => {
     const onChange = vi.fn();
     render(<Harness height={1080} onChange={onChange} />);

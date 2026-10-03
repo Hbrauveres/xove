@@ -69,7 +69,7 @@ export function ShareControls({
 
         <div className={styles.settings}>
           <label className={styles.setting}>
-            <span>Quality</span>
+            <span>Send quality</span>
             <select
               value={prefs.quality}
               disabled={busy}

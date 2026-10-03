@@ -74,8 +74,15 @@ export function screenPublishOptions(quality: ShareQuality, mode: ShareMode): Tr
  * isn't 16:9 comes out a bit shorter than its preset, so it counts as the preset
  * just above.
  */
-export function viewerQualities(height: number): ShareQuality[] {
+export function viewerQualities(height: number, layers?: number): ShareQuality[] {
   const ascending = [...SHARE_QUALITIES].reverse();
   const top = ascending.find((q) => height <= q.height) ?? SHARE_QUALITIES[0];
-  return SHARE_QUALITIES.filter((q) => q.height <= top.height).map((q) => q.id);
+  const offered = SHARE_QUALITIES.filter((q) => q.height <= top.height).map((q) => q.id);
+  // Firefox and Safari sharers send one quality only: picking a lower one would change nothing.
+  return layers === 1 ? offered.slice(0, 1) : offered;
+}
+
+/** The quality to ask the server for: a remembered choice this sharer doesn't offer counts as Auto. */
+export function effectiveQuality<Q extends string>(wanted: Q | "auto", offered: readonly string[]): Q | "auto" {
+  return wanted !== "auto" && offered.includes(wanted) ? wanted : "auto";
 }

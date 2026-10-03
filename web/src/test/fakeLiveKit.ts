@@ -78,6 +78,7 @@ let publishSeq = 0;
 export type FakeRemotePublication = {
   track: FakeTrack;
   dimensions?: { width: number; height: number };
+  trackInfo?: { layers: unknown[] };
   setVideoQuality: ReturnType<typeof vi.fn>;
   setVideoDimensions: ReturnType<typeof vi.fn>;
 };
@@ -200,7 +201,8 @@ export class Room {
     this.emit(RoomEvent.ParticipantDisconnected, p);
   }
 
-  publishScreen(identity: string, options: { height?: number; withSound?: boolean } = {}) {
+  /** `layers`: how many qualities the sharer sends (1 for Firefox and Safari sharers). */
+  publishScreen(identity: string, options: { height?: number; withSound?: boolean; layers?: number } = {}) {
     const p = this.remoteParticipants.get(identity) ?? this.join(identity, identity);
     const track = new FakeTrack();
     const height = options.height ?? 1080;
@@ -208,6 +210,7 @@ export class Room {
     p.publications.set(Track.Source.ScreenShare, {
       track,
       dimensions: { width: Math.round((height * 16) / 9), height },
+      trackInfo: { layers: Array.from({ length: options.layers ?? 3 }, () => ({})) },
       setVideoQuality: vi.fn(),
       setVideoDimensions: vi.fn(),
     });

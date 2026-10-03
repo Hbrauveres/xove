@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
+import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { PlayerControls } from "./PlayerControls";
@@ -34,11 +35,13 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
     saveWatchPrefs(next);
   };
 
-  // Ask for the chosen quality as soon as someone's screen arrives, and whenever it changes.
+  // Ask for the chosen quality as soon as someone's screen arrives, and whenever it
+  // changes. A remembered quality this sharer doesn't offer counts as Auto.
   const setQuality = screen?.setQuality;
+  const quality = effectiveQuality(watch.quality, viewerQualities(screen?.height ?? 0, screen?.layers));
   useEffect(() => {
-    setQuality?.(watch.quality);
-  }, [setQuality, watch.quality]);
+    setQuality?.(quality);
+  }, [setQuality, quality]);
 
   const goFullscreen = () => {
     frameRef.current?.requestFullscreen?.().catch(() => {
@@ -68,6 +71,7 @@ export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection
         <div className={styles.player}>
           <PlayerControls
             sharerHeight={screen.height ?? 0}
+            layers={screen.layers}
             prefs={watch}
             onChange={changeWatch}
             canSetVolume={canSetVolume()}

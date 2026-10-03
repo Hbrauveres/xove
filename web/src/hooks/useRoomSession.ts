@@ -148,16 +148,18 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   // A new quality or mode while sharing: send the screen again with it, tell the
   // API the new track (so the old one going away doesn't free the slot), then
   // stop the old one. Viewers see a short reload.
+  // Resolves true when the screen now goes out with the new settings.
   const changeShare = useCallback(
     async (prefs: SharePrefs) => {
       starting.current = true;
       setStarting(true);
       try {
         const change = await lk.changeScreenShare(prefs);
-        if (!change) return;
+        if (!change) return false;
         const ok = await slot.take(change.connection);
         if (ok) await change.finish();
         else await change.cancel();
+        return ok;
       } finally {
         starting.current = false;
         setStarting(false);
@@ -168,18 +170,24 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
 
   const setSharePrefs = useCallback(
     (prefs: SharePrefs) => {
+      const before = sharePrefs;
       setPrefsState(prefs);
       saveSharePrefs(prefs);
-      if (mine && lk.publishing) void changeShare(prefs);
+      if (!(mine && lk.publishing)) return;
+      void changeShare(prefs).then((ok) => {
+        // The old settings are still the ones going out: show and keep those.
+        if (ok) return;
+        setPrefsState(before);
+        saveSharePrefs(before);
+      });
     },
-    [mine, lk.publishing, changeShare],
+    [mine, lk.publishing, changeShare, sharePrefs],
   );
 
   const stop = useCallback(async () => {
     await lk.stopScreenShare();
     await slot.release();
   }, [lk, slot]);
-
 
   // Someone took the screen from me: stop sending mine.
   useEffect(() => {
