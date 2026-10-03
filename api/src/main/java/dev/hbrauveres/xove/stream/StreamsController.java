@@ -93,9 +93,12 @@ public class StreamsController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, UNKNOWN_KIND));
     }
 
+    /** {@code reason: "full"} tells a page registering its stream again to stop it, rather than retry. */
     @ExceptionHandler(StreamsFullException.class)
     ProblemDetail full(StreamsFullException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setProperty("reason", "full");
+        return problem;
     }
 
     @ExceptionHandler(NotYourStreamException.class)

@@ -16,8 +16,11 @@ export type RoomSeat = {
   cancel: () => void;
   /** Joins the queue again after leaving it. */
   rejoin: () => void;
-  /** The API forgot my seat (it restarted): ask again, staying in the room if there's one. */
-  reenter: () => void;
+  /**
+   * The API forgot my seat (it restarted): ask again, staying in the room if there's one.
+   * The video connection, when there is one, confirms the seat.
+   */
+  reenter: (participantSid?: string) => void;
 };
 
 /**
@@ -27,23 +30,26 @@ export type RoomSeat = {
 export function useRoomSeat(pollMs: number = SEAT_POLL_MS): RoomSeat {
   const [status, setStatus] = useState<RoomSeat["status"]>(null);
   const [error, setError] = useState<string | null>(null);
-  const asking = useRef(false);
-  // Bumped by Cancel: an answer already on its way is about the queue I just left.
+  // The poll on its way, if any: Cancel waits for it, so it can't put me back in the queue.
+  const asking = useRef<Promise<void> | null>(null);
+  // Bumped by Enter room and Cancel: an answer already on its way is out of date.
   const generation = useRef(0);
 
-  const enter = useCallback(async () => {
+  const enter = useCallback(async (participantSid?: string) => {
     if (asking.current) return;
-    asking.current = true;
     const askedIn = generation.current;
-    try {
-      const answer = await api.room.enter();
-      if (askedIn === generation.current) setStatus(answer);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't reach the room. Trying again…");
-    } finally {
-      asking.current = false;
-    }
+    const ask = (async () => {
+      try {
+        const answer = await api.room.enter(participantSid);
+        if (askedIn === generation.current) setStatus(answer);
+        setError(null);
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : "Couldn't reach the room. Trying again…");
+      }
+    })();
+    asking.current = ask;
+    await ask;
+    asking.current = null;
   }, []);
 
   const waiting = status === null || status.status === "waiting" || status.status === "offered";
@@ -65,6 +71,7 @@ export function useRoomSeat(pollMs: number = SEAT_POLL_MS): RoomSeat {
   }, [status?.status]);
 
   const accept = useCallback(async () => {
+    generation.current += 1;
     try {
       setStatus(await api.room.accept());
     } catch (e) {
@@ -76,11 +83,12 @@ export function useRoomSeat(pollMs: number = SEAT_POLL_MS): RoomSeat {
   const cancel = useCallback(async () => {
     generation.current += 1;
     setStatus({ status: "left" });
+    await asking.current;
     await api.room.cancel().catch(() => undefined);
   }, []);
 
   const rejoin = useCallback(() => setStatus(null), []);
-  const reenter = useCallback(() => void enter(), [enter]);
+  const reenter = useCallback((participantSid?: string) => void enter(participantSid), [enter]);
 
   return {
     status,

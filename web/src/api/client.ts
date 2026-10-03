@@ -13,10 +13,13 @@ import type {
 /** An error the API answered with. `message` is safe to show to the user. */
 export class ApiError extends Error {
   readonly status: number;
+  /** Why, when the API says (e.g. "full" when the 6 stream places are taken). */
+  readonly reason?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, reason?: string) {
     super(message);
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -55,14 +58,16 @@ async function request<T>(method: string, path: string, body?: unknown, keepaliv
 
   if (!response.ok) {
     let message = FALLBACK_MESSAGES[response.status] ?? "Something went wrong. Try again.";
+    let reason: string | undefined;
     try {
       // The API answers errors as RFC 9457 problem details: { status, title, detail, ... }
       const data = await response.json();
       if (typeof data?.detail === "string" && data.detail.length > 0) message = data.detail;
+      if (typeof data?.reason === "string") reason = data.reason;
     } catch {
       // empty or non-JSON body: keep the fallback message
     }
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, reason);
   }
 
   const text = await response.text();
@@ -85,8 +90,12 @@ export const api = {
   },
 
   room: {
-    /** Asks for a seat, or polls the queue. */
-    enter: () => request<SeatStatus>("POST", "/api/room/enter"),
+    /**
+     * Asks for a seat, or polls the queue. A page already connected to LiveKit says on
+     * which connection: after an API restart, that confirms its seat.
+     */
+    enter: (participantSid?: string) =>
+      request<SeatStatus>("POST", "/api/room/enter", participantSid ? { participantSid } : undefined),
     /** Takes the seat held for me. */
     accept: () => request<SeatStatus>("POST", "/api/room/accept"),
     /** Leaves the queue, or turns the seat down. */

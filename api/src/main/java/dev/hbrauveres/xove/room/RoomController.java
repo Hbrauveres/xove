@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,9 +30,17 @@ public class RoomController {
         this.currentUser = currentUser;
     }
 
+    /**
+     * The body is optional: a page already connected to LiveKit sends its
+     * {@code participantSid}, which confirms its seat after an API restart.
+     */
     @PostMapping("/enter")
-    public SeatStatus enter(@AuthenticationPrincipal OidcUser google) {
-        return seats.enter(currentUser.member(google).getId());
+    public SeatStatus enter(@AuthenticationPrincipal OidcUser google,
+                            @RequestBody(required = false) EnterRequest request) {
+        return seats.enter(currentUser.member(google).getId(), request == null ? null : request.participantSid());
+    }
+
+    record EnterRequest(String participantSid) {
     }
 
     /** "Enter room" on the popup: takes the seat held for you. */

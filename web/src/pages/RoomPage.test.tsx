@@ -800,7 +800,8 @@ describe("room: the setup window and the keyboard", () => {
 // ---- a full room: the queue and the seat offer (spec 0060) ----
 
 describe("room: waiting for a seat", () => {
-  const seatIn = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
+  const offered = (seconds: number) =>
+    ({ status: "offered", until: new Date(Date.now() + seconds * 1000).toISOString(), seconds }) as const;
 
   it("waits with its place in the queue when the room is full, without joining the video", async () => {
     const server = installFakeApi({ me: member });
@@ -823,11 +824,11 @@ describe("room: waiting for a seat", () => {
     await screen.findByText(/you're next/i);
 
     act(() => {
-      server.seat = { status: "offered", until: seatIn(60) };
+      server.seat = offered(60);
     });
 
     const offer = await screen.findByRole("dialog", { name: /it's your turn/i });
-    expect(offer).toHaveTextContent(/(60|59) seconds/);
+    expect(offer).toHaveTextContent("60 seconds");
     expect(document.title).toBe("Your turn — Xovê");
     expect(within(offer).getByRole("button", { name: /enter room/i })).toHaveFocus();
 
@@ -840,7 +841,7 @@ describe("room: waiting for a seat", () => {
 
   it("leaves the queue on Cancel, and can join it again", async () => {
     const server = installFakeApi({ me: member });
-    server.seat = { status: "offered", until: seatIn(60) };
+    server.seat = offered(60);
     renderRoom();
     const offer = await screen.findByRole("dialog", { name: /it's your turn/i });
     const user = userEvent.setup();
@@ -860,7 +861,7 @@ describe("room: waiting for a seat", () => {
 
   it("goes back to waiting when the offer runs out", async () => {
     const server = installFakeApi({ me: member });
-    server.seat = { status: "offered", until: seatIn(1) };
+    server.seat = offered(1);
     renderRoom();
     await screen.findByRole("dialog", { name: /it's your turn/i });
 
@@ -902,6 +903,8 @@ describe("room: waiting for a seat", () => {
 
     await waitFor(() => expect(enters()).toBeGreaterThan(before));
     await waitFor(() => expect(server.seated).toBe(true));
+    // My video connection goes with it: that confirms the seat.
+    expect(server.calls.filter((c) => c.path === "/api/room/enter").at(-1)?.body).toEqual({ participantSid: "PA_me" });
     expect(room.disconnected).toBe(false);
     expect(screen.getByText("Connected")).toBeInTheDocument();
   });
@@ -1308,5 +1311,102 @@ describe("room: the feed names each stream", () => {
       server.streams = [];
     });
     expect(await screen.findByText(/bruno turned off their camera/i)).toBeInTheDocument();
+  });
+});
+
+// ---- found in review (spec 0060) ----
+
+describe("room: after the review", () => {
+  afterEach(() => localStorage.clear());
+  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+  const thumbnails = () => screen.getByRole("list", { name: /other streams/i });
+
+  it("keeps sending my screen when registering it again fails for another reason, and tries again", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    server.failures.set("POST /api/streams", { status: 503, body: { status: 503, detail: "Starting up" } });
+
+    act(() => {
+      server.streams = [];
+    });
+    await waitFor(() => expect(server.calls.filter((c) => c.method === "POST" && c.path === "/api/streams").length).toBeGreaterThan(1));
+    expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(true);
+
+    server.failures.delete("POST /api/streams");
+    await waitFor(() => expect(myLiveStream(server)).toBeDefined());
+    expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(true);
+  });
+
+  it("puts a refused screen change back even when the camera changes right after", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
+    await user.click(within(setup).getByRole("button", { name: /start camera/i }));
+    await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
+    server.failures.set("POST /api/streams/screen/settings", {
+      status: 409,
+      body: { status: 409, detail: "Only the person sharing can change how their stream is sent." },
+    });
+
+    fireEvent.change(within(stage()).getByLabelText("Send quality"), { target: { value: "480p" } });
+    fireEvent.change(within(stage()).getByLabelText("Camera quality"), { target: { value: "480p" } });
+
+    await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
+    await waitFor(() => expect(within(stage()).getByLabelText("Send quality")).toHaveValue("1080p"));
+    expect(lastRoom().localParticipant.screens[0].track.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+  });
+
+  it("forgets a viewer's pick once that person stops, even if they share again later", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "screen", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "screen", undefined, minutesAgo(5)),
+    ];
+    renderRoom();
+    await connected();
+    await screen.findByText("Ana is sharing");
+    await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+    expect(screen.getByText("Bruno is sharing")).toBeInTheDocument();
+
+    act(() => {
+      server.streams = server.streams.filter((st) => st.userId !== 7);
+    });
+    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+    act(() => {
+      server.streams = [...server.streams, someoneSharing("Bruno Lima", 7)];
+    });
+
+    await within(stage()).findByRole("button", { name: "Watch Bruno" });
+    expect(screen.getByText("Ana is sharing")).toBeInTheDocument();
+  });
+
+  it("swaps the facecam for one person only", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "screen", undefined, minutesAgo(10)),
+      someoneSharing("Ana Souza", 3, "camera", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "screen", undefined, minutesAgo(5)),
+      someoneSharing("Bruno Lima", 7, "camera", undefined, minutesAgo(5)),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      for (const id of ["user-3", "user-7"]) {
+        lastRoom().publishScreen(id);
+        lastRoom().publishCamera(id);
+      }
+    });
+    await screen.findByLabelText("Ana's shared screen");
+    const user = userEvent.setup();
+    const facecam = () => stage().querySelector("[data-facecam]") as HTMLElement;
+
+    await user.click(within(facecam()).getByRole("button", { name: "Swap views" }));
+    expect(within(facecam()).getByLabelText("Ana's shared screen")).toBeInTheDocument();
+
+    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+    expect(within(facecam()).getByLabelText("Bruno's camera")).toBeInTheDocument();
   });
 });

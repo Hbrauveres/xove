@@ -133,6 +133,43 @@ class RoomSeatsTest {
         assertThat(seats.isSeated(ANA)).isTrue();
     }
 
+    // After an API restart, LiveKit doesn't say "joined" again: the room's page says it's connected.
+    @Test
+    void enteringFromALiveConnectionConfirmsTheSeat() {
+        assertThat(seats.enter(ANA, "PA_ana")).isEqualTo(SeatStatus.in());
+        wait(120);
+        assertThat(seats.isSeated(ANA)).isTrue();
+
+        seats.left(ANA, "PA_ana", true);
+        wait(30);
+        assertThat(seats.isSeated(ANA)).isFalse();
+    }
+
+    @Test
+    void enteringAgainFromALiveConnectionConfirmsAReservedSeat() {
+        seats.enter(ANA);
+        wait(50);
+
+        seats.enter(ANA, "PA_ana");
+        wait(120);
+
+        assertThat(seats.isSeated(ANA)).isTrue();
+        assertThat(seats.keptUntil(ANA)).isEmpty();
+    }
+
+    @Test
+    void anOfferSaysHowManySecondsAreLeft() {
+        fillTheRoom();
+        seats.enter(CAIO);
+        seats.left(ANA, "PA_ana", true);
+        wait(30);
+        seats.enter(CAIO);
+
+        wait(15);
+
+        assertThat(seats.enter(CAIO).seconds()).isEqualTo(45);
+    }
+
     @Test
     void joiningWithoutASeatGivesNone() {
         seats.joined(ANA, "PA_ana");
@@ -150,7 +187,7 @@ class RoomSeatsTest {
         seats.left(ANA, "PA_ana", true);
         wait(30);
 
-        assertThat(seats.enter(CAIO)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60)));
+        assertThat(seats.enter(CAIO)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60), clock.instant()));
         assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.waiting(2));
     }
 
@@ -192,7 +229,7 @@ class RoomSeatsTest {
         assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.waiting(2));
         wait(1);
 
-        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60)));
+        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60), clock.instant()));
         assertThat(seats.enter(CAIO)).isEqualTo(SeatStatus.waiting(2));
         assertThatThrownBy(() -> seats.accept(CAIO)).isInstanceOf(NoSeatOfferException.class);
     }
@@ -209,7 +246,7 @@ class RoomSeatsTest {
         assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.waiting(2));
 
         wait(30);
-        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60)));
+        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60), clock.instant()));
     }
 
     @Test
@@ -223,7 +260,7 @@ class RoomSeatsTest {
 
         seats.cancel(CAIO);
 
-        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60)));
+        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60), clock.instant()));
         // Coming back after cancelling is a new arrival, behind Dora.
         assertThat(seats.enter(CAIO)).isEqualTo(SeatStatus.waiting(2));
     }
@@ -237,8 +274,8 @@ class RoomSeatsTest {
         seats.left(BRUNO, "PA_bruno", true);
         wait(30);
 
-        assertThat(seats.enter(CAIO)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60)));
-        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60)));
+        assertThat(seats.enter(CAIO)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60), clock.instant()));
+        assertThat(seats.enter(DORA)).isEqualTo(SeatStatus.offered(clock.instant().plusSeconds(60), clock.instant()));
     }
 
     @Test

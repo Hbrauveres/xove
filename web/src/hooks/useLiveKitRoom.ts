@@ -82,6 +82,8 @@ export type LiveKitRoom = {
   stop: (kind: StreamKind) => Promise<void>;
   /** Where a stream I'm sending comes from, to register it again with the API. */
   connectionOf: (kind: StreamKind) => SharingConnection | null;
+  /** This browser's connection to the room, once connected. */
+  participantSid: () => string | undefined;
 };
 
 const CONNECTION: Record<LkState, ConnectionState> = {
@@ -339,6 +341,8 @@ export function useLiveKitRoom(): LiveKitRoom {
     return me?.sid && trackSid ? { participantSid: me.sid, trackSid } : null;
   }, []);
 
+  const participantSid = useCallback(() => roomRef.current?.localParticipant.sid || undefined, []);
+
   return {
     connection,
     others,
@@ -353,5 +357,6 @@ export function useLiveKitRoom(): LiveKitRoom {
     applySettings,
     stop,
     connectionOf,
+    participantSid,
   };
 }

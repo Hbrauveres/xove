@@ -142,7 +142,8 @@ class StreamsControllerTest {
 
         start("sub-friend", "screen")
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("The room already has 6 streams."));
+                .andExpect(jsonPath("$.detail").value("The room already has 6 streams."))
+                .andExpect(jsonPath("$.reason").value("full"));
         assertThat(streams.all()).hasSize(6);
     }
 

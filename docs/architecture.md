@@ -136,7 +136,7 @@ sequenceDiagram
 - **Sound:** the big person's plays. Thumbnails are muted, each with its own mute button and volume; a muted thumbnail's sound isn't downloaded at all.
 - **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so thumbnails and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
 
-Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy) empties them; each open room asks for its seat again and registers what it's still sending, within a poll. If the places filled up meanwhile, it stops sending.
+Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy) empties them; each open room asks for its seat again within a poll, with its LiveKit connection (LiveKit doesn't report it joining again, so that confirms the seat), and registers what it's still sending. If the 6 places filled up meanwhile, it stops sending; any other failure is tried again on the next poll. Re-registered streams count as started then, so "longest sharing" restarts from that order.
 
 ### Video and sound quality
 
@@ -195,12 +195,12 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `POST /api/admin/access-requests/{id}/decline` | Admin | Declines; the user can ask again |
 | `GET /api/admin/members` | Admin | Members |
 | `DELETE /api/admin/members/{id}` | Admin | Removes a member and ends all their sessions |
-| `POST /api/room/enter` | Member | Asks for a seat, or polls the queue: `{ status: "in" }`, `{ status: "waiting", place }` or `{ status: "offered", until }` |
+| `POST /api/room/enter` | Member | Asks for a seat, or polls the queue: `{ status: "in" }`, `{ status: "waiting", place }` or `{ status: "offered", until, seconds }`. Optional body `{ participantSid }` from a page already in the video room: confirms its seat after an API restart |
 | `POST /api/room/accept` | Member | Takes the seat offered: `{ status: "in" }`; 409 when there's no offer (it ran out) |
 | `POST /api/room/cancel` | Member | Leaves the queue, or turns the offer down; 204 |
 | `POST /api/room/leave` | Member | The waiting page is closing: the place is kept 30 seconds; 204 |
 | `GET /api/streams` | Member | `{ streams: [{ kind, userId, name, avatarUrl, since, settings: { quality, mode }, mine }], free, seated }`, oldest first |
-| `POST /api/streams` | Member with a seat | Starts a stream. Body `{ kind, participantSid, trackSid, quality?, mode? }`: `screen` or `camera`, the LiveKit connection and track it comes from (never shown to anyone; 400 without them), and what it's sent with (a missing value is 1080p Smooth for a screen, 720p Smooth for a camera; a camera can't be 1080p). Starting the same kind again replaces your own. 409 when the 6 places are taken, or without a seat |
+| `POST /api/streams` | Member with a seat | Starts a stream. Body `{ kind, participantSid, trackSid, quality?, mode? }`: `screen` or `camera`, the LiveKit connection and track it comes from (never shown to anyone; 400 without them), and what it's sent with (a missing value is 1080p Smooth for a screen, 720p Smooth for a camera; a camera can't be 1080p). Starting the same kind again replaces your own. 409 when the 6 places are taken (with `reason: "full"`), or without a seat |
 | `POST /api/streams/{kind}/settings` | Its person | Changes what the stream is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if you don't have that stream |
 | `POST /api/streams/{kind}/stop` | Member | Ends your stream of that kind; nothing to stop is fine |
 | `POST /api/livekit/token` | Member with a seat | `{ url, room, identity, token }` to join the video room; 409 without a seat |
@@ -218,4 +218,4 @@ Errors follow RFC 9457 (problem details); the web app shows their `detail` field
 - **Network:** the database has no public port. The app's containers publish no ports; only the proxy (80/443) and each LiveKit's two media ports face the internet.
 - **Supply chain:** every change passes a vulnerability scan of the images and dependencies and a static analysis of the code before it can be published (see [Pipeline](pipeline.md)).
 
-**Trust boundaries to know about:** any seated member's token may publish a screen and a camera; the 6-stream limit is enforced by the web app and the API's list, not by LiveKit. And a token stays valid for an hour, so someone who lost their seat could rejoin LiveKit with an old one. Both are acceptable for a small group of friends.
+**Trust boundaries to know about:** any seated member's token may publish a screen and a camera; the 6-stream limit is enforced by the web app and the API's list, not by LiveKit. And a token stays valid for an hour, so someone who lost their seat could rejoin LiveKit with an old one. And after a restart the API takes a page's word for its LiveKit connection when it asks for its seat again, so a member could keep a seat they don't use. All three are acceptable for a small group of friends.

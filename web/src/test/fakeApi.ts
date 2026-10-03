@@ -50,7 +50,7 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
         seated: server.seated,
       },
     });
-    const conflict = (detail: string) => ({ status: 409, body: { status: 409, detail } });
+    const conflict = (detail: string, reason?: string) => ({ status: 409, body: { status: 409, detail, reason } });
     const isMine = (kind: string) => (st: FakeStream) => st.userId === MY_USER_ID && st.kind === kind;
 
     if (key === "GET /api/streams") return streamsState();
@@ -72,7 +72,7 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
         own.settings = settings;
         return streamsState();
       }
-      if (server.streams.length >= 6) return conflict("The room already has 6 streams.");
+      if (server.streams.length >= 6) return conflict("The room already has 6 streams.", "full");
       server.streams = [...server.streams, myStream(wanted.kind, server.me?.name ?? null, settings)];
       return streamsState();
     }
@@ -90,6 +90,10 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     }
 
     if (key === "POST /api/room/enter") {
+      // A page connected to the video room confirms its seat (after an API restart).
+      if ((body as { participantSid?: string } | undefined)?.participantSid && server.seat.status === "in") {
+        server.seated = true;
+      }
       if (server.seat.status === "in") server.seated = true;
       return { status: 200, body: server.seat };
     }
@@ -141,7 +145,10 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
 /** One live stream as the fake API keeps it. */
 export type FakeStream = Omit<LiveStream, "mine">;
 
-export type SeatAnswer = { status: "in" } | { status: "waiting"; place: number } | { status: "offered"; until: string };
+export type SeatAnswer =
+  | { status: "in" }
+  | { status: "waiting"; place: number }
+  | { status: "offered"; until: string; seconds: number };
 
 /** Someone else's live stream: a screen at 1080p Smooth unless said otherwise, started a minute ago. */
 export const someoneSharing = (

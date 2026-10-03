@@ -5,15 +5,15 @@ Why things are the way they are. Newest at the bottom; a decision that gets repl
 | # | Decision | Why | Alternatives considered |
 | --- | --- | --- | --- |
 | 1 | **Self-hosted LiveKit** for video | An SFU uploads each screen once and fans it out; open source, Docker image, good browser SDK | Peer-to-peer mesh (every viewer costs the sharer upload bandwidth), hosted services (cost, data leaves our server) |
-| 2 | **One room, one screen slot** in version 1 (screens replaced by #32) | The product is "watch my screen with friends"; the limit is kept as a limit so more screens can come later | Rooms, multiple screens from day one |
-| 3 | **No camera, no microphone** (cameras allowed by #32; still no microphone) | Scope: voice already happens elsewhere; fewer permissions to ask for | — |
+| 2 | **One room, one screen slot** in version 1 (screens replaced by decision 32) | The product is "watch my screen with friends"; the limit is kept as a limit so more screens can come later | Rooms, multiple screens from day one |
+| 3 | **No camera, no microphone** (cameras allowed by decision 32; still no microphone) | Scope: voice already happens elsewhere; fewer permissions to ask for | — |
 | 4 | **Monorepo** (`api/`, `web/`, compose, docs) with a separate private repo for the shared proxy | The app repo knows how to run the app; the infra repo knows how to reach it | One repo per service |
 | 5 | **Java 21 + Spring Boot** for the API | Mature security and data libraries; the backend stack most job postings ask for | Node/TypeScript end to end |
 | 6 | **Google sign-in + request access + admin approval** | Real identities without passwords; approving people in the app instead of editing a list | Fixed allowlist in configuration |
 | 7 | **Server-side sessions** in PostgreSQL (Spring Session JDBC) | Removing a member can end their sessions immediately | Stateless JWT sessions |
-| 8 | **Screen slot in API memory**, polled every 2 s (now the seats and streams, #32) | One instance and a few people: simple and enough | Database table, LiveKit room metadata, WebSockets |
+| 8 | **Screen slot in API memory**, polled every 2 s (now the seats and streams, decision 32) | One instance and a few people: simple and enough | Database table, LiveKit room metadata, WebSockets |
 | 9 | **LiveKit tokens signed with Nimbus JOSE** | Already on the classpath through Spring Security; one small class | LiveKit's server SDK |
-| 10 | **Take over = steal, after a confirmation** (replaced by #32: nobody is pushed out) | Friends, not strangers: whoever wants the screen gets it | Refuse while busy; ask the sharer |
+| 10 | **Take over = steal, after a confirmation** (replaced by decision 32: nobody is pushed out) | Friends, not strangers: whoever wants the screen gets it | Refuse while busy; ask the sharer |
 | 11 | **Screen audio allowed, never a microphone** | Watching a game or a video needs its sound | Screen only |
 | 12 | **LiveKit media on one UDP port** (plus a TCP fallback) | One firewall rule instead of a 10,000-port range; fine for a small group | Port range |
 | 13 | **Caddy** as the shared reverse proxy | Automatic HTTPS, short config | nginx + certbot, Traefik |

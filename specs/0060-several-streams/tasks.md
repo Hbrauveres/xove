@@ -51,7 +51,8 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
 
 - [x] **T12** Docs: `docs/architecture.md` (room rules, seats and queue, facecam, API table, tokens allow the camera), decision 32 in `docs/decisions.md`, `CLAUDE.md` (test counts, room facts, `XOVE_ROOM_SEATS`) · verify: review
   - Done: `architecture.md` (seats and the queue, streams, watching, the facecam, sound, the API table, tokens allow the camera, webhooks, trust boundaries), `overview.md`, `testing.md`, `operations.md` (log lines), `getting-started.md` (`XOVE_ROOM_SEATS`), decision 32 (and 2, 3, 8, 10 marked), `CLAUDE.md` (what this is, test counts, the seats setting).
-- [ ] **T13** Review every AC (`/review`), fix what it finds, open the PR · verify: no gaps left
+- [x] **T13** Review every AC (`/review`), fix what it finds, open the PR · verify: no gaps left
+  - Done: review (spec-reviewer): every FR and AC covered; fixed what it found: a seat taken back after an API restart is confirmed by the page's LiveKit connection (it ran out every 60 s); re-registering stops a stream only when the places are full, and re-entering keeps trying; late queue answers after Enter room or Cancel; a refused change goes back per stream; a viewer's pick ends when that person stops; the facecam swap is per person; the countdown uses the API's seconds; docs. API 147, web 158. Open for Henrique: a waiting tab in the background (Chrome polls it once a minute).
 - [ ] **T14** On staging after merge, written in the PR (Henrique, with friends):
   - six streams, a seventh refused (AC-1);
   - a sharer closes the tab: streams gone in seconds, seat kept 30 s; check `disconnectReason` arrives (AC-4);

@@ -5,14 +5,19 @@ import type { SharingConnection, StreamKind, StreamSettings, StreamsState } from
 /** How often every open room asks the API which streams are live. */
 export const STREAMS_POLL_MS = 2000;
 
+export type StartOutcome = "ok" | "full" | "failed";
+
 export type Streams = {
   /** Null until the first answer arrives. */
   state: StreamsState | null;
   /** Message from the last failed start, change or stop, safe to show. */
   error: string | null;
   busy: boolean;
-  /** Resolves true when the API accepted. The connection lets the API end the stream when it stops. */
-  start: (kind: StreamKind, connection: SharingConnection, settings: StreamSettings) => Promise<boolean>;
+  /**
+   * Resolves "ok" when the API accepted, "full" when the 6 places are taken, "failed" otherwise.
+   * The connection lets the API end the stream when it stops.
+   */
+  start: (kind: StreamKind, connection: SharingConnection, settings: StreamSettings) => Promise<StartOutcome>;
   /** Its person changes what a stream is sent with. Resolves true when the API accepted. */
   changeSettings: (kind: StreamKind, settings: StreamSettings) => Promise<boolean>;
   stop: (kind: StreamKind) => Promise<boolean>;
@@ -45,17 +50,17 @@ export function useStreams(pollMs: number = STREAMS_POLL_MS): Streams {
   }, [refresh, pollMs]);
 
   const run = useCallback(
-    async (call: () => Promise<StreamsState>) => {
+    async (call: () => Promise<StreamsState>): Promise<StartOutcome> => {
       version.current += 1;
       setBusy(true);
       setError(null);
       try {
         setState(await call());
-        return true;
+        return "ok";
       } catch (e) {
         setError(e instanceof ApiError ? e.message : "Something went wrong. Try again.");
         void refresh();
-        return false;
+        return e instanceof ApiError && e.reason === "full" ? "full" : "failed";
       } finally {
         setBusy(false);
       }
@@ -69,10 +74,10 @@ export function useStreams(pollMs: number = STREAMS_POLL_MS): Streams {
     [run],
   );
   const changeSettings = useCallback(
-    (kind: StreamKind, settings: StreamSettings) => run(() => api.streams.settings(kind, settings)),
+    async (kind: StreamKind, settings: StreamSettings) => (await run(() => api.streams.settings(kind, settings))) === "ok",
     [run],
   );
-  const stop = useCallback((kind: StreamKind) => run(() => api.streams.stop(kind)), [run]);
+  const stop = useCallback(async (kind: StreamKind) => (await run(() => api.streams.stop(kind))) === "ok", [run]);
 
   return { state, error, busy, start, changeSettings, stop };
 }

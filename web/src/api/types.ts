@@ -74,9 +74,10 @@ export type LiveKitAccess = {
 
 /**
  * POST /api/room/enter (spec 0060): in the room, waiting in the queue at `place`
- * (1 is next), or a seat held for this person until `until` (ISO timestamp).
+ * (1 is next), or a seat held for this person until `until` (ISO timestamp), which is
+ * `seconds` from now (the countdown uses the seconds: a browser's clock may be wrong).
  */
 export type SeatStatus =
   | { status: "in" }
   | { status: "waiting"; place: number }
-  | { status: "offered"; until: string };
+  | { status: "offered"; until: string; seconds: number };

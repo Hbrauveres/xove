@@ -40,6 +40,12 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   // Each viewer picks who is big; by default, and when that person stops, the
   // longest sharing person is.
   const [picked, setPicked] = useState<string | null>(null);
+  // A pick holds while that person shares: if they stop and share again later, the
+  // longest sharing person is big again.
+  const pickedSharing = picked !== null && sharers.some((s) => s.person.id === picked);
+  useEffect(() => {
+    if (picked !== null && !pickedSharing) setPicked(null);
+  }, [picked, pickedSharing]);
   const bigId = stagePick(
     sharers.map((s) => s.person.id),
     picked,
@@ -47,8 +53,9 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   const big = sharers.find((s) => s.person.id === bigId) ?? null;
 
   // Screen and camera together: the screen big, the camera in the facecam over it,
-  // unless the viewer swapped them. Remembered for this visit only.
-  const [swapped, setSwapped] = useState(false);
+  // unless the viewer swapped them (for that person). Remembered for this visit only.
+  const [swappedFor, setSwappedFor] = useState<Record<string, boolean>>({});
+  const swapped = big ? Boolean(swappedFor[big.person.id]) : false;
   const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>({ x: 0.74, y: 0.72 });
   const [facecamCollapsed, setFacecamCollapsed] = useState(false);
   const both = Boolean(big?.screen && big?.camera);
@@ -186,7 +193,7 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
             label={big.isMe ? `Your ${what(small)}` : `${big.person.name}'s ${what(small)}`}
             place={facecamPlace}
             collapsed={facecamCollapsed}
-            onSwap={() => setSwapped((s) => !s)}
+            onSwap={() => setSwappedFor((prev) => ({ ...prev, [big.person.id]: !prev[big.person.id] }))}
             onMove={setFacecamPlace}
             onCollapse={setFacecamCollapsed}
           />

@@ -54,9 +54,27 @@ public class RoomSeats {
 
     /** Asks to be in the room, or polls the queue. Also brings back someone away, in time. */
     public synchronized SeatStatus enter(Long userId) {
+        return enter(userId, null);
+    }
+
+    /**
+     * Same, from a page already connected to LiveKit on {@code participantSid}: after an API
+     * restart, LiveKit doesn't report that connection joining again, so the page says so.
+     */
+    public synchronized SeatStatus enter(Long userId, String participantSid) {
         Objects.requireNonNull(userId, "userId");
         Instant now = tidy();
         Seat seat = seats.get(userId);
+        boolean connected = participantSid != null && !participantSid.isBlank();
+        if (seat == null && connected && queue.isEmpty() && free() > 0) {
+            seat = Seat.reserved(now);
+            seats.put(userId, seat);
+        }
+        if (seat != null && connected) {
+            seat.participantSid = participantSid;
+            seat.until = null;
+            return SeatStatus.in();
+        }
         if (seat != null) {
             if (seat.participantSid == null || seat.until != null) {
                 // Back from away, or still on the way in: they have a minute to join LiveKit.
@@ -188,7 +206,7 @@ public class RoomSeats {
 
     private SeatStatus statusOf(Waiting waiting) {
         return waiting.offerUntil != null
-                ? SeatStatus.offered(waiting.offerUntil)
+                ? SeatStatus.offered(waiting.offerUntil, clock.instant())
                 : SeatStatus.waiting(queue.indexOf(waiting) + 1);
     }
 

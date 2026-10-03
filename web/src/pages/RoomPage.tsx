@@ -8,7 +8,7 @@ import { ShareSetup } from "../components/share/ShareSetup";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
-import { useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
+import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import type { Friend } from "../types";
 import styles from "./RoomPage.module.css";
@@ -48,11 +48,16 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   const session = useRoomSession(meAsFriend, pollMs);
   const onlineCount = session.people.length;
 
-  // The API forgot my seat (it restarted): ask again. With a seat free, nothing changes here.
+  // The API forgot my seat (it restarted): ask again, with my video connection, which
+  // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
   const { reenter } = seat;
+  const { seated, participantSid } = session;
   useEffect(() => {
-    if (session.seated === false) reenter();
-  }, [session.seated, reenter]);
+    if (seated !== false) return;
+    reenter(participantSid());
+    const timer = window.setInterval(() => reenter(participantSid()), pollMs ?? SEAT_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [seated, reenter, participantSid, pollMs]);
 
   return (
     <div className={styles.shell}>

@@ -76,6 +76,17 @@ class RoomControllerTest {
     }
 
     @Test
+    void enteringFromALiveConnectionConfirmsTheSeat() throws Exception {
+        User m1 = users.findByGoogleSubject("sub-m1").orElseThrow();
+
+        mvc.perform(post("/api/room/enter").with(as("sub-m1")).with(csrf())
+                        .contentType("application/json").content("{\"participantSid\":\"PA_m1\"}"))
+                .andExpect(jsonPath("$.status").value("in"));
+
+        org.assertj.core.api.Assertions.assertThat(seats.keptUntil(m1.getId())).isEmpty();
+    }
+
+    @Test
     void acceptingWithoutAnOfferIs409() throws Exception {
         mvc.perform(post("/api/room/accept").with(as("sub-m1")).with(csrf()))
                 .andExpect(status().isConflict())

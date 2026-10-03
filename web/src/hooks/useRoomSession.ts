@@ -38,6 +38,8 @@ export type RoomSession = {
   noSound: boolean;
   /** False when the API doesn't know I'm in the room (it restarted): enter again. Null until known. */
   seated: boolean | null;
+  /** My connection to the video room, to confirm my seat when entering again. */
+  participantSid: () => string | undefined;
   activity: ActivityEvent[];
   connection: ConnectionState;
   error: string | null;
@@ -196,8 +198,10 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   // The settings the API last accepted for each of my streams: what a refused change goes back to.
   const accepted = useRef<Record<StreamKind, SharePrefs>>(prefs);
   // Changes made while live run one after the other, in the order they were made.
+  // Each stream knows its own latest change, so a refused one goes back even when the
+  // other stream changed meanwhile.
   const changes = useRef<Promise<void>>(Promise.resolve());
-  const latestChange = useRef(0);
+  const latestChange = useRef<Record<StreamKind, number>>({ screen: 0, camera: 0 });
 
   // Step 1, from the click: the browser's picker, or the camera. Captured, not sent.
   const start = useCallback(
@@ -227,7 +231,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
         const sending = await lk.publishCapture(capture, chosen);
         if (!sending) return;
         const { hasSound, ...connection } = sending;
-        const ok = await api.start(kind, connection, chosen);
+        const ok = (await api.start(kind, connection, chosen)) === "ok";
         if (!ok) {
           await lk.stop(kind);
           return;
@@ -277,14 +281,14 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
       setPrefsState((prev) => ({ ...prev, [kind]: next }));
       savePrefs(kind, next);
       if (!(myLive[kind] && lk.publishing[kind])) return;
-      const change = ++latestChange.current;
+      const change = ++latestChange.current[kind];
       changes.current = changes.current.then(async () => {
         await lk.applySettings(kind, next);
         if (await api.changeSettings(kind, next)) {
           accepted.current = { ...accepted.current, [kind]: next };
           return;
         }
-        if (change !== latestChange.current) return; // a newer change follows
+        if (change !== latestChange.current[kind]) return; // a newer change of this stream follows
         const back = accepted.current[kind];
         await lk.applySettings(kind, back);
         setPrefsState((prev) => ({ ...prev, [kind]: back }));
@@ -303,7 +307,8 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   );
 
   // The API lost a stream I'm still sending (it restarted, and every deploy restarts
-  // it): register it again. If the places filled up meanwhile, stop sending it.
+  // it): register it again. If the places filled up meanwhile, stop sending it; any
+  // other failure (the API still starting) is tried again on the next poll.
   const registering = useRef<Record<StreamKind, boolean>>({ screen: false, camera: false });
   useEffect(() => {
     if (!loaded || !seated) return;
@@ -314,7 +319,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
       registering.current[kind] = true;
       void api
         .start(kind, connection, accepted.current[kind])
-        .then((ok) => (ok ? undefined : lk.stop(kind)))
+        .then((outcome) => (outcome === "full" ? lk.stop(kind) : undefined))
         .finally(() => {
           registering.current[kind] = false;
         });
@@ -347,6 +352,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     // Only while my screen is actually going out.
     noSound: noSound && myLive.screen && lk.publishing.screen,
     seated,
+    participantSid: lk.participantSid,
     activity,
     connection: lk.connection,
     error: api.error ?? lk.error,

@@ -3,27 +3,30 @@ import { Button } from "../ui/Button";
 import styles from "./SeatOffer.module.css";
 
 type Props = {
-  /** When the seat goes to the next person (ISO timestamp, from the API). */
-  until: string;
+  /** Seconds left before the seat goes to the next person, as the API counted them. */
+  seconds: number;
   onEnter: () => void;
   onCancel: () => void;
 };
 
-const secondsLeft = (until: string) => Math.max(0, Math.ceil((Date.parse(until) - Date.now()) / 1000));
 
 /**
  * A seat is free for me (spec 0060): enter within the time, or cancel. With no answer,
  * the API moves me to the end of the queue and offers the seat to the next person.
  */
-export function SeatOffer({ until, onEnter, onCancel }: Props) {
-  const [left, setLeft] = useState(() => secondsLeft(until));
+export function SeatOffer({ seconds, onEnter, onCancel }: Props) {
+  const [left, setLeft] = useState(seconds);
   const windowRef = useRef<HTMLDivElement>(null);
 
+  // Counted from when the answer arrived, on this browser's own clock (a wrong clock
+  // can't shorten it). Every poll brings the API's count again.
   useEffect(() => {
-    setLeft(secondsLeft(until));
-    const timer = window.setInterval(() => setLeft(secondsLeft(until)), 1000);
+    const deadline = Date.now() + seconds * 1000;
+    const tick = () => setLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    tick();
+    const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [until]);
+  }, [seconds]);
 
   // The tab may be in the background: its title says it's my turn.
   useEffect(() => {
