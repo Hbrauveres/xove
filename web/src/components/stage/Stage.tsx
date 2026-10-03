@@ -5,6 +5,7 @@ import { stagePick } from "../../media/stagePick";
 import type { ConnectionState, LiveFeed, Sharer, StreamKind } from "../../types";
 import { ShareSettingsFields } from "../share/ShareSettingsFields";
 import { EmptyStage } from "./EmptyStage";
+import { Facecam, type FacecamPlace } from "./Facecam";
 import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
@@ -44,7 +45,15 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
     picked,
   );
   const big = sharers.find((s) => s.person.id === bigId) ?? null;
-  const main = big ? (big.screen ?? big.camera ?? null) : null;
+
+  // Screen and camera together: the screen big, the camera in the facecam over it,
+  // unless the viewer swapped them. Remembered for this visit only.
+  const [swapped, setSwapped] = useState(false);
+  const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>({ x: 0.74, y: 0.72 });
+  const [facecamCollapsed, setFacecamCollapsed] = useState(false);
+  const both = Boolean(big?.screen && big?.camera);
+  const main = big ? ((both && swapped ? big.camera : big.screen) ?? big.camera ?? null) : null;
+  const small = both && big ? (swapped ? big.screen : big.camera) : undefined;
 
   // The LIVE label, the name and the bars show while the mouse moves over the player
   // (or after a tap), and fade when it stops, like YouTube.
@@ -154,6 +163,17 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
     return (
       <>
         {content}
+        {small && (
+          <Facecam
+            video={big.isMe ? small.local : small.remote?.video}
+            label={big.isMe ? `Your ${what(small)}` : `${big.person.name}'s ${what(small)}`}
+            place={facecamPlace}
+            collapsed={facecamCollapsed}
+            onSwap={() => setSwapped((s) => !s)}
+            onMove={setFacecamPlace}
+            onCollapse={setFacecamCollapsed}
+          />
+        )}
         <StageOverlay
           sharer={big.person}
           startedAt={big.since}

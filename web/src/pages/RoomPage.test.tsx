@@ -1124,3 +1124,85 @@ describe("room: several people sharing", () => {
     localStorage.clear();
   });
 });
+
+// ---- screen and camera together: the facecam (spec 0060, AC-6) ----
+
+describe("room: the facecam", () => {
+  async function brunoWithBoth() {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7, "screen"), someoneSharing("Bruno Lima", 7, "camera")];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+      lastRoom().publishCamera("user-7");
+    });
+    await screen.findByLabelText("Bruno's shared screen");
+    return server;
+  }
+
+  const facecam = () => stage().querySelector("[data-facecam]") as HTMLElement | null;
+
+  it("shows the screen big and the camera in the facecam on top of it", async () => {
+    await brunoWithBoth();
+
+    expect(facecam()).not.toBeNull();
+    expect(within(facecam()!).getByLabelText("Bruno's camera")).toBeInTheDocument();
+    expect(within(stage()).getAllByLabelText("Bruno's shared screen")).toHaveLength(1);
+    expect(facecam()!.contains(within(stage()).getByLabelText("Bruno's shared screen"))).toBe(false);
+  });
+
+  it("swaps them with the button, and back", async () => {
+    await brunoWithBoth();
+    const user = userEvent.setup();
+
+    await user.click(within(facecam()!).getByRole("button", { name: "Swap views" }));
+
+    expect(within(facecam()!).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
+    expect(facecam()!.contains(within(stage()).getByLabelText("Bruno's camera"))).toBe(false);
+    // The quality menu now picks the camera's quality: it offers 720p at most.
+    const offered = [...(within(stage()).getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
+    expect(offered).toEqual(["auto", "720p", "480p"]);
+
+    await user.click(within(facecam()!).getByRole("button", { name: "Swap views" }));
+    expect(within(facecam()!).getByLabelText("Bruno's camera")).toBeInTheDocument();
+  });
+
+  it("collapses to a tab and expands again", async () => {
+    await brunoWithBoth();
+    const user = userEvent.setup();
+
+    await user.click(within(facecam()!).getByRole("button", { name: "Hide facecam" }));
+    expect(facecam()).toBeNull();
+    expect(within(stage()).queryByLabelText("Bruno's camera")).not.toBeInTheDocument();
+
+    await user.click(within(stage()).getByRole("button", { name: "Show facecam" }));
+    expect(within(facecam()!).getByLabelText("Bruno's camera")).toBeInTheDocument();
+  });
+
+  it("goes away when the camera stops", async () => {
+    const server = await brunoWithBoth();
+
+    act(() => {
+      server.streams = server.streams.filter((st) => st.kind === "screen");
+      lastRoom().unpublish("user-7", "camera");
+    });
+
+    await waitFor(() => expect(facecam()).toBeNull());
+    expect(within(stage()).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
+  });
+
+  it("works on the sharer's own preview too", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
+    await user.click(within(setup).getByRole("button", { name: /start camera/i }));
+
+    await waitFor(() => expect(facecam()).not.toBeNull());
+    expect(within(facecam()!).getByLabelText("Your camera")).toBeInTheDocument();
+    await user.click(within(facecam()!).getByRole("button", { name: "Swap views" }));
+    expect(within(facecam()!).getByLabelText("Your shared screen")).toBeInTheDocument();
+  });
+});
