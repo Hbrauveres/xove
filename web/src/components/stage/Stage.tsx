@@ -1,6 +1,9 @@
-import { useRef } from "react";
-import type { ConnectionState, Friend, ScreenTracks, ShareState } from "../../types";
+import { useEffect, useRef, useState } from "react";
+import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
+import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
+import type { ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../../types";
 import { EmptyStage } from "./EmptyStage";
+import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
@@ -11,14 +14,34 @@ type Props = {
   sharer: Friend | null;
   /** The sharer's tracks, once they arrive. Null when it's me or nothing yet. */
   screen: ScreenTracks | null;
+  /** My own screen while I share: the preview, played without its sound. */
+  myScreen?: MediaTrack;
   isMeSharing: boolean;
   connection: ConnectionState;
   onStartSharing: () => void;
 };
 
+/** iPhones and iPads ignore a page's volume (only their buttons change it). */
+const canSetVolume = () =>
+  !/iPad|iPhone|iPod/.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 /** The 16:9 area where the shared screen plays. */
-export function Stage({ share, sharer, screen, isMeSharing, connection, onStartSharing }: Props) {
+export function Stage({ share, sharer, screen, myScreen, isMeSharing, connection, onStartSharing }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
+
+  const changeWatch = (next: WatchPrefs) => {
+    setWatch(next);
+    saveWatchPrefs(next);
+  };
+
+  // Ask for the chosen quality as soon as someone's screen arrives, and whenever it
+  // changes. A remembered quality this sharer doesn't offer counts as Auto.
+  const setQuality = screen?.setQuality;
+  const quality = effectiveQuality(watch.quality, viewerQualities(screen?.height ?? 0, screen?.layers));
+  useEffect(() => {
+    setQuality?.(quality);
+  }, [setQuality, quality]);
 
   const goFullscreen = () => {
     frameRef.current?.requestFullscreen?.().catch(() => {
@@ -29,11 +52,32 @@ export function Stage({ share, sharer, screen, isMeSharing, connection, onStartS
   const body = () => {
     if (!share || !sharer) return <EmptyStage onStartSharing={onStartSharing} />;
 
-    // No preview of my own screen: it would show the stage inside the stage, forever.
+    // My own screen as everyone sees it, without its sound (it would echo). Sharing
+    // the whole screen shows the page inside itself: sharing a tab or window avoids it.
     const content = isMeSharing ? (
-      <StageNotice title="You're sharing your screen" text="Everyone here sees it. Stop from the button below or from your browser's bar." />
+      myScreen ? (
+        <ScreenVideo screen={{ video: myScreen }} label="Your shared screen" />
+      ) : (
+        <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
+      )
     ) : screen?.video ? (
-      <ScreenVideo screen={screen} label={`${sharer.name}'s shared screen`} />
+      <>
+        <ScreenVideo
+          screen={screen}
+          label={`${sharer.name}'s shared screen`}
+          volume={watch.volume}
+          muted={watch.muted}
+        />
+        <div className={styles.player}>
+          <PlayerControls
+            sharerHeight={screen.height ?? 0}
+            layers={screen.layers}
+            prefs={watch}
+            onChange={changeWatch}
+            canSetVolume={canSetVolume()}
+          />
+        </div>
+      </>
     ) : (
       <StageNotice spinner title={`Loading ${sharer.name}'s screen…`} text="The video starts in a moment." />
     );

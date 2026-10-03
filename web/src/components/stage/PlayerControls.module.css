@@ -1,0 +1,54 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  font-size: var(--text-sm);
+  max-width: 100%;
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon:hover,
+.icon:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.slider {
+  width: 96px;
+  accent-color: var(--tally);
+}
+
+.quality {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.label {
+  color: var(--text-muted);
+}
+
+.quality select {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  font: inherit;
+}

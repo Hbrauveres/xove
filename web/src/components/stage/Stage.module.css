@@ -52,3 +52,14 @@
     transform: rotate(360deg);
   }
 }
+
+/* The viewer's bar (volume, quality), over the bottom of the video. */
+.player {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  justify-content: flex-start;
+  z-index: 1;
+}

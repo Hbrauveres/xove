@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ActivityEvent, ActivityKind, ConnectionState, Friend, ScreenTracks, ShareState } from "../types";
+import { loadSharePrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
+import type { ActivityEvent, ActivityKind, ConnectionState, Friend, MediaTrack, ScreenTracks, ShareState } from "../types";
 import { useLiveKitRoom } from "./useLiveKitRoom";
 import { useScreenSlot } from "./useScreenSlot";
 
@@ -19,6 +20,13 @@ export type RoomSession = {
   isMeSharing: boolean;
   /** The sharer's video and audio, when it's someone else and it has arrived. */
   screen: ScreenTracks | null;
+  /** My own screen while I share, for the preview. */
+  myScreen: MediaTrack | undefined;
+  /** The quality and mode I send (remembered); changing them while sharing resends the screen. */
+  sharePrefs: SharePrefs;
+  setSharePrefs: (prefs: SharePrefs) => void;
+  /** I'm sharing, but my browser gave no sound with the screen. */
+  noSound: boolean;
   activity: ActivityEvent[];
   connection: ConnectionState;
   startSharing: () => void;
@@ -117,21 +125,64 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   // True between opening the picker and the API confirming the slot.
   const starting = useRef(false);
   const [isStarting, setStarting] = useState(false);
+  const [sharePrefs, setPrefsState] = useState<SharePrefs>(loadSharePrefs);
+  const [noSound, setNoSound] = useState(false);
 
   const shareScreen = useCallback(async () => {
     starting.current = true;
     setStarting(true);
     try {
       // The picker first: browsers only open it straight from a click.
-      const sharing = await lk.startScreenShare();
+      const sharing = await lk.startScreenShare(sharePrefs);
       if (!sharing) return;
-      const ok = await slot.take(sharing);
+      const { hasSound, ...connection } = sharing;
+      const ok = await slot.take(connection);
       if (!ok) await lk.stopScreenShare();
+      else setNoSound(!hasSound);
     } finally {
       starting.current = false;
       setStarting(false);
     }
-  }, [lk, slot]);
+  }, [lk, slot, sharePrefs]);
+
+  // A new quality or mode while sharing: send the screen again with it, tell the
+  // API the new track (so the old one going away doesn't free the slot), then
+  // stop the old one. Viewers see a short reload.
+  // Resolves true when the screen now goes out with the new settings.
+  const changeShare = useCallback(
+    async (prefs: SharePrefs) => {
+      starting.current = true;
+      setStarting(true);
+      try {
+        const change = await lk.changeScreenShare(prefs);
+        if (!change) return false;
+        const ok = await slot.take(change.connection);
+        if (ok) await change.finish();
+        else await change.cancel();
+        return ok;
+      } finally {
+        starting.current = false;
+        setStarting(false);
+      }
+    },
+    [lk, slot],
+  );
+
+  const setSharePrefs = useCallback(
+    (prefs: SharePrefs) => {
+      const before = sharePrefs;
+      setPrefsState(prefs);
+      saveSharePrefs(prefs);
+      if (!(mine && lk.publishing)) return;
+      void changeShare(prefs).then((ok) => {
+        // The old settings are still the ones going out: show and keep those.
+        if (ok) return;
+        setPrefsState(before);
+        saveSharePrefs(before);
+      });
+    },
+    [mine, lk.publishing, changeShare, sharePrefs],
+  );
 
   const stop = useCallback(async () => {
     await lk.stopScreenShare();
@@ -159,6 +210,11 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     sharer,
     isMeSharing: mine,
     screen: holderIdentity && !mine ? lk.screens[holderIdentity] ?? null : null,
+    myScreen: mine ? lk.localScreen : undefined,
+    sharePrefs,
+    setSharePrefs,
+    // Only while my screen is actually going out.
+    noSound: noSound && mine && lk.publishing,
     activity,
     connection: lk.connection,
     startSharing: () => void shareScreen(),
