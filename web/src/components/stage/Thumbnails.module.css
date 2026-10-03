@@ -1,0 +1,60 @@
+.strip {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0 0 4px;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.item {
+  position: relative;
+  flex: 0 0 auto;
+  width: 176px;
+}
+
+.pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.video {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  outline: 1px solid var(--line);
+}
+
+.pick:hover .video,
+.pick:focus-visible .video {
+  outline: 2px solid var(--accent, var(--tally));
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.name {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

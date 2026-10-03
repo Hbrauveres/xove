@@ -1041,3 +1041,86 @@ describe("room: my camera", () => {
     expect(screen.getByText(/bruno turned on their camera|bruno is sharing/i)).toBeInTheDocument();
   });
 });
+
+// ---- who is big, and the thumbnails (spec 0060, AC-5) ----
+
+describe("room: several people sharing", () => {
+  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+  const thumbnails = () => screen.getByRole("list", { name: /other streams/i });
+
+  async function threeSharing() {
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "screen", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "screen", undefined, minutesAgo(5)),
+      someoneSharing("Caio Reis", 9, "camera", undefined, minutesAgo(1)),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-3");
+      lastRoom().publishScreen("user-7");
+      lastRoom().publishCamera("user-9");
+    });
+    await screen.findByLabelText("Ana's shared screen");
+    return server;
+  }
+
+  it("shows the first sharer big, and the others as thumbnails", async () => {
+    await threeSharing();
+
+    expect(screen.getByText("Ana is sharing")).toBeInTheDocument();
+    const items = within(thumbnails()).getAllByRole("button", { name: /watch/i });
+    expect(items.map((b) => b.getAttribute("aria-label"))).toEqual(["Watch Bruno", "Watch Caio"]);
+    expect(within(thumbnails()).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
+    expect(within(thumbnails()).getByLabelText("Caio's camera")).toBeInTheDocument();
+  });
+
+  it("makes a thumbnail big on click, and the big one goes back to the thumbnails", async () => {
+    await threeSharing();
+    const user = userEvent.setup();
+
+    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+
+    expect(screen.getByText("Bruno is sharing")).toBeInTheDocument();
+    expect(within(stage()).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
+    const names = within(thumbnails()).getAllByRole("button", { name: /watch/i }).map((b) => b.getAttribute("aria-label"));
+    expect(names).toEqual(["Watch Ana", "Watch Caio"]);
+  });
+
+  it("gives the big place to the longest sharing when the big one stops", async () => {
+    const server = await threeSharing();
+    const user = userEvent.setup();
+    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Caio" }));
+    expect(screen.getByText("Caio is sharing")).toBeInTheDocument();
+
+    act(() => {
+      server.streams = server.streams.filter((st) => st.userId !== 9);
+    });
+
+    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+    expect(within(thumbnails()).getAllByRole("button", { name: /watch/i })).toHaveLength(1);
+  });
+
+  it("shows no thumbnails with one sharer", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Ana Souza", 3)];
+    renderRoom();
+    await screen.findByText("Ana is sharing");
+
+    expect(screen.queryByRole("list", { name: /other streams/i })).not.toBeInTheDocument();
+  });
+
+  it("puts a stream back to Auto when it leaves the big player", async () => {
+    localStorage.setItem("xove.watch.quality", "480p");
+    await threeSharing();
+    const ana = lastRoom().screenPublication("user-3")!;
+    expect(ana.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
+
+    await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+
+    expect(ana.setVideoQuality).toHaveBeenLastCalledWith(2);
+    expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
+    localStorage.clear();
+  });
+});

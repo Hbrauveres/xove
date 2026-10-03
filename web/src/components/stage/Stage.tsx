@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type SharePrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
+import { stagePick } from "../../media/stagePick";
 import type { ConnectionState, LiveFeed, Sharer, StreamKind } from "../../types";
 import { ShareSettingsFields } from "../share/ShareSettingsFields";
 import { EmptyStage } from "./EmptyStage";
@@ -8,6 +9,7 @@ import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
+import { Thumbnails } from "./Thumbnails";
 import styles from "./Stage.module.css";
 
 type Props = {
@@ -34,8 +36,14 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
-  // The longest sharing person is shown big.
-  const big = sharers[0] ?? null;
+  // Each viewer picks who is big; by default, and when that person stops, the
+  // longest sharing person is.
+  const [picked, setPicked] = useState<string | null>(null);
+  const bigId = stagePick(
+    sharers.map((s) => s.person.id),
+    picked,
+  );
+  const big = sharers.find((s) => s.person.id === bigId) ?? null;
   const main = big ? (big.screen ?? big.camera ?? null) : null;
 
   // The LIVE label, the name and the bars show while the mouse moves over the player
@@ -72,14 +80,23 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   // as Auto, and Auto never asks for more than the sharer's cap (so LiveKit stops
   // sending layers above it).
   const remote = big?.isMe ? undefined : main?.remote;
-  const setQuality = remote?.setQuality;
+  // A new function arrives with every LiveKit update; the video it's about is what matters.
+  const setQuality = useRef(remote?.setQuality);
+  useEffect(() => {
+    setQuality.current = remote?.setQuality;
+  });
+  const bigVideo = remote?.video;
   const cap = main?.settings.quality;
   const offered = viewerQualities(remote?.height ?? 0, remote?.layers, cap);
   const chosen = effectiveQuality(watch.quality, offered);
   const request = chosen === "auto" && cap && cap !== "1080p" ? offered[0] : chosen;
   useEffect(() => {
-    setQuality?.(request);
-  }, [setQuality, request]);
+    const set = setQuality.current;
+    if (!bigVideo || !set) return;
+    set(request);
+    // Leaving the big player (to a thumbnail): back to Auto, so it comes in small.
+    return () => set("auto");
+  }, [bigVideo, request]);
 
   const goFullscreen = () => {
     frameRef.current?.requestFullscreen?.().catch(() => {
@@ -169,6 +186,8 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
           </div>
         )}
       </div>
+
+      <Thumbnails sharers={sharers.filter((s) => s !== big)} onPick={setPicked} />
     </section>
   );
 }
