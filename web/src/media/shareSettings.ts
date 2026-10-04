@@ -47,6 +47,46 @@ export const degradationOf = (mode: ShareMode): RTCDegradationPreference =>
   mode === "smooth" ? "maintain-framerate" : "maintain-resolution";
 
 /**
+ * What Xovê asks the browser for when sharing a screen (spec 0095). Xovê opens the
+ * picker itself, since livekit-client drops `windowAudio`.
+ */
+export type ScreenCaptureRequest = DisplayMediaStreamOptions & {
+  audio: MediaTrackConstraints & { restrictOwnAudio: boolean };
+  video: MediaTrackConstraints;
+  selfBrowserSurface: "include" | "exclude";
+  windowAudio: "exclude" | "window" | "system";
+};
+
+/**
+ * The browser's screen picker: always the best quality (so the sharer can raise it
+ * later without picking again), and the sound as played.
+ */
+export function screenCaptureRequest(): ScreenCaptureRequest {
+  const preset = SHARE_QUALITIES[0];
+  return {
+    // `max` too, as LiveKit does for Safari.
+    video: {
+      width: { ideal: preset.width, max: preset.width },
+      height: { ideal: preset.height, max: preset.height },
+      frameRate: preset.fps,
+    },
+    // Sharing this very tab would show the room inside the room.
+    selfBrowserSurface: "exclude",
+    // Music and game sound, not a voice: no microphone filters, both channels. Without
+    // Xovê's own sound, so a whole-screen share doesn't send viewers their own streams back.
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 2,
+      restrictOwnAudio: true,
+    },
+    // A picked window shares its app's sound, not the whole system's (Discord included).
+    windowAudio: "window",
+  };
+}
+
+/**
  * What the browser's screen picker captures: always the best quality (so the sharer
  * can raise it later without picking again), the mode's content hint, and the sound
  * as played.
