@@ -7,8 +7,9 @@ import {
   cameraCaptureOptions,
   cameraPublishOptions,
   capOf,
+  contentHintOf,
   effectiveQuality,
-  screenCaptureOptions,
+  screenCaptureRequest,
   screenPublishOptions,
   viewerQualities,
   type ShareMode,
@@ -26,11 +27,16 @@ describe("share presets", () => {
     expect(DEFAULT_SHARE).toEqual({ quality: "1080p", mode: "smooth" });
   });
 
-  it.each(modes)("%s: always captures the best quality at 30 fps, with the mode's content hint", (mode) => {
-    const capture = screenCaptureOptions(mode);
-    expect(capture.resolution).toEqual({ width: 1920, height: 1080, frameRate: 30 });
-    expect(capture.contentHint).toBe(mode === "smooth" ? "motion" : "detail");
-    expect(capture.selfBrowserSurface).toBe("exclude");
+  it("always captures the best quality at 30 fps, and never this tab", () => {
+    const request = screenCaptureRequest();
+    expect(request.video).toEqual({ width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: 30 });
+    // Safari needs a ceiling instead, as LiveKit asks it.
+    expect(screenCaptureRequest(true).video).toEqual({ width: { max: 1920 }, height: { max: 1080 }, frameRate: 30 });
+    expect(request.selfBrowserSurface).toBe("exclude");
+  });
+
+  it.each(modes)("%s: has its content hint", (mode) => {
+    expect(contentHintOf(mode)).toBe(mode === "smooth" ? "motion" : "detail");
   });
 
   it.each(modes)("%s: VP9 with a VP8 fallback, always 1080p, 720p and 480p layers", (mode) => {
@@ -60,13 +66,18 @@ describe("share presets", () => {
 });
 
 describe("screen sound", () => {
-  it("is captured as played: no voice filters, stereo", () => {
-    expect(screenCaptureOptions("smooth").audio).toEqual({
+  it("is captured as played: no voice filters, stereo, without Xovê's own sound", () => {
+    expect(screenCaptureRequest().audio).toEqual({
       echoCancellation: false,
       noiseSuppression: false,
       autoGainControl: false,
       channelCount: 2,
+      restrictOwnAudio: true,
     });
+  });
+
+  it("is the app's sound when a window is picked, not the whole system's", () => {
+    expect(screenCaptureRequest().windowAudio).toBe("window");
   });
 
   it("is sent in stereo at music quality, without silence skipping", () => {

@@ -1,4 +1,4 @@
-import type { ScreenShareCaptureOptions, TrackPublishOptions, VideoCaptureOptions, VideoPreset } from "livekit-client";
+import type { TrackPublishOptions, VideoCaptureOptions, VideoPreset } from "livekit-client";
 
 /**
  * How a shared screen is captured and sent (spec 0086). LiveKit's defaults are
@@ -47,19 +47,41 @@ export const degradationOf = (mode: ShareMode): RTCDegradationPreference =>
   mode === "smooth" ? "maintain-framerate" : "maintain-resolution";
 
 /**
- * What the browser's screen picker captures: always the best quality (so the sharer
- * can raise it later without picking again), the mode's content hint, and the sound
- * as played.
+ * What Xovê asks the browser for when sharing a screen (spec 0095). Xovê opens the
+ * picker itself, since livekit-client drops `windowAudio`.
  */
-export function screenCaptureOptions(mode: ShareMode): ScreenShareCaptureOptions {
+export type ScreenCaptureRequest = DisplayMediaStreamOptions & {
+  audio: MediaTrackConstraints & { restrictOwnAudio: boolean };
+  video: MediaTrackConstraints;
+  selfBrowserSurface: "include" | "exclude";
+  windowAudio: "exclude" | "window" | "system";
+};
+
+const isSafari = () => /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+
+/**
+ * The browser's screen picker: always the best quality (so the sharer can raise it
+ * later without picking again), and the sound as played.
+ */
+export function screenCaptureRequest(safari = isSafari()): ScreenCaptureRequest {
   const preset = SHARE_QUALITIES[0];
+  // As LiveKit does: Safari needs `max`, the others take `ideal`.
+  const size = (px: number) => (safari ? { max: px } : { ideal: px });
   return {
-    resolution: { width: preset.width, height: preset.height, frameRate: preset.fps },
-    contentHint: contentHintOf(mode),
+    video: { width: size(preset.width), height: size(preset.height), frameRate: preset.fps },
     // Sharing this very tab would show the room inside the room.
     selfBrowserSurface: "exclude",
-    // Music and game sound, not a voice: no microphone filters, both channels.
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+    // Music and game sound, not a voice: no microphone filters, both channels. Without
+    // Xovê's own sound, so a whole-screen share doesn't send viewers their own streams back.
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 2,
+      restrictOwnAudio: true,
+    },
+    // A picked window shares its app's sound, not the whole system's (Discord included).
+    windowAudio: "window",
   };
 }
 
