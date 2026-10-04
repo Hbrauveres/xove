@@ -46,7 +46,7 @@ The rest is in the web app.
   | In the room | closed the tab | LiveKit's `participant_left`, reason `CLIENT_INITIATED` | 30 s |
   | In the room | connection dropped | `participant_left`, any other reason | 60 s |
   | In the queue | closed the tab | the page sends `POST /api/room/leave` while closing (`fetch` with `keepalive`) | 30 s |
-  | In the queue | connection dropped | no poll for a while | 60 s after the last poll |
+  | In the queue | connection dropped | no poll for a while | 90 s after the last poll (Chrome lets a hidden tab poll about once a minute) |
 
 - **Coming back in time** gives you the same seat, or the same place in the queue.
 - **Without timers:** expired places are removed each time someone asks, based on the clock. This is easy to test with a fake clock.

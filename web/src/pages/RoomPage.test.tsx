@@ -513,6 +513,8 @@ describe("room: the sharer sees what they send", () => {
     const video = await screen.findByLabelText("Your shared screen");
     const local = lastRoom().localParticipant;
     expect(local.screens[0].track.attached).toContain(video);
+    // No browser picture-in-picture button over the player (Edge adds one).
+    expect(video).toHaveAttribute("disablepictureinpicture");
     expect(video).toHaveProperty("muted", true);
     // My own sound would echo: it isn't played back to me.
     expect(local.screenAudio?.track.attached ?? []).toHaveLength(0);

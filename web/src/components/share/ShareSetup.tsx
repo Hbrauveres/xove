@@ -72,6 +72,7 @@ export function ShareSetup({ kind, preview, initial, hasSound, onStart, onCancel
           autoPlay
           playsInline
           muted
+          disablePictureInPicture
         />
         {!camera && !hasSound && (
           <p className={styles.notice}>

@@ -113,7 +113,7 @@ sequenceDiagram
   | In the room | closed the tab | LiveKit's `participant_left`, reason `CLIENT_INITIATED` | 30 s |
   | In the room | connection dropped | `participant_left`, any other reason | 60 s |
   | In the queue | closed the tab | `POST /api/room/leave`, sent with `keepalive` while the page closes | 30 s |
-  | In the queue | connection dropped | no poll | 60 s after the last poll |
+  | In the queue | connection dropped | no poll | 90 s after the last poll: Chrome lets a tab in the background poll only about once a minute |
 
   A dropped connection takes longer in total: LiveKit first waits for the browser to come back (about 20 to 30 seconds), and only then reports the leave.
 - **A seat never used** (a token handed out, nobody joined LiveKit) is given up after 60 seconds.
