@@ -227,6 +227,33 @@ describe("room: sharing", () => {
     expect(server.calls.some((c) => c.path === "/api/streams" && c.method === "POST")).toBe(false);
   });
 
+  it("says so when the browser gives no screen", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    lastRoom().localParticipant.nextPicker = "no-video";
+
+    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+    expect(await screen.findByText("Couldn't start sharing your screen.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
+  });
+
+  it("says so when the browser can't share a screen at all", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    const devices = Object.getOwnPropertyDescriptor(navigator, "mediaDevices")!;
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {} });
+    try {
+      await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+
+      expect(await screen.findByText("Couldn't start sharing your screen.")).toBeInTheDocument();
+      expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(navigator, "mediaDevices", devices);
+    }
+  });
+
   it("stops sharing and says so when the screen track can't be identified", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
@@ -374,6 +401,7 @@ describe("room: what the screen is sent with", () => {
     expect(local.getDisplayMedia).toHaveBeenCalledWith(screenCaptureRequest());
     const [video, sound] = local.lastCapture;
     expect([video.source, sound.source]).toEqual(["screen_share", "screen_share_audio"]);
+    expect(lastRoom().startAudio).toHaveBeenCalled();
     expect(local.publishTrack).toHaveBeenCalledWith(video, { ...screenPublishOptions("smooth"), source: "screen_share" });
     expect(local.publishTrack).toHaveBeenCalledWith(sound, { ...screenPublishOptions("smooth"), source: "screen_share_audio" });
     expect(video.mediaStreamTrack.contentHint).toBe("motion");

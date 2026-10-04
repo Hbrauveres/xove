@@ -29,7 +29,9 @@ describe("share presets", () => {
 
   it("always captures the best quality at 30 fps, and never this tab", () => {
     const request = screenCaptureRequest();
-    expect(request.video).toEqual({ width: { ideal: 1920, max: 1920 }, height: { ideal: 1080, max: 1080 }, frameRate: 30 });
+    expect(request.video).toEqual({ width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: 30 });
+    // Safari needs a ceiling instead, as LiveKit asks it.
+    expect(screenCaptureRequest(true).video).toEqual({ width: { max: 1920 }, height: { max: 1080 }, frameRate: 30 });
     expect(request.selfBrowserSurface).toBe("exclude");
   });
 

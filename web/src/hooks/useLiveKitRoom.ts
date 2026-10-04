@@ -31,7 +31,7 @@ import type { ActivityEvent, ConnectionState, MediaTrack, RemoteVideo, StreamKin
  * The browser's screen picker, asked directly because livekit-client drops `windowAudio`
  * (spec 0095). Wraps the capture as LiveKit's own `createScreenTracks` does.
  */
-async function captureScreen(mode: ShareMode): Promise<(LocalVideoTrack | LocalAudioTrack)[]> {
+async function captureScreen(room: Room, mode: ShareMode): Promise<(LocalVideoTrack | LocalAudioTrack)[]> {
   const stream = await navigator.mediaDevices.getDisplayMedia(screenCaptureRequest());
   const [screen] = stream.getVideoTracks();
   const [sound] = stream.getAudioTracks();
@@ -43,8 +43,11 @@ async function captureScreen(mode: ShareMode): Promise<(LocalVideoTrack | LocalA
   const video = new LocalVideoTrack(screen, undefined, false);
   video.source = Track.Source.ScreenShare;
   if (!sound) return [video];
+  // No audio context: LiveKit only needs it for track processors, which Xovê doesn't use.
   const audio = new LocalAudioTrack(sound, undefined, false);
   audio.source = Track.Source.ScreenShareAudio;
+  // LiveKit unlocks the page's sound here too, while the sharer's click still counts.
+  void room.startAudio();
   return [video, audio];
 }
 
@@ -255,7 +258,7 @@ export function useLiveKitRoom(): LiveKitRoom {
       const tracks =
         kind === "screen"
           ? // Always the best quality: the sharer can lower it, or raise it back, while sharing.
-            await captureScreen(mode)
+            await captureScreen(room, mode)
           : await room.localParticipant.createTracks({ video: cameraCaptureOptions(), audio: false });
       const video = tracks.find((t) => t.kind === Track.Kind.Video) as LocalVideoTrack | undefined;
       const audio = tracks.find((t) => t.kind === Track.Kind.Audio) as LocalAudioTrack | undefined;

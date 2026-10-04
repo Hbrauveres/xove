@@ -179,8 +179,8 @@ export class Room {
     screenTrackSid: "TR_my_screen" as string | undefined,
     /** Tests set this to false to play a browser or surface that gives no sound. */
     nextPickerAudio: true,
-    /** Tests set this to "cancel" to play someone closing the browser's picker. */
-    nextPicker: "share" as "share" | "cancel",
+    /** Tests set this to "cancel" to play someone closing the browser's picker, "no-video" for a capture without a screen. */
+    nextPicker: "share" as "share" | "cancel" | "no-video",
     /** The last screen captured (whether it was published or not). */
     lastCapture: [] as FakeLocalTrack[],
     getTrackPublication: (source: string) => {
@@ -205,7 +205,7 @@ export class Room {
       const local = this.localParticipant;
       if (local.nextPicker === "cancel") throw new DOMException("Permission denied", "NotAllowedError");
       local.lastCapture = [];
-      const video = [new FakeMediaStreamTrack()];
+      const video = local.nextPicker === "no-video" ? [] : [new FakeMediaStreamTrack()];
       const audio = local.nextPickerAudio ? [new FakeMediaStreamTrack()] : [];
       return { getVideoTracks: () => video, getAudioTracks: () => audio, getTracks: () => [...video, ...audio] };
     }),
@@ -251,6 +251,9 @@ export class Room {
       return undefined;
     }),
   };
+
+  /** Unlocks the page's sound (LiveKit's own, after a click). */
+  readonly startAudio = vi.fn(async () => undefined);
 
   constructor() {
     rooms.push(this);

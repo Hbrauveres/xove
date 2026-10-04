@@ -23,7 +23,7 @@ Rejected:
 
 | Area | File or component | Change |
 | --- | --- | --- |
-| Web | `web/src/media/shareSettings.ts` | The capture settings gain `windowAudio: "window"` and, inside the sound, `restrictOwnAudio: true`; a function turns them into the browser's request (video size and frame rate as LiveKit does today, `selfBrowserSurface`, sound). |
+| Web | `web/src/media/shareSettings.ts` | The capture settings gain `windowAudio: "window"` and, inside the sound, `restrictOwnAudio: true`; a function turns them into the browser's request (video size and frame rate as LiveKit does today: `ideal`, or `max` in Safari; `selfBrowserSurface`, sound). |
 | Web | `web/src/hooks/useLiveKitRoom.ts` | `capture` for a screen asks the browser directly and wraps the video and sound in `LocalVideoTrack` and `LocalAudioTrack` (screen sources, content hint), instead of `createScreenTracks`. Errors (closed picker) are handled as today. |
 | Web | `web/src/test/fakeLiveKit.ts` | Fake `LocalVideoTrack` and `LocalAudioTrack`, and a fake browser picker for the tests. |
 | Docs | `docs/decisions.md` | Decision 33: a window shares its app's sound, the whole screen leaves out Xovê's own sound, and why we ask the browser ourselves. |
@@ -46,7 +46,7 @@ None.
 
 | AC | Test | Kind |
 | --- | --- | --- |
-| AC-1 | `shareSettings.test.ts`: the request has `windowAudio: "window"`, `restrictOwnAudio: true`, the 0086 sound settings and `selfBrowserSurface: "exclude"`. `useLiveKitRoom.test.ts`: sharing a screen asks the browser with that request and publishes its video and sound as the screen and screen-sound sources. | unit / web UI |
+| AC-1 | `shareSettings.test.ts`: the request has `windowAudio: "window"`, `restrictOwnAudio: true`, the 0086 sound settings and `selfBrowserSurface: "exclude"`. `RoomPage.test.tsx`: sharing a screen asks the browser with that request and publishes its video and sound as the screen and screen-sound sources. | unit / web UI |
 | AC-2 | On staging, Chrome on Windows: picking a window shows "Share this app's audio too" | manual |
 | AC-3 | On staging: a game window shared during a Discord call; viewers hear the game, not the call | manual |
 | AC-4 | On staging: a shared tab still carries its sound | manual |
