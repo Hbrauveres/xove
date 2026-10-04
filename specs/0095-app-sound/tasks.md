@@ -14,12 +14,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: decision 33, a "Which sound" line in `docs/architecture.md`, web 162 tests in `CLAUDE.md`.
 - [x] **T4** Review every AC (`/review`), fix what it finds, open the PR with `Closes #95` · verify: no gaps left
   - Done: no gaps. Fixed: the video size matches LiveKit's again (`ideal`, `max` only in Safari); the page's sound is unlocked as LiveKit did (`startAudio`); tests for a capture without a screen and a browser without the picker.
-- [ ] **T5** On staging after merge, written in the PR (Henrique, Chrome on Windows, with Discord on):
+- [x] **T5** On staging after merge, written in the PR (Henrique, Chrome on Windows, with Discord on):
   - picking a window shows "Share this app's audio too" (AC-2);
   - a game window shared during a Discord call: viewers hear the game, not the call (AC-3);
   - a shared tab still carries its sound (AC-4);
   - the whole screen shared while a friend's stream plays in Xovê: viewers don't hear it come back (AC-5).
   - · verify: every check written in the PR
+  - Done 2026-10-04: Henrique checked it on staging after #96 merged; all as planned. Live in production with v0.0.5.
 
 ## Coverage
 
