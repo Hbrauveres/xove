@@ -48,7 +48,7 @@ Only one person can share at a time. When friends want to show each other someth
   - Changed with Henrique on 2026-10-03: entering is confirmed, not automatic.
 - **FR-14** Leaving doesn't give up a place at once, whether it's a seat in the room or a place in the queue:
   - If the person **closes the tab** (or the browser), the place is kept for **30 seconds**.
-  - If their **connection drops**, it's kept for **60 seconds**.
+  - If their **connection drops**, it's kept for **60 seconds**; for a place in the queue, **90 seconds** after the page last checked in. Changed with Henrique on 2026-10-03: Chrome lets a waiting tab in the background check in only about once a minute, so 60 seconds would keep sending it to the end of the line.
   - If they come back within that time, they get the same seat or the same place in the queue, and nobody else moves. After that, the place is given up and the queue moves on.
 - **FR-15** A person's streams end as soon as they leave or drop, as today (spec 0038), so viewers don't watch a frozen picture. Their stream places are free for others; when they come back, they start sharing again.
 
