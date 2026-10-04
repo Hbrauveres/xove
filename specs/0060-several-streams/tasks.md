@@ -53,7 +53,7 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
   - Done: `architecture.md` (seats and the queue, streams, watching, the facecam, sound, the API table, tokens allow the camera, webhooks, trust boundaries), `overview.md`, `testing.md`, `operations.md` (log lines), `getting-started.md` (`XOVE_ROOM_SEATS`), decision 32 (and 2, 3, 8, 10 marked), `CLAUDE.md` (what this is, test counts, the seats setting).
 - [x] **T13** Review every AC (`/review`), fix what it finds, open the PR · verify: no gaps left
   - Done: review (spec-reviewer): every FR and AC covered; fixed what it found: a seat taken back after an API restart is confirmed by the page's LiveKit connection (it ran out every 60 s); re-registering stops a stream only when the places are full, and re-entering keeps trying; late queue answers after Enter room or Cancel; a refused change goes back per stream; a viewer's pick ends when that person stops; the facecam swap is per person; the countdown uses the API's seconds; docs. API 147, web 158. After it, with Henrique: a place in the queue is kept 90 s after the last poll (Chrome lets a background tab poll about once a minute); no browser picture-in-picture button over the videos. API 148, web 158.
-- [ ] **T14** On staging after merge, written in the PR (Henrique, with friends):
+- [x] **T14** On staging after merge, written in the PR (Henrique, with friends):
   - six streams, a seventh refused (AC-1);
   - a sharer closes the tab: streams gone in seconds, seat kept 30 s; check `disconnectReason` arrives (AC-4);
   - facecam: swap, drag, collapse (AC-6);
@@ -61,6 +61,7 @@ Nothing to do outside the repos before starting. Henrique's part: merging the `i
   - high quality only for the big stream (AC-9);
   - the VPS's traffic in Hostinger's panel (AC-10).
   - · verify: every check written in the PR
+  - Done 2026-10-04: Henrique checked it on staging and in production (v0.0.4, after #90 and #91); all as planned.
 
 ## Coverage
 
