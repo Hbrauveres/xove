@@ -75,7 +75,7 @@ export class FakeMediaStreamTrack {
 export class FakeLocalTrack extends FakeTrack {
   readonly mediaStreamTrack: FakeMediaStreamTrack;
   readonly kind: "video" | "audio";
-  readonly source: string;
+  source: string;
   stopped = false;
   constructor(kind: "video" | "audio", source: string, mediaStreamTrack = new FakeMediaStreamTrack()) {
     super();
@@ -102,6 +102,22 @@ export class FakeLocalScreenTrack extends FakeLocalTrack {
 export class FakeLocalCameraTrack extends FakeLocalScreenTrack {
   constructor() {
     super(new FakeMediaStreamTrack(), Track.Source.Camera);
+  }
+}
+
+/** The screen's video, wrapped by the app after the browser's picker. */
+export class LocalVideoTrack extends FakeLocalScreenTrack {
+  constructor(mediaStreamTrack: FakeMediaStreamTrack) {
+    super(mediaStreamTrack, Track.Source.Unknown);
+    rooms[rooms.length - 1]?.localParticipant.lastCapture.push(this);
+  }
+}
+
+/** The screen's sound, wrapped by the app after the browser's picker. */
+export class LocalAudioTrack extends FakeLocalTrack {
+  constructor(mediaStreamTrack: FakeMediaStreamTrack) {
+    super("audio", Track.Source.Unknown, mediaStreamTrack);
+    rooms[rooms.length - 1]?.localParticipant.lastCapture.push(this);
   }
 }
 
@@ -181,14 +197,17 @@ export class Room {
       local.lastCamera = new FakeLocalCameraTrack();
       return [local.lastCamera];
     }),
-    /** The browser's picker: captures the screen (and its sound), sends nothing yet. */
-    createScreenTracks: vi.fn(async (_options?: unknown) => {
+    /**
+     * The browser's picker (`navigator.mediaDevices.getDisplayMedia`, see setup.ts):
+     * captures the screen (and its sound), sends nothing yet.
+     */
+    getDisplayMedia: vi.fn(async (_request?: unknown) => {
       const local = this.localParticipant;
       if (local.nextPicker === "cancel") throw new DOMException("Permission denied", "NotAllowedError");
-      const tracks: FakeLocalTrack[] = [new FakeLocalScreenTrack()];
-      if (local.nextPickerAudio) tracks.push(new FakeLocalTrack("audio", Track.Source.ScreenShareAudio));
-      local.lastCapture = tracks;
-      return tracks;
+      local.lastCapture = [];
+      const video = [new FakeMediaStreamTrack()];
+      const audio = local.nextPickerAudio ? [new FakeMediaStreamTrack()] : [];
+      return { getVideoTracks: () => video, getAudioTracks: () => audio, getTracks: () => [...video, ...audio] };
     }),
     publishTrack: vi.fn(async (track: FakeLocalTrack, options?: unknown) => {
       const local = this.localParticipant;

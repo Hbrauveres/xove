@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
-import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureOptions, screenPublishOptions } from "../media/shareSettings";
+import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureRequest, screenPublishOptions } from "../media/shareSettings";
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, myLiveStream, someoneSharing } from "../test/fakeApi";
 import { FakeLocalScreenTrack, lastRoom } from "../test/fakeLiveKit";
@@ -162,7 +162,7 @@ describe("room: sharing", () => {
     const setup = await pickScreen(user);
 
     const local = lastRoom().localParticipant;
-    expect(local.createScreenTracks).toHaveBeenCalled();
+    expect(local.getDisplayMedia).toHaveBeenCalled();
     expect(local.lastCapture[0].attached).toContain(within(setup).getByLabelText("Preview of your screen"));
     expect(within(setup).getByLabelText("Send quality")).toHaveValue("1080p");
     expect(within(setup).getByLabelText("Mode")).toHaveValue("smooth");
@@ -370,8 +370,10 @@ describe("room: what the screen is sent with", () => {
     await screen.findByText("You are sharing");
 
     const local = lastRoom().localParticipant;
-    expect(local.createScreenTracks).toHaveBeenCalledWith(screenCaptureOptions("smooth"));
+    // The browser is asked directly: livekit-client would drop `windowAudio` (spec 0095).
+    expect(local.getDisplayMedia).toHaveBeenCalledWith(screenCaptureRequest());
     const [video, sound] = local.lastCapture;
+    expect([video.source, sound.source]).toEqual(["screen_share", "screen_share_audio"]);
     expect(local.publishTrack).toHaveBeenCalledWith(video, { ...screenPublishOptions("smooth"), source: "screen_share" });
     expect(local.publishTrack).toHaveBeenCalledWith(sound, { ...screenPublishOptions("smooth"), source: "screen_share_audio" });
     expect(video.mediaStreamTrack.contentHint).toBe("motion");
@@ -392,7 +394,8 @@ describe("room: what the screen is sent with", () => {
     await screen.findByText("You are sharing");
 
     expect(localStorage.getItem("xove.share.quality")).toBe("720p");
-    expect(lastRoom().localParticipant.createScreenTracks).toHaveBeenCalledWith(screenCaptureOptions("sharp"));
+    expect(lastRoom().localParticipant.getDisplayMedia).toHaveBeenCalledWith(screenCaptureRequest());
+    expect(lastRoom().localParticipant.lastCapture[0].mediaStreamTrack.contentHint).toBe("detail");
   });
 
   it("tells the sharer when their browser gave no sound, in the setup and while sharing", async () => {
@@ -954,7 +957,7 @@ describe("room: my camera", () => {
 
     expect(local.createTracks).toHaveBeenCalledTimes(1);
     expect(local.createTracks).toHaveBeenCalledWith({ video: cameraCaptureOptions(), audio: false });
-    expect(local.createScreenTracks).not.toHaveBeenCalled();
+    expect(local.getDisplayMedia).not.toHaveBeenCalled();
     expect(local.lastCamera!.attached).toContain(within(setup).getByLabelText("Preview of your camera"));
     expect(local.publishTrack).not.toHaveBeenCalled();
   });

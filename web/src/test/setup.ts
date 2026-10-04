@@ -15,6 +15,13 @@ afterEach(() => {
 });
 
 // jsdom lacks these browser APIs.
+// The screen picker: the last fake room plays it (`nextPicker`, `nextPickerAudio`).
+Object.defineProperty(navigator, "mediaDevices", {
+  configurable: true,
+  value: {
+    getDisplayMedia: (request?: unknown) => rooms[rooms.length - 1].localParticipant.getDisplayMedia(request),
+  },
+});
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({

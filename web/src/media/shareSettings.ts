@@ -1,4 +1,4 @@
-import type { ScreenShareCaptureOptions, TrackPublishOptions, VideoCaptureOptions, VideoPreset } from "livekit-client";
+import type { TrackPublishOptions, VideoCaptureOptions, VideoPreset } from "livekit-client";
 
 /**
  * How a shared screen is captured and sent (spec 0086). LiveKit's defaults are
@@ -83,23 +83,6 @@ export function screenCaptureRequest(): ScreenCaptureRequest {
     },
     // A picked window shares its app's sound, not the whole system's (Discord included).
     windowAudio: "window",
-  };
-}
-
-/**
- * What the browser's screen picker captures: always the best quality (so the sharer
- * can raise it later without picking again), the mode's content hint, and the sound
- * as played.
- */
-export function screenCaptureOptions(mode: ShareMode): ScreenShareCaptureOptions {
-  const preset = SHARE_QUALITIES[0];
-  return {
-    resolution: { width: preset.width, height: preset.height, frameRate: preset.fps },
-    contentHint: contentHintOf(mode),
-    // Sharing this very tab would show the room inside the room.
-    selfBrowserSurface: "exclude",
-    // Music and game sound, not a voice: no microphone filters, both channels.
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
   };
 }
 
