@@ -143,6 +143,7 @@ Seats and streams live in the API's memory: one API instance, a handful of peopl
 How a screen or a camera is sent is decided in one place, `web/src/media/shareSettings.ts` ([spec 0086](../specs/0086-stream-quality/spec.md)). LiveKit's defaults suit slides and voice calls; these suit games and videos.
 
 - **Starting:** the browser's picker captures the screen, then a setup window shows a preview and the settings. Nothing is sent until "Start sharing".
+- **Which sound** ([spec 0095](../specs/0095-app-sound/spec.md)): a picked window shares only its app's sound (Chrome's "Share this app's audio too"), a tab its own sound, and the whole screen the system sound without Xovê's own sound. Xovê opens the picker itself (`getDisplayMedia`) because livekit-client drops the `windowAudio` option, and hands the tracks to LiveKit.
 - **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is always captured at 1080p and sent in VP9 with all three layers; the chosen quality is a **cap**: the layers above it aren't sent.
   - **No tight limits:** each layer may use up to 8, 4 and 2 Mbit/s. That's above what a screen usually needs, so only the sharer's computer and connection, and each viewer's, limit the picture. The browser and LiveKit lower the bitrate by themselves when a connection can't keep up.
   - The sharer uploads all the layers (up to about 14 Mbit/s at 1080p on a great connection); each viewer downloads one.
