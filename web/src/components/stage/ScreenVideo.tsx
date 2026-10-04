@@ -45,7 +45,16 @@ export function ScreenVideo({ video, sound, label, volume = 1, muted = false }: 
 
   return (
     <>
-      <video ref={videoRef} className={styles.video} aria-label={label} autoPlay playsInline muted />
+      {/* The player has its own controls: no browser picture-in-picture button over it (Edge adds one). */}
+      <video
+        ref={videoRef}
+        className={styles.video}
+        aria-label={label}
+        autoPlay
+        playsInline
+        muted
+        disablePictureInPicture
+      />
       {sound && <audio ref={audioRef} autoPlay />}
     </>
   );
