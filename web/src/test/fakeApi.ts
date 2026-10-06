@@ -20,6 +20,12 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     streams: [] as FakeStream[],
     /** False plays an API that restarted and forgot this person's seat. */
     seated: true,
+    /** The room's seats (spec 0104); undefined plays an older API. */
+    seatsInfo: { total: 20, taken: 1, waiting: 0 } as { total: number; taken: number; waiting: number } | undefined,
+    /** Who watches what, besides me; undefined plays an older API. */
+    watching: [] as { userId: number; sharerId: number; kind: StreamKind; mine: boolean }[] | undefined,
+    /** What I reported with PUT /api/streams/watching. */
+    myWatch: null as { sharerId: number; kind: StreamKind } | null,
     /** What POST /api/room/enter answers: tests set "waiting" or "offered" to play a full room. */
     seat: { status: "in" } as SeatAnswer,
     calls: [] as Call[],
@@ -48,12 +54,23 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
         streams: server.streams.map((st) => ({ ...st, mine: st.userId === MY_USER_ID })),
         free: 6 - server.streams.length,
         seated: server.seated,
+        seats: server.seatsInfo,
+        watching:
+          server.watching &&
+          (server.myWatch
+            ? [...server.watching, { userId: MY_USER_ID, ...server.myWatch, mine: true }]
+            : server.watching),
       },
     });
     const conflict = (detail: string, reason?: string) => ({ status: 409, body: { status: 409, detail, reason } });
     const isMine = (kind: string) => (st: FakeStream) => st.userId === MY_USER_ID && st.kind === kind;
 
     if (key === "GET /api/streams") return streamsState();
+    if (key === "PUT /api/streams/watching") {
+      const target = body as { sharerId?: number; kind?: StreamKind };
+      server.myWatch = target.sharerId && target.kind ? { sharerId: target.sharerId, kind: target.kind } : null;
+      return { status: 204 };
+    }
     if (key === "POST /api/livekit/token") {
       return {
         status: 200,

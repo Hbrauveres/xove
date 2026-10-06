@@ -21,8 +21,8 @@ public record StreamsView(List<Item> streams, int free, boolean seated, Seats se
     public record Seats(int total, int taken, int waiting) {
     }
 
-    /** {@code userId} has {@code sharerId}'s {@code kind} on their stage. */
-    public record Watcher(Long userId, Long sharerId, String kind) {
+    /** {@code userId} has {@code sharerId}'s {@code kind} on their stage; {@code mine} when it's the asking person. */
+    public record Watcher(Long userId, Long sharerId, String kind, boolean mine) {
     }
 
     static StreamsView of(Streams streams, Long viewerId, boolean seated, Occupancy occupancy,
@@ -32,7 +32,7 @@ public record StreamsView(List<Item> streams, int free, boolean seated, Seats se
                         s.userId().equals(viewerId)))
                 .toList();
         List<Watcher> watching = watches.stream()
-                .map(w -> new Watcher(w.userId(), w.sharerId(), w.kind().id()))
+                .map(w -> new Watcher(w.userId(), w.sharerId(), w.kind().id(), w.userId().equals(viewerId)))
                 .toList();
         return new StreamsView(items, streams.free(), seated,
                 new Seats(occupancy.total(), occupancy.taken(), occupancy.waiting()), watching);

@@ -310,7 +310,9 @@ class StreamsControllerTest {
                 .andExpect(jsonPath("$.watching.length()").value(1))
                 .andExpect(jsonPath("$.watching[0].userId").value(idOf("sub-m2")))
                 .andExpect(jsonPath("$.watching[0].sharerId").value(m1))
-                .andExpect(jsonPath("$.watching[0].kind").value("screen"));
+                .andExpect(jsonPath("$.watching[0].kind").value("screen"))
+                .andExpect(jsonPath("$.watching[0].mine").value(false));
+        mvc.perform(get("/api/streams").with(as("sub-m2"))).andExpect(jsonPath("$.watching[0].mine").value(true));
     }
 
     @Test

@@ -22,11 +22,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Web core
 
-- [ ] **T3** Data:
+- [x] **T3** Data:
   - `api/types.ts` and `api/client.ts` get the new fields and `api.streams.watching(target)`;
   - `useRoomSession` exposes the seats and who watches what from the poll, adds a "Reconnected" event when the connection comes back, and gives each event the id of the stream it's about;
   - an API without the new fields still works.
   - · covers FR-9, FR-10, FR-13, FR-14a · verify: `RoomPage.test.tsx` (session through the page), `client` tests
+  - Done: `seats` and `watchingOf` (room ids, "me" for me) and a "reconnected" event from `useRoomSession`; `api.streams.watching`; the API's watch entries gained `mine`, since `/api/me` has no user id. Tested in `useRoomSession.test.ts` (new, 3) and `client.test.ts` (1); the fake API serves the new fields.
 - [ ] **T4** `media/ambilight.ts` and the preferences:
   - the edge colours from a 64×36 frame (200 LEDs, averaged inward);
   - the easing;

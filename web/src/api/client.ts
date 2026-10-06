@@ -87,6 +87,9 @@ export const api = {
     settings: (kind: StreamKind, settings: StreamSettings) =>
       request<StreamsState>("POST", `/api/streams/${kind}/settings`, settings),
     stop: (kind: StreamKind) => request<StreamsState>("POST", `/api/streams/${kind}/stop`),
+    /** What's on my stage (spec 0104): someone's screen or camera, or null for an empty stage. */
+    watching: (target: { sharerId: number; kind: StreamKind } | null) =>
+      request<void>("PUT", "/api/streams/watching", target ?? {}),
   },
 
   room: {

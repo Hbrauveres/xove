@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
 import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, Sharer, StreamKind } from "../types";
-import type { LiveStream } from "../api/types";
+import type { LiveStream, RoomSeatsState } from "../api/types";
 import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
 
@@ -47,6 +47,10 @@ export type RoomSession = {
   /** My connection to the video room, to confirm my seat when entering again. */
   participantSid: () => string | undefined;
   activity: ActivityEvent[];
+  /** How full the room is, when the API says (spec 0104). */
+  seats: RoomSeatsState | null;
+  /** Per person (by their id in the room): whose stream is on their stage (spec 0104). */
+  watchingOf: Record<string, { sharerId: string; kind: StreamKind }>;
   connection: ConnectionState;
   error: string | null;
   busy: boolean;
@@ -176,10 +180,35 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     if (events.length) setStreamEvents((prev) => [...prev, ...events].slice(-30));
   }, [streamKeys]);
 
+  // My connection coming back after a drop is an event too (spec 0104).
+  const [connectionEvents, setConnectionEvents] = useState<ActivityEvent[]>([]);
+  const lastConnection = useRef(lk.connection);
+  useEffect(() => {
+    const before = lastConnection.current;
+    lastConnection.current = lk.connection;
+    if (before === "reconnecting" && lk.connection === "connected") {
+      setConnectionEvents((prev) =>
+        [...prev, { id: `conn${++streamSeq}`, at: Date.now(), kind: "reconnected" as const, actorId: me.id }].slice(-30),
+      );
+    }
+  }, [lk.connection, me.id]);
+
   const activity = useMemo(
-    () => [...lk.presence, ...streamEvents].sort((a, b) => a.at - b.at),
-    [lk.presence, streamEvents],
+    () => [...lk.presence, ...streamEvents, ...connectionEvents].sort((a, b) => a.at - b.at),
+    [lk.presence, streamEvents, connectionEvents],
   );
+
+  // Who watches what, in the room's ids: "me" for me, "user-42" for everyone else.
+  const watchers = api.state?.watching;
+  const watchingOf = useMemo(() => {
+    const idOf = (userId: number, mine: boolean) => (mine ? me.id : identityOf(userId));
+    const sharerIsMe = (userId: number) => (live ?? []).some((s) => s.mine && s.userId === userId);
+    const byPerson: Record<string, { sharerId: string; kind: StreamKind }> = {};
+    for (const w of watchers ?? []) {
+      byPerson[idOf(w.userId, w.mine)] = { sharerId: idOf(w.sharerId, sharerIsMe(w.sharerId)), kind: w.kind };
+    }
+    return byPerson;
+  }, [watchers, live, me.id]);
 
   // ---- keeping my streams and the API in step ----
 
@@ -376,6 +405,8 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     seated,
     participantSid: lk.participantSid,
     activity,
+    seats: api.state?.seats ?? null,
+    watchingOf,
     connection: lk.connection,
     error: api.error ?? lk.error,
     busy: api.busy || isStarting || isChanging,

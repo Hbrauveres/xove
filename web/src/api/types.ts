@@ -56,7 +56,17 @@ export type StreamsState = {
   free: number;
   /** False when the API doesn't know this person is in the room (after a restart): enter again. */
   seated: boolean;
+  /** How full the room is (spec 0104). Missing from an older API. */
+  seats?: RoomSeatsState;
+  /** Who has which stream on their stage (spec 0104). Missing from an older API. */
+  watching?: Watcher[];
 };
+
+/** The room's seats: in total, taken (kept ones too), and how many people wait. */
+export type RoomSeatsState = { total: number; taken: number; waiting: number };
+
+/** `userId` has `sharerId`'s `kind` on their stage; `mine` when that's me. */
+export type Watcher = { userId: number; sharerId: number; kind: StreamKind; mine: boolean };
 
 /** Which LiveKit connection and track a stream comes from. Required to start one. */
 export type SharingConnection = {
