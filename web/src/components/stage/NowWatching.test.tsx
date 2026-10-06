@@ -26,6 +26,11 @@ describe("now watching (spec 0104)", () => {
     expect(screen.getByText("12:40")).toBeInTheDocument();
   });
 
+  it("draws the avatar's ring inside it, so it lines up with the stage's edge (spec 0107)", () => {
+    const { container } = render(<NowWatching sharer={bruno(false)} />);
+    expect(container.querySelector('[data-ring="inside"]')).toBeInTheDocument();
+  });
+
   it("says Screen or Camera when that's all they share", () => {
     const { rerender } = render(<NowWatching sharer={bruno(false)} />);
     expect(screen.getByText("Screen")).toBeInTheDocument();

@@ -1,10 +1,12 @@
 /* The other live streams (spec 0104): see specs/0104-room-theater/design.html. */
+/* The right never runs past the box: it leaves the left room, and past that the previews scroll (spec 0107). */
 .also {
+  flex: 0 1 auto;
   display: grid;
   justify-items: end;
   gap: 8px;
   min-width: 0;
-  max-width: 100%;
+  max-width: calc(100% - 280px);
 }
 
 .head {
@@ -162,6 +164,7 @@
 @media (max-width: 760px) {
   .also {
     justify-items: start;
+    max-width: 100%;
   }
 }
 

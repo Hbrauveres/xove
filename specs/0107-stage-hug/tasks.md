@@ -33,8 +33,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The info row
 
-- [ ] **T4** `Avatar` gains `ring="inside"`, drawn inside the avatar. The info row becomes a flex row, centred on one line, and an inline-size container; the right side never runs past the box; phones stack as today.
+- [x] **T4** `Avatar` gains `ring="inside"`, drawn inside the avatar. The info row becomes a flex row, centred on one line, and an inline-size container; the right side never runs past the box; phones stack as today.
   - · covers FR-7, FR-8 (ring), FR-10, FR-12 · verify: `Avatar` rendered with the option in `NowWatching.test.tsx`; build green
+  - Done: `Avatar` `ring="inside"` (`data-ring`); `.info` a flex row and container, stacked on phones; `.now` grows, `.also` stops 280 px short of the left. 1 test.
 - [ ] **T5** `NowWatching`:
   - a 52 px avatar with the inner ring, the name, a filled LIVE badge, what's shared and for how long;
   - who's watching: up to 4 avatars side by side and "N watching", hidden when none. Container queries drop the words, then the avatars.

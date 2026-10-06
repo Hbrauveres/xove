@@ -22,7 +22,7 @@ export function NowWatching({ sharer }: { sharer: Sharer | null }) {
   const name = sharer.isMe ? "You" : sharer.person.name;
   return (
     <div className={styles.now}>
-      <Avatar person={sharer.person} size={44} onAir />
+      <Avatar person={sharer.person} size={52} onAir ring="inside" />
       <div className={styles.text}>
         <h2 className={styles.name}>{name}</h2>
         <p className={styles.meta}>

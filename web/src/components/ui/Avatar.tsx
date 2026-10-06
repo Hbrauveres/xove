@@ -6,13 +6,16 @@ type Props = {
   size?: number;
   /** Amber ring when this person is on air. */
   onAir?: boolean;
+  /** Where the ring goes: around the avatar, or inside its edge, so it lines up with what's beside it (spec 0107). */
+  ring?: "outside" | "inside";
 };
 
-export function Avatar({ person, size = 32, onAir = false }: Props) {
+export function Avatar({ person, size = 32, onAir = false, ring = "outside" }: Props) {
   const initial = person.name.charAt(0).toUpperCase();
   return (
     <span
-      className={`${styles.avatar} ${onAir ? styles.onAir : ""}`}
+      className={`${styles.avatar} ${onAir ? (ring === "inside" ? styles.onAirInside : styles.onAir) : ""}`}
+      data-ring={onAir ? ring : undefined}
       style={{
         width: size,
         height: size,

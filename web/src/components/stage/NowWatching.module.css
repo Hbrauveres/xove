@@ -1,5 +1,7 @@
 /* Who is on the stage (spec 0104): see specs/0104-room-theater/design.html. */
 .now {
+  /* The left grows and gives way first (spec 0107). */
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 14px;
