@@ -78,7 +78,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T12** Docs: the room's layout, ambilight and who-watches-what in `docs/architecture.md` and `docs/overview.md`; decision 36 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
+- [x] **T12** Docs: the room's layout, ambilight and who-watches-what in `docs/architecture.md` and `docs/overview.md`; decision 36 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
+  - Done: architecture (the page, ambilight, who watches what, the info row, sound, the API table), overview, decision 36, API 163 and web 275 tests.
 - [ ] **T13** Review every AC (`/review`), fix what it finds, and open the PR with `Closes #104`. Then on staging after merge, written in the PR (Henrique):
   - at 1080p, 2K and a narrow window: sizes, edges, the header and footer see-through above the light (AC-2, AC-12);
   - on the 2K monitor: the ambilight looks like the design and stays smooth, under a millisecond per update in Chrome's performance panel (AC-4);

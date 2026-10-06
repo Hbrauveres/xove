@@ -133,11 +133,21 @@ sequenceDiagram
 
 ### Watching
 
-- **Each viewer picks who is big:** a click on a thumbnail. By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`).
-- **Thumbnails** centred under the player (scrolling sideways when they don't fit), one per other person sharing: their screen, or their camera when that's all they share.
+- **The page** ([spec 0104](../specs/0104-room-theater/spec.md), the look in [its design](../specs/0104-room-theater/design.html)) is theater mode:
+  - **Header and footer:** full width and see-through. The header holds the logo, the activity pill, the people button and the account button (connection dot; name, role and connection, ambilight, Admin, Sign out). The footer is plain text.
+  - **The middle:** a size container. Its one column is as wide as the stage can be at 16:9, so the stage and the info row under it share their edges.
+  - **Dropdowns** (`components/ui/Dropdown.tsx`): frosted sections with 2 px clear cuts. They unroll by their height, since a clip or fade would stop the blur. One opens at a time.
+- **Ambilight** (`media/ambilight.ts`, `stage/Ambilight.tsx`):
+  - the big video is read into a 64×36 frame about 12 times a second (2 with reduced motion), only while the tab is visible and the video plays;
+  - its edges give 200 LEDs, eased towards their new colours;
+  - they're painted as fading strips into a small canvas, blurred 3 px at that size, which the page only stretches past the frame. No blur at screen size, so a 4K monitor costs the same.
+  - On and brightness are saved in the browser (`xove.ambilight.*`).
+- **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
+- **Who watches what:** each browser reports what's on its stage (`PUT /api/streams/watching`), once it has been still for a second, and again when a poll shows the API lost it. The streams poll returns everyone's, for the people panel.
+- **The info row:** who is on the stage (LIVE, what, how long), then "Also live · N of 6" with the other streams as previews and the places left. A preview shows their screen, or their camera when that's all they share.
 - **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
-- **Sound:** the big person's plays. Thumbnails are muted, each with its own mute button and volume; a muted thumbnail's sound isn't downloaded at all.
-- **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so thumbnails and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
+- **Sound:** the big person's plays. Previews are muted, each with its own speaker and a horizontal volume slider; a muted preview's sound isn't downloaded at all. A preview without sound has no speaker.
+- **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so previews and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
 
 Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy) empties them; each open room asks for its seat again within a poll, with its LiveKit connection (LiveKit doesn't report it joining again, so that confirms the seat), and registers what it's still sending. If the 6 places filled up meanwhile, it stops sending; any other failure is tried again on the next poll. Re-registered streams count as started then, so "longest sharing" restarts from that order.
 
@@ -202,7 +212,8 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `POST /api/room/accept` | Member | Takes the seat offered: `{ status: "in" }`; 409 when there's no offer (it ran out) |
 | `POST /api/room/cancel` | Member | Leaves the queue, or turns the offer down; 204 |
 | `POST /api/room/leave` | Member | The waiting page is closing: the place is kept 30 seconds; 204 |
-| `GET /api/streams` | Member | `{ streams: [{ kind, userId, name, avatarUrl, since, settings: { quality, mode }, mine }], free, seated }`, oldest first |
+| `GET /api/streams` | Member | `{ streams: [{ kind, userId, name, avatarUrl, since, settings: { quality, mode }, mine }], free, seated, seats: { total, taken, waiting }, watching: [{ userId, sharerId, kind, mine }] }`, streams oldest first; `watching` lists seated people watching live streams (spec 0104) |
+| `PUT /api/streams/watching` | Member | What's on my stage (spec 0104). Body `{ sharerId, kind }`, or `{}` for an empty stage; 204, 400 for a bad kind. Kept in memory; leaving the room forgets it |
 | `POST /api/streams` | Member with a seat | Starts a stream. Body `{ kind, participantSid, trackSid, quality?, mode? }`: `screen` or `camera`, the LiveKit connection and track it comes from (never shown to anyone; 400 without them), and what it's sent with (a missing value is 1080p Smooth for a screen, 720p Smooth for a camera; a camera can't be 1080p). Starting the same kind again replaces your own. 409 when the 6 places are taken (with `reason: "full"`), or without a seat |
 | `POST /api/streams/{kind}/settings` | Its person | Changes what the stream is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if you don't have that stream |
 | `POST /api/streams/{kind}/stop` | Member | Ends your stream of that kind; nothing to stop is fine |
