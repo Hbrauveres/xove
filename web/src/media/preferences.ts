@@ -15,6 +15,7 @@ const KEYS = {
   shareMode: "xove.share.mode",
   cameraQuality: "xove.camera.quality",
   cameraMode: "xove.camera.mode",
+  cameraDevice: "xove.camera.device",
   watchQuality: "xove.watch.quality",
   watchVolume: "xove.watch.volume",
   watchMuted: "xove.watch.muted",
@@ -66,6 +67,15 @@ export function loadCameraPrefs(): SharePrefs {
 export function saveCameraPrefs(prefs: SharePrefs) {
   write(KEYS.cameraQuality, prefs.quality);
   write(KEYS.cameraMode, prefs.mode);
+}
+
+/** The camera picked in the camera's menu (spec 0098), or null for the browser's default. */
+export function loadCameraDevice(): string | null {
+  return read(KEYS.cameraDevice) || null;
+}
+
+export function saveCameraDevice(deviceId: string) {
+  write(KEYS.cameraDevice, deviceId);
 }
 
 export function loadWatchPrefs(): WatchPrefs {

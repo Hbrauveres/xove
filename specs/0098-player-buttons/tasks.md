@@ -16,7 +16,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - keyboard: Tab, Enter, arrow keys, Escape back to the arrow; readable menu text on a lit button.
   - · covers FR-2, FR-3, FR-6, FR-7, FR-11, FR-12, FR-13, FR-14, FR-16, FR-17 · verify: `StreamButtons.test.tsx`
   - Done: `StreamButtons` (with its menu inside) and its styles; the mode labels come from `ShareSettingsFields`. 11 tests.
-- [ ] **T2** Camera choice: `xove.camera.device` in `preferences.ts`, `cameraCaptureOptions(deviceId?)`, and a gone device falls back to the default · covers FR-9 · verify: `preferences.test.ts`, `shareSettings.test.ts`
+- [x] **T2** Camera choice: `xove.camera.device` in `preferences.ts`, `cameraCaptureOptions(deviceId?)`, and a gone device falls back to the default · covers FR-9 · verify: `preferences.test.ts`, `shareSettings.test.ts`
+  - Done: `loadCameraDevice`/`saveCameraDevice`; the camera is asked as `ideal`, so a gone one falls back. 2 tests.
 - [ ] **T3** `useLiveKitRoom`: `changeScreen()` re-picks and swaps the video on the same publication, with the sound per the plan's table, the content hint, the cap, and the end of the capture handled on the new track; a closed picker changes nothing. `cameras` (listed, refreshed on `devicechange`) and `pickCamera(deviceId)` restart the published camera on that device, saved for next time. Fakes: `replaceTrack`, `restartTrack`, the camera list · covers FR-8, FR-9 · verify: `useLiveKitRoom.test.ts` (new, with `renderHook`); `cd web && npm test && npm run build`
 
 ## Wiring

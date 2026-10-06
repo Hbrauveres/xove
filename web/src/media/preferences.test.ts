@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadCameraPrefs, loadSharePrefs, loadWatchPrefs, saveCameraPrefs, saveSharePrefs, saveWatchPrefs } from "./preferences";
+import {
+  loadCameraDevice,
+  loadCameraPrefs,
+  loadSharePrefs,
+  loadWatchPrefs,
+  saveCameraDevice,
+  saveCameraPrefs,
+  saveSharePrefs,
+  saveWatchPrefs,
+} from "./preferences";
 
 afterEach(() => localStorage.clear());
 
@@ -35,6 +44,14 @@ describe("the camera's choices (spec 0060)", () => {
   it("never go above 720p", () => {
     localStorage.setItem("xove.camera.quality", "1080p");
     expect(loadCameraPrefs().quality).toBe("720p");
+  });
+});
+
+describe("the camera picked (spec 0098)", () => {
+  it("is none until one is picked, then remembered", () => {
+    expect(loadCameraDevice()).toBeNull();
+    saveCameraDevice("cam-2");
+    expect(loadCameraDevice()).toBe("cam-2");
   });
 });
 
