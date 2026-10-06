@@ -151,7 +151,25 @@ async function startSharing(user: User) {
   await screen.findByText("You are sharing");
 }
 
-const sharerBar = () => within(stage());
+type MenuKind = "Screen" | "Camera";
+
+/** My stream's menu, from the arrow on its button (spec 0098). Opened when it isn't. */
+async function openMenu(user: User, kind: MenuKind = "Screen") {
+  const name = `${kind} options`;
+  if (!screen.queryByRole("menu", { name })) await user.click(within(stage()).getByRole("button", { name }));
+  return within(screen.getByRole("menu", { name }));
+}
+
+/** Picks a quality or mode in my stream's menu. */
+async function pickInMenu(user: User, option: string, kind: MenuKind = "Screen") {
+  await user.click((await openMenu(user, kind)).getByRole("menuitemradio", { name: option }));
+}
+
+/** The quality ticked in my stream's open menu. */
+const tickedQuality = (kind: MenuKind = "Screen") =>
+  within(screen.getByRole("menu", { name: `${kind} options` }))
+    .getAllByRole("menuitemradio")
+    .find((item) => /^\d+p$/.test(item.textContent ?? "") && item.getAttribute("aria-checked") === "true")?.textContent;
 
 describe("room: sharing", () => {
   afterEach(() => localStorage.clear());
@@ -466,7 +484,7 @@ describe("room: changing the stream while sharing", () => {
     const local = lastRoom().localParticipant;
     const video = local.screens[0].track;
 
-    await user.selectOptions(sharerBar().getByLabelText("Send quality"), "480p");
+    await pickInMenu(user, "480p");
 
     await waitFor(() => expect(myLiveStream(server)?.settings).toEqual({ quality: "480p", mode: "smooth" }));
     expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
@@ -484,7 +502,7 @@ describe("room: changing the stream while sharing", () => {
     await startSharing(user);
     const video = lastRoom().localParticipant.screens[0].track;
 
-    await user.selectOptions(sharerBar().getByLabelText("Send quality"), "1080p");
+    await pickInMenu(user, "1080p");
 
     await waitFor(() => expect(myLiveStream(server)?.settings.quality).toBe("1080p"));
     expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
@@ -496,7 +514,7 @@ describe("room: changing the stream while sharing", () => {
     await startSharing(user);
     const video = lastRoom().localParticipant.screens[0].track;
 
-    await user.selectOptions(sharerBar().getByLabelText("Mode"), "sharp");
+    await pickInMenu(user, "Sharp (text, code)");
 
     await waitFor(() => expect(myLiveStream(server)?.settings).toEqual({ quality: "1080p", mode: "sharp" }));
     expect(video.mediaStreamTrack.contentHint).toBe("detail");
@@ -513,10 +531,10 @@ describe("room: changing the stream while sharing", () => {
     await startSharing(user);
     const video = lastRoom().localParticipant.screens[0].track;
 
-    await user.selectOptions(sharerBar().getByLabelText("Send quality"), "480p");
+    await pickInMenu(user, "480p");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/only the person sharing/i);
-    await waitFor(() => expect(sharerBar().getByLabelText("Send quality")).toHaveValue("1080p"));
+    await waitFor(() => expect(tickedQuality()).toBe("1080p"));
     expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
     expect(localStorage.getItem("xove.share.quality")).not.toBe("480p");
   });
@@ -526,7 +544,7 @@ describe("room: changing the stream while sharing", () => {
     const user = await readyRoom();
     await startSharing(user);
     const local = lastRoom().localParticipant;
-    await user.selectOptions(sharerBar().getByLabelText("Send quality"), "720p");
+    await pickInMenu(user, "720p");
     await waitFor(() => expect(myLiveStream(server)?.settings.quality).toBe("720p"));
 
     await user.click(within(controls()).getByRole("button", { name: /stop sharing/i }));
@@ -632,13 +650,15 @@ describe("room: the viewer's quality and volume", () => {
     expect(within(stage()).getByLabelText("Quality")).toHaveValue("720p");
   });
 
-  it("shows the sharer their own settings instead of the viewer's bar", async () => {
+  it("gives the sharer's own player no viewer's bar and no settings: those are in the button's menu", async () => {
     installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
 
     expect(within(stage()).queryByRole("button", { name: "Mute" })).not.toBeInTheDocument();
-    expect(within(stage()).getByLabelText("Send quality")).toBeInTheDocument();
+    expect(within(stage()).queryByLabelText("Send quality")).not.toBeInTheDocument();
+    expect(within(stage()).queryByLabelText("Mode")).not.toBeInTheDocument();
+    expect(within(stage()).queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
 
@@ -844,16 +864,16 @@ describe("room: quick changes while sharing", () => {
     const user = await readyRoom();
     await startSharing(user);
     const video = lastRoom().localParticipant.screens[0].track;
-    const select = sharerBar().getByLabelText("Send quality");
+    const menu = await openMenu(user);
 
-    fireEvent.change(select, { target: { value: "720p" } });
-    fireEvent.change(select, { target: { value: "480p" } });
+    fireEvent.click(menu.getByRole("menuitemradio", { name: "720p" }));
+    fireEvent.click(menu.getByRole("menuitemradio", { name: "480p" }));
 
     await waitFor(() => expect(myLiveStream(server)?.settings.quality).toBe("480p"));
     const sent = server.calls.filter((c) => c.path === "/api/streams/screen/settings").map((c) => (c.body as { quality: string }).quality);
     expect(sent).toEqual(["720p", "480p"]);
     expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
-    expect(select).toHaveValue("480p");
+    expect(tickedQuality()).toBe("480p");
   });
 });
 
@@ -1355,7 +1375,7 @@ describe("room: whose sound plays", () => {
 describe("room: my settings for each of my streams", () => {
   afterEach(() => localStorage.clear());
 
-  it("changes the camera's quality live from my player, apart from the screen's", async () => {
+  it("changes the camera's quality live from its menu, apart from the screen's", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
@@ -1365,14 +1385,15 @@ describe("room: my settings for each of my streams", () => {
     await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
     const camera = lastRoom().localParticipant.lastCamera!;
 
-    const cameraQuality = within(stage()).getByLabelText("Camera quality") as HTMLSelectElement;
-    expect([...cameraQuality.options].map((o) => o.value)).toEqual(["720p", "480p"]);
-    await user.selectOptions(cameraQuality, "480p");
+    const menu = await openMenu(user, "Camera");
+    expect(menu.queryByRole("menuitemradio", { name: "1080p" })).not.toBeInTheDocument();
+    await pickInMenu(user, "480p", "Camera");
 
     await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
     expect(camera.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
     expect(myLiveStream(server, "screen")?.settings.quality).toBe("1080p");
-    expect(within(stage()).getByLabelText("Send quality")).toHaveValue("1080p");
+    await openMenu(user, "Screen");
+    expect(tickedQuality()).toBe("1080p");
     expect(localStorage.getItem("xove.camera.quality")).toBe("480p");
   });
 });
@@ -1432,11 +1453,13 @@ describe("room: after the review", () => {
       body: { status: 409, detail: "Only the person sharing can change how their stream is sent." },
     });
 
-    fireEvent.change(within(stage()).getByLabelText("Send quality"), { target: { value: "480p" } });
-    fireEvent.change(within(stage()).getByLabelText("Camera quality"), { target: { value: "480p" } });
+    // Both changes go out before either answer comes back.
+    fireEvent.click((await openMenu(user, "Screen")).getByRole("menuitemradio", { name: "480p" }));
+    fireEvent.click((await openMenu(user, "Camera")).getByRole("menuitemradio", { name: "480p" }));
 
     await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
-    await waitFor(() => expect(within(stage()).getByLabelText("Send quality")).toHaveValue("1080p"));
+    await openMenu(user, "Screen");
+    await waitFor(() => expect(tickedQuality()).toBe("1080p"));
     expect(lastRoom().localParticipant.screens[0].track.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
   });
 

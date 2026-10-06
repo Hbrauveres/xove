@@ -64,18 +64,6 @@
   z-index: 1;
 }
 
-/* The sharer's settings, in the same place as the viewer's bar. */
-.bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(8, 10, 14, 0.72);
-  backdrop-filter: blur(6px);
-  pointer-events: auto;
-}
-
 /* Labels and bars over the video fade when the mouse stops, like YouTube. */
 .player {
   transition: opacity 0.25s ease;

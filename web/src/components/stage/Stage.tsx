@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import { stagePick } from "../../media/stagePick";
-import type { ConnectionState, LiveFeed, Sharer, StreamKind } from "../../types";
-import { ShareSettingsFields } from "../share/ShareSettingsFields";
+import type { ConnectionState, LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { PlayerControls } from "./PlayerControls";
@@ -33,7 +32,6 @@ const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared sc
 
 /** The 16:9 area where the big stream plays. */
 export function Stage({ sharers, connection, controls }: Props) {
-  const { prefs, onPrefsChange } = controls;
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -145,26 +143,8 @@ export function Stage({ sharers, connection, controls }: Props) {
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
     const content = big.isMe ? (
       main.local ? (
-        <>
-          <ScreenVideo video={main.local} label={`Your ${what(main)}`} />
-          <div className={styles.player}>
-            <div className={styles.bar}>
-              {/* My quality and mode for each of my streams: the screen's first. */}
-              {(["screen", "camera"] as StreamKind[])
-                .filter((kind) => big[kind])
-                .map((kind) => (
-                  <ShareSettingsFields
-                    key={kind}
-                    kind={kind}
-                    name={kind === "camera" && big.screen ? "Camera" : undefined}
-                    prefs={prefs[kind]}
-                    onChange={(next) => onPrefsChange(kind, next)}
-                    look="bar"
-                  />
-                ))}
-            </div>
-          </div>
-        </>
+        // My quality and mode are in my buttons' menus (spec 0098).
+        <ScreenVideo video={main.local} label={`Your ${what(main)}`} />
       ) : (
         <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
       )
