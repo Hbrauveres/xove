@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadWatchPrefs, saveWatchPrefs, type SharePrefs, type WatchPrefs } from "../../media/preferences";
+import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import { stagePick } from "../../media/stagePick";
 import type { ConnectionState, LiveFeed, Sharer, StreamKind } from "../../types";
@@ -10,6 +10,7 @@ import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
+import { StreamButtons, type StreamControls } from "./StreamButtons";
 import { MUTED, Thumbnails, type ThumbnailSound } from "./Thumbnails";
 import styles from "./Stage.module.css";
 
@@ -17,10 +18,8 @@ type Props = {
   /** Everyone with a live stream, the longest sharing first. */
   sharers: Sharer[];
   connection: ConnectionState;
-  onStartSharing: () => void;
-  /** My own quality and mode for each of my streams, changed from my player's bar. */
-  prefs: Record<StreamKind, SharePrefs>;
-  onPrefsChange: (kind: StreamKind, prefs: SharePrefs) => void;
+  /** My screen and camera: the round buttons over the bottom of the stage (spec 0098). */
+  controls: StreamControls;
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -33,7 +32,8 @@ const canSetVolume = () =>
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** The 16:9 area where the big stream plays. */
-export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChange }: Props) {
+export function Stage({ sharers, connection, controls }: Props) {
+  const { prefs, onPrefsChange } = controls;
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -66,8 +66,9 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   // (or after a tap), and fade when it stops, like YouTube.
   const [chromeShown, setChromeShown] = useState(false);
   const idleTimer = useRef<number | undefined>(undefined);
-  // Nothing fades while a control has the keyboard focus.
-  const focusInside = () => frameRef.current?.contains(document.activeElement) ?? false;
+  // Nothing fades while a control has the keyboard focus, or a stream's menu is open.
+  const menuOpen = useRef(false);
+  const focusInside = () => menuOpen.current || (frameRef.current?.contains(document.activeElement) ?? false);
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
@@ -83,6 +84,13 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
     window.clearTimeout(idleTimer.current);
     setChromeShown(false);
   }, []);
+  const onMenuChange = useCallback(
+    (open: boolean) => {
+      menuOpen.current = open;
+      if (open) showChrome();
+    },
+    [showChrome],
+  );
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -131,7 +139,7 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   };
 
   const body = () => {
-    if (!big || !main) return <EmptyStage onStartSharing={onStartSharing} />;
+    if (!big || !main) return <EmptyStage />;
 
     // My own stream as everyone sees it, without its sound (it would echo). Sharing
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
@@ -222,6 +230,11 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
         onFocus={showChrome}
       >
         {body()}
+
+        {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
+        <div className={styles.controls}>
+          <StreamButtons {...controls} onMenuChange={onMenuChange} />
+        </div>
 
         {connection === "reconnecting" && (
           <div className={styles.reconnecting} role="status">

@@ -57,6 +57,9 @@ export type ScreenCaptureRequest = DisplayMediaStreamOptions & {
   windowAudio: "exclude" | "window" | "system";
 };
 
+/** Phones and some browsers can't share a screen at all (spec 0098). */
+export const canShareScreen = () => typeof navigator.mediaDevices?.getDisplayMedia === "function";
+
 const isSafari = () => /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
 
 /**

@@ -94,3 +94,40 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* My screen and camera buttons (spec 0098): over the bottom centre, fading with the bars. */
+.controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.frame[data-chrome="hidden"] .controls {
+  opacity: 0;
+}
+
+.frame[data-chrome="hidden"] .controls button {
+  pointer-events: none;
+}
+
+.frame[data-chrome="hidden"]:focus-within .controls {
+  opacity: 1;
+}
+
+.frame[data-chrome="hidden"]:focus-within .controls button {
+  pointer-events: auto;
+}
+
+/* On a narrow stage, the buttons sit above the viewer's bar instead of beside it. */
+@media (max-width: 640px) {
+  .controls {
+    bottom: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controls {
+    transition: none;
+  }
+}

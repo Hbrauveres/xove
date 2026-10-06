@@ -34,6 +34,9 @@ type Props = {
   onMenuChange?: (open: boolean) => void;
 };
 
+/** What the stage passes on to the buttons: everything but the menu's state. */
+export type StreamControls = Omit<Props, "onMenuChange">;
+
 const LABEL: Record<StreamKind, { start: string; stop: string; options: string }> = {
   screen: {
     start: "Share your screen",

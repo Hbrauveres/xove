@@ -23,7 +23,8 @@ function renderRoom() {
   );
 }
 
-const controls = () => screen.getByRole("region", { name: /screen sharing/i });
+// My screen and camera buttons sit on the stage (spec 0098).
+const controls = () => screen.getByRole("region", { name: /shared screen/i });
 const connected = () => screen.findByText("Connected");
 const stage = () => screen.getByRole("region", { name: /shared screen/i });
 
@@ -138,7 +139,7 @@ type User = ReturnType<typeof userEvent.setup>;
 const setupWindow = () => screen.findByRole("dialog", { name: /start sharing/i });
 
 /** Clicks "Share my screen": the browser's picker, then the setup window. */
-async function pickScreen(user: User, button: RegExp = /share my screen/i) {
+async function pickScreen(user: User, button: RegExp = /share your screen/i) {
   await user.click(within(controls()).getByRole("button", { name: button }));
   return setupWindow();
 }
@@ -219,7 +220,7 @@ describe("room: sharing", () => {
     const user = await readyRoom();
     lastRoom().localParticipant.nextPicker = "cancel";
 
-    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText(/nobody is sharing right now/i)).toBeInTheDocument();
@@ -232,7 +233,7 @@ describe("room: sharing", () => {
     const user = await readyRoom();
     lastRoom().localParticipant.nextPicker = "no-video";
 
-    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
 
     expect(await screen.findByText("Couldn't start sharing your screen.")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -245,7 +246,7 @@ describe("room: sharing", () => {
     const devices = Object.getOwnPropertyDescriptor(navigator, "mediaDevices")!;
     Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {} });
     try {
-      await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+      await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
 
       expect(await screen.findByText("Couldn't start sharing your screen.")).toBeInTheDocument();
       expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
@@ -276,7 +277,7 @@ describe("room: sharing", () => {
     await screen.findByText("Bruno is sharing");
     const user = userEvent.setup();
 
-    await user.click(within(controls()).getByRole("button", { name: /share my screen/i }));
+    await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
     const setup = await setupWindow();
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
 
@@ -319,15 +320,19 @@ describe("room: sharing", () => {
     renderRoom();
     await connected();
 
-    expect(await within(controls()).findByText(/6 streams are live/i)).toBeInTheDocument();
-    expect(within(controls()).getByRole("button", { name: /share my screen/i })).toBeDisabled();
-    expect(within(controls()).getByRole("button", { name: /turn on camera/i })).toBeDisabled();
+    // Greyed out, still focusable, with the reason in their tooltip.
+    const share = within(controls()).getByRole("button", { name: /share your screen/i });
+    await waitFor(() => expect(share).toHaveAttribute("aria-disabled", "true"));
+    expect(share).toHaveAccessibleDescription(expect.stringMatching(/6 streams are live/i));
+    expect(within(controls()).getByRole("button", { name: /turn on camera/i })).toHaveAttribute("aria-disabled", "true");
 
     act(() => {
       server.streams = server.streams.slice(1);
     });
 
-    await waitFor(() => expect(within(controls()).getByRole("button", { name: /share my screen/i })).toBeEnabled());
+    await waitFor(() =>
+      expect(within(controls()).getByRole("button", { name: /share your screen/i })).not.toHaveAttribute("aria-disabled"),
+    );
   });
 
   // Every deploy restarts the API, which forgets the streams: mine is registered again.
@@ -717,6 +722,49 @@ describe("room: the player's labels and bars", () => {
   });
 });
 
+describe("room: my screen and camera buttons on the player (spec 0098)", () => {
+  it("has no bar under the player: the buttons are on the stage, and never fade over an empty one", async () => {
+    installFakeApi({ me: member });
+    await readyRoom();
+
+    expect(screen.queryByRole("region", { name: /screen sharing/i })).not.toBeInTheDocument();
+    const share = within(stage()).getByRole("button", { name: "Share your screen" });
+    expect(within(stage()).getByRole("button", { name: "Turn on camera" })).toBeInTheDocument();
+    expect(share.closest("[data-chrome]")).toBeNull();
+    expect(screen.queryByRole("button", { name: /share my screen/i })).not.toBeInTheDocument();
+  });
+
+  it("fade with the player's bars over a stream", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const frame = (await screen.findByLabelText("Bruno's shared screen")).closest("[data-chrome]")!;
+
+    expect(frame).toContainElement(within(stage()).getByRole("button", { name: "Share your screen" }));
+    expect(frame).toHaveAttribute("data-chrome", "hidden");
+    fireEvent.pointerMove(frame);
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+  });
+
+  it("stay while a stream's menu is open", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    const frame = (await screen.findByLabelText("Your shared screen")).closest("[data-chrome]")!;
+
+    await user.click(within(stage()).getByRole("button", { name: "Screen options" }));
+    (document.activeElement as HTMLElement).blur();
+    fireEvent.pointerLeave(frame);
+
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+    expect(screen.getByRole("menu", { name: "Screen options" })).toBeInTheDocument();
+  });
+});
+
 describe("room: the player on touch screens and keyboards", () => {
   const watchBruno = async () => {
     const server = installFakeApi({ me: member });
@@ -813,7 +861,7 @@ describe("room: the setup window and the keyboard", () => {
   it("keeps the focus inside while open, and gives it back when closed", async () => {
     installFakeApi({ me: member });
     const user = await readyRoom();
-    const shareButton = within(controls()).getByRole("button", { name: /share my screen/i });
+    const shareButton = within(controls()).getByRole("button", { name: /share your screen/i });
     await user.click(shareButton);
     const setup = await setupWindow();
 
@@ -826,7 +874,7 @@ describe("room: the setup window and the keyboard", () => {
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(within(controls()).getByRole("button", { name: /share my screen/i })).toHaveFocus();
+    expect(within(controls()).getByRole("button", { name: /share your screen/i })).toHaveFocus();
   });
 });
 
