@@ -33,7 +33,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `PlayerControls` takes `hasSound` (locked, muted, the saved volume kept); thumbnails show a disabled "shares no sound" speaker. The fake gained `publishSound`. 2 tests.
 - [x] **T8** Fullscreen toggles, following `fullscreenchange`; named "Fullscreen" or "Exit fullscreen" · covers FR-18 · verify: `Stage.test.tsx`
   - Done: the stage follows `fullscreenchange` and the button enters or leaves; its icon and name follow. Tested in `RoomPage.test.tsx` (1 test).
-- [ ] **T9** Thumbnails centred under the player (`safe center`), and the hover and focus ring drawn inside each thumbnail · covers FR-19, FR-20 · verify: `npm run build`; manual on staging (T11)
+- [x] **T9** Thumbnails centred under the player (`safe center`), and the hover and focus ring drawn inside each thumbnail · covers FR-19, FR-20 · verify: `npm run build`; manual on staging (T11)
+  - Done: `justify-content: safe center` on the row; the 1px line and the 2px hover and focus ring are an inset shadow over each thumbnail's video.
 
 ## Docs and review
 
