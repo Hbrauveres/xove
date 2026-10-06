@@ -206,6 +206,10 @@ export class Room {
     nextPickerAudio: true,
     /** Tests set this to "cancel" to play someone closing the browser's picker, "no-video" for a capture without a screen. */
     nextPicker: "share" as "share" | "cancel" | "no-video",
+    /** Tests set this to play something happening while the picker is open. */
+    duringPicker: undefined as (() => void) | undefined,
+    /** The browser tracks the last pick gave. */
+    lastPicked: [] as FakeMediaStreamTrack[],
     /** The last screen captured (whether it was published or not). */
     lastCapture: [] as FakeLocalTrack[],
     getTrackPublication: (source: string) => {
@@ -234,6 +238,8 @@ export class Room {
       local.lastCapture = [];
       const video = local.nextPicker === "no-video" ? [] : [new FakeMediaStreamTrack()];
       const audio = local.nextPickerAudio ? [new FakeMediaStreamTrack()] : [];
+      local.lastPicked = [...video, ...audio];
+      local.duringPicker?.();
       return { getVideoTracks: () => video, getAudioTracks: () => audio, getTracks: () => [...video, ...audio] };
     }),
     publishTrack: vi.fn(async (track: FakeLocalTrack, options?: unknown) => {

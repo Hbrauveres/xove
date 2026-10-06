@@ -370,7 +370,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     changeScreen: () => void changeScreen(),
     cameras: lk.cameras,
     cameraId: lk.cameraId,
-    pickCamera: (deviceId: string) => void lk.pickCamera(deviceId),
+    pickCamera: (deviceId: string) => void lk.pickCamera(deviceId, prefs.camera),
     // Only while my screen is actually going out.
     noSound: noSound && myLive.screen && lk.publishing.screen,
     seated,

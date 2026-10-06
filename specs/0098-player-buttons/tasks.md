@@ -39,13 +39,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 ## Docs and review
 
 - [x] **T10** Docs: the controls on the player in `docs/architecture.md` and `docs/overview.md`; decision 34 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
-  - Done: architecture (buttons, menus, change window, camera list, no-sound lock, centred thumbnails), overview, decision 34, web 192 tests.
+  - Done: architecture (buttons, menus, change window, camera list, no-sound lock, centred thumbnails), overview, decision 34, web 199 tests.
 - [ ] **T11** Review every AC (`/review`), fix what it finds, open the PR with `Closes #98`. Then on staging after merge, written in the PR (Henrique, Chrome):
   - "Change window" during a share: viewers see the new window without a break, sound follows (AC-5);
   - switching between two webcams while live (AC-6);
   - looks like the preview, readable menus, fullscreen in and out with the button (AC-14);
   - thumbnails centred, the ring whole on the first, middle and last one (AC-15).
   - · verify: no gaps left; every check written in the PR
+  - Review done: no AC uncovered. Fixed what it found: a "Change window" racing a stop (the new pick stopped), a failed camera switch (back to the previous camera, or stopped; not remembered), the camera's mode after a switch, the menus waiting while busy, named groups for screen readers, a menu reopening by itself, the buttons over the viewer's bar at mid widths (a container query), and no sound lock on cameras. 7 tests. The staging checks are Henrique's, after merge.
 
 ## Coverage
 

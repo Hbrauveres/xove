@@ -55,7 +55,7 @@ export function Thumbnails({ sharers, onPick, sound, onSoundChange, canSetVolume
             </button>
 
             {/* Without sound: shown muted, and nothing to unmute (spec 0098). */}
-            {!s.isMe && !s.hasSound && (
+            {!s.isMe && s.screen && !s.hasSound && (
               <div className={styles.sound}>
                 <button type="button" className={styles.icon} aria-label={`${name} shares no sound`} disabled>
                   <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">

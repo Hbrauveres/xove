@@ -178,7 +178,8 @@ export function Stage({ sharers, connection, controls }: Props) {
             prefs={watch}
             onChange={changeWatch}
             canSetVolume={canSetVolume()}
-            hasSound={Boolean(big.hasSound)}
+            // Only a screen can be shared without sound; a camera never has any to lock.
+            hasSound={!big.screen || Boolean(big.hasSound)}
           />
         </div>
       </>

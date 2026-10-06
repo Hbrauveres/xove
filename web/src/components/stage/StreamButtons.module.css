@@ -205,6 +205,11 @@
   background: radial-gradient(circle, var(--tally-ink) 0 3px, transparent 4px);
 }
 
+.item[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: progress;
+}
+
 .danger {
   color: #ff7a7a;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { SharePrefs } from "../../media/preferences";
 import { CAMERA_QUALITIES, SHARE_QUALITIES } from "../../media/shareSettings";
 import type { CameraDevice, StreamKind } from "../../types";
@@ -58,8 +58,10 @@ export function StreamButtons(props: Props) {
   const { mine, canShareScreen, onMenuChange } = props;
   const [picked, setPicked] = useState<StreamKind | null>(null);
   const root = useRef<HTMLDivElement>(null);
-  // A stream that stops closes its menu.
-  const open = picked !== null && mine[picked] ? picked : null;
+  // A stream that stops closes its menu, for good: it doesn't reopen when the stream
+  // comes back (set while rendering, React's way to follow a changed prop).
+  if (picked !== null && !mine[picked]) setPicked(null);
+  const open = picked;
   const show = (kind: StreamKind | null) => setPicked(kind);
 
   // The player keeps its controls shown while a menu is open.
@@ -118,6 +120,7 @@ function StreamButton({
   const tip = full ? FULL_ROOM : silent ? `${label}. ${NO_SOUND}` : label;
   const tipId = useId();
   const menuId = useId();
+  const noteId = useId();
   const arrow = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
 
@@ -214,23 +217,41 @@ function StreamButton({
           className={styles.menu}
           onKeyDown={onMenuKey}
         >
-          <p className={styles.heading}>Quality</p>
-          {qualities.map((q) => (
-            <MenuRadio key={q.id} checked={prefs[kind].quality === q.id} onSelect={() => set({ quality: q.id })}>
-              {q.id}
-            </MenuRadio>
-          ))}
-          <p className={styles.heading}>Mode</p>
-          {MODES.map((m) => (
-            <MenuRadio key={m.id} checked={prefs[kind].mode === m.id} onSelect={() => set({ mode: m.id })}>
-              {m.label}
-            </MenuRadio>
-          ))}
+          <MenuGroup label="Quality">
+            {qualities.map((q) => (
+              <MenuRadio
+                key={q.id}
+                checked={prefs[kind].quality === q.id}
+                busy={busy}
+                onSelect={() => set({ quality: q.id })}
+              >
+                {q.id}
+              </MenuRadio>
+            ))}
+          </MenuGroup>
+          <MenuGroup label="Mode">
+            {MODES.map((m) => (
+              <MenuRadio
+                key={m.id}
+                checked={prefs[kind].mode === m.id}
+                busy={busy}
+                onSelect={() => set({ mode: m.id })}
+              >
+                {m.label}
+              </MenuRadio>
+            ))}
+          </MenuGroup>
           <hr className={styles.separator} />
           {kind === "screen" ? (
             <>
-              {silent && <p className={styles.note}>{NO_SOUND}</p>}
+              {silent && (
+                <p id={noteId} className={styles.note} aria-hidden="true">
+                  {NO_SOUND}
+                </p>
+              )}
               <MenuItem
+                busy={busy}
+                describedBy={silent ? noteId : undefined}
                 onSelect={() => {
                   onOpen(false);
                   onChangeWindow();
@@ -242,18 +263,25 @@ function StreamButton({
           ) : (
             cameras.length > 0 && (
               <>
-                <p className={styles.heading}>Camera</p>
-                {cameras.map((c) => (
-                  <MenuRadio key={c.deviceId} checked={camera === c.deviceId} onSelect={() => onPickCamera(c.deviceId)}>
-                    {c.label}
-                  </MenuRadio>
-                ))}
+                <MenuGroup label="Camera">
+                  {cameras.map((c) => (
+                    <MenuRadio
+                      key={c.deviceId}
+                      checked={camera === c.deviceId}
+                      busy={busy}
+                      onSelect={() => onPickCamera(c.deviceId)}
+                    >
+                      {c.label}
+                    </MenuRadio>
+                  ))}
+                </MenuGroup>
                 <hr className={styles.separator} />
               </>
             )
           )}
           <MenuItem
             danger
+            busy={busy}
             onSelect={() => {
               onOpen(false);
               onStop(kind);
@@ -267,15 +295,31 @@ function StreamButton({
   );
 }
 
-function MenuRadio({ checked, onSelect, children }: { checked: boolean; onSelect: () => void; children: string }) {
+/** One set of choices in a menu, named for screen readers ("Quality", "Mode", "Camera"). */
+function MenuGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div role="group" aria-label={label}>
+      <p className={styles.heading} aria-hidden="true">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+type ItemProps = { busy: boolean; onSelect: () => void; children: string };
+
+/** While a start, change or stop is on its way, the items wait too (FR-14). */
+function MenuRadio({ checked, busy, onSelect, children }: ItemProps & { checked: boolean }) {
   return (
     <button
       type="button"
       role="menuitemradio"
       aria-checked={checked}
+      aria-disabled={busy || undefined}
       tabIndex={-1}
       className={styles.item}
-      onClick={onSelect}
+      onClick={() => !busy && onSelect()}
     >
       {children}
     </button>
@@ -284,20 +328,20 @@ function MenuRadio({ checked, onSelect, children }: { checked: boolean; onSelect
 
 function MenuItem({
   danger = false,
+  busy,
+  describedBy,
   onSelect,
   children,
-}: {
-  danger?: boolean;
-  onSelect: () => void;
-  children: string;
-}) {
+}: ItemProps & { danger?: boolean; describedBy?: string }) {
   return (
     <button
       type="button"
       role="menuitem"
+      aria-disabled={busy || undefined}
+      aria-describedby={describedBy}
       tabIndex={-1}
       className={`${styles.item} ${danger ? styles.danger : ""}`}
-      onClick={onSelect}
+      onClick={() => !busy && onSelect()}
     >
       {children}
     </button>

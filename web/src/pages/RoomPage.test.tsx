@@ -782,6 +782,12 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
 
     expect(frame).toHaveAttribute("data-chrome", "shown");
     expect(screen.getByRole("menu", { name: "Screen options" })).toBeInTheDocument();
+
+    // Past the time the bars would fade: still shown while the menu is open.
+    fireEvent.pointerMove(frame);
+    (document.activeElement as HTMLElement).blur();
+    await new Promise((resolve) => setTimeout(resolve, 2700));
+    expect(frame).toHaveAttribute("data-chrome", "shown");
   });
 });
 
@@ -1474,6 +1480,24 @@ describe("room: whose sound plays", () => {
     expect(within(stage()).getByLabelText("Volume")).toHaveValue("0.6");
     expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
     localStorage.clear();
+  });
+
+  it("doesn't lock a camera's volume: a camera never has sound to share", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "camera", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "camera", undefined, minutesAgo(5)),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishCamera("user-3");
+      lastRoom().publishCamera("user-7");
+    });
+    await screen.findByLabelText("Ana's camera");
+
+    expect(within(stage()).queryByRole("button", { name: "No sound in this stream" })).not.toBeInTheDocument();
+    expect(within(thumbnails()).queryByRole("button", { name: /shares no sound/i })).not.toBeInTheDocument();
   });
 
   it("plays a thumbnail's sound too when it's unmuted, at its own volume", async () => {

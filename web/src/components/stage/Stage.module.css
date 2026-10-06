@@ -4,6 +4,8 @@
 
 .frame {
   position: relative;
+  /* Its own width decides where the buttons go (below), not the window's. */
+  container-type: inline-size;
   width: 100%;
   max-width: 100%;
   aspect-ratio: 16 / 9;
@@ -107,8 +109,11 @@
   pointer-events: auto;
 }
 
-/* On a narrow stage, the buttons sit above the viewer's bar instead of beside it. */
-@media (max-width: 640px) {
+/*
+ * The viewer's bar (about 300px, on the left) and the centred buttons meet below about
+ * 800px of stage: there, the buttons sit above the bar instead of over it.
+ */
+@container (max-width: 800px) {
   .controls {
     bottom: 52px;
   }

@@ -118,7 +118,7 @@ export type LiveKitRoom = {
   cameras: CameraDevice[];
   cameraId: string | null;
   /** Switches the camera being sent to another one, without stopping it; remembered for next time. */
-  pickCamera: (deviceId: string) => Promise<void>;
+  pickCamera: (deviceId: string, prefs: SharePrefs) => Promise<void>;
 };
 
 const CONNECTION: Record<LkState, ConnectionState> = {
@@ -391,15 +391,24 @@ export function useLiveKitRoom(): LiveKitRoom {
       }
       const [screen] = stream.getVideoTracks();
       const [sound] = stream.getAudioTracks();
+      const drop = () => stream.getTracks().forEach((t) => t.stop());
       if (!screen) {
-        stream.getTracks().forEach((t) => t.stop());
+        drop();
         setError("Couldn't change what you share.");
         return null;
       }
+      // The share may have stopped while the picker was open (its own browser bar):
+      // then there's nothing to swap into, and the new pick must not keep capturing.
+      if (me.getTrackPublication(Track.Source.ScreenShare)?.track !== video) {
+        drop();
+        return null;
+      }
+      let swapped = false;
       try {
         screen.contentHint = contentHintOf(prefs.mode);
         // Not provided by us: LiveKit stops the old capture and watches the new one's end.
         await video.replaceTrack(screen, { userProvidedTrack: false });
+        swapped = true;
         await applySettings("screen", prefs);
         // The sound follows the new pick. Sound tracks aren't streams, so the API sees no change.
         const before = me.getTrackPublication(Track.Source.ScreenShareAudio)?.track as LocalAudioTrack | undefined;
@@ -415,7 +424,10 @@ export function useLiveKitRoom(): LiveKitRoom {
         sync();
         return { hasSound: sound !== undefined };
       } catch {
-        sound?.stop();
+        // Before the swap, nothing of the new pick is sent: stop all of it. After, the
+        // screen is LiveKit's; only a sound that didn't make it goes.
+        if (swapped) sound?.stop();
+        else drop();
         setError("Couldn't change what you share.");
         sync();
         return null;
@@ -455,24 +467,42 @@ export function useLiveKitRoom(): LiveKitRoom {
   const sentCamera = (local.camera as LocalVideoTrack | undefined)?.mediaStreamTrack?.getSettings?.().deviceId;
 
   const pickCamera = useCallback(
-    async (deviceId: string) => {
+    async (deviceId: string, prefs: SharePrefs) => {
       const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as
         | LocalVideoTrack
         | undefined;
-      saveCameraDevice(deviceId);
-      setCameraId(deviceId);
-      if (!track) return;
-      try {
-        setError(null);
-        // The same published camera, on another device: no stop for viewers or the API.
-        await track.restartTrack({ ...cameraCaptureOptions(), deviceId: { exact: deviceId } });
-        watchCameraEnd(track);
-        sync();
-      } catch {
-        setError("Couldn't switch to that camera.");
+      if (!track) {
+        saveCameraDevice(deviceId);
+        setCameraId(deviceId);
+        return;
       }
+      const previous = track.mediaStreamTrack.getSettings().deviceId;
+      // The same published camera, on another device: no stop for viewers or the API.
+      // A new browser track needs the stream's mode again, and the watch for its end.
+      const restartOn = async (id: string) => {
+        await track.restartTrack({ ...cameraCaptureOptions(), deviceId: { exact: id } });
+        watchCameraEnd(track);
+        await applySettings("camera", prefs);
+      };
+      setError(null);
+      try {
+        await restartOn(deviceId);
+        saveCameraDevice(deviceId);
+        setCameraId(deviceId);
+      } catch {
+        // LiveKit stopped the old camera before asking for the new one: go back to it,
+        // or stop sending a camera that shows nothing.
+        setError("Couldn't switch to that camera.");
+        try {
+          if (!previous) throw new Error("no previous camera");
+          await restartOn(previous);
+        } catch {
+          await stop("camera");
+        }
+      }
+      sync();
     },
-    [sync, watchCameraEnd],
+    [sync, watchCameraEnd, applySettings, stop],
   );
 
   const connectionOf = useCallback((kind: StreamKind): SharingConnection | null => {

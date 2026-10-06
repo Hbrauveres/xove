@@ -24,7 +24,7 @@ function setup(props: Partial<Parameters<typeof StreamButtons>[0]> = {}) {
     onMenuChange: vi.fn(),
   };
   const user = userEvent.setup();
-  render(
+  const view = render(
     <StreamButtons
       mine={{ screen: false, camera: false }}
       free={6}
@@ -36,7 +36,21 @@ function setup(props: Partial<Parameters<typeof StreamButtons>[0]> = {}) {
       {...props}
     />,
   );
-  return { user, ...handlers };
+  const rerender = (next: Partial<Parameters<typeof StreamButtons>[0]>) =>
+    view.rerender(
+      <StreamButtons
+        mine={{ screen: false, camera: false }}
+        free={6}
+        prefs={PREFS}
+        cameras={CAMERAS}
+        camera="cam-1"
+        canShareScreen
+        {...handlers}
+        {...props}
+        {...next}
+      />,
+    );
+  return { user, rerender, ...handlers };
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -122,6 +136,30 @@ describe("stream buttons: the menus", () => {
     expect(onStop).toHaveBeenCalledWith("camera");
   });
 
+  it("names each set of choices for screen readers", async () => {
+    const { user } = setup({ mine: { screen: false, camera: true } });
+    await user.click(screen.getByRole("button", { name: "Camera options" }));
+
+    const names = (group: string) =>
+      within(screen.getByRole("group", { name: group }))
+        .getAllByRole("menuitemradio")
+        .map((i) => i.textContent);
+    expect(names("Quality")).toEqual(["720p", "480p"]);
+    expect(names("Mode")).toEqual(["Smooth (games, videos)", "Sharp (text, code)"]);
+    expect(names("Camera")).toEqual(["Logitech C920", "Integrated Webcam"]);
+  });
+
+  it("doesn't reopen by itself when its stream stops and starts again", async () => {
+    const { user, rerender } = setup({ mine: { screen: true, camera: false } });
+    await user.click(screen.getByRole("button", { name: "Screen options" }));
+
+    // Stopped from elsewhere (the browser's own bar), then started again.
+    rerender({ mine: { screen: false, camera: false } });
+    rerender({ mine: { screen: true, camera: false } });
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
   it("closes on a click outside", async () => {
     const { user } = setup({ mine: { screen: true, camera: false } });
     await user.click(screen.getByRole("button", { name: "Screen options" }));
@@ -146,10 +184,31 @@ describe("stream buttons: when they can't be used", () => {
     expect(onStop).toHaveBeenCalledWith("screen");
   });
 
-  it("waits while a request is on its way", async () => {
-    const { user, onStart } = setup({ busy: true });
-    await user.click(screen.getByRole("button", { name: "Share your screen" }));
+  it("waits while a request is on its way, in the menus too", async () => {
+    const { user, onStart, onStop, onChangeWindow, onPrefsChange, onPickCamera } = setup({
+      mine: { screen: true, camera: true },
+      busy: true,
+    });
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    expect(onStop).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Screen options" }));
+    for (const item of [
+      screen.getByRole("menuitemradio", { name: "720p" }),
+      screen.getByRole("menuitem", { name: "Change window" }),
+      screen.getByRole("menuitem", { name: "Stop sharing" }),
+    ]) {
+      expect(item).toHaveAttribute("aria-disabled", "true");
+      await user.click(item);
+    }
+    await user.click(screen.getByRole("button", { name: "Camera options" }));
+    await user.click(screen.getByRole("menuitemradio", { name: "Integrated Webcam" }));
+
     expect(onStart).not.toHaveBeenCalled();
+    expect(onStop).not.toHaveBeenCalled();
+    expect(onChangeWindow).not.toHaveBeenCalled();
+    expect(onPrefsChange).not.toHaveBeenCalled();
+    expect(onPickCamera).not.toHaveBeenCalled();
   });
 
   it("marks a screen shared without sound, and says how to share it", async () => {
@@ -161,6 +220,7 @@ describe("stream buttons: when they can't be used", () => {
     );
     await user.click(screen.getByRole("button", { name: "Screen options" }));
     expect(within(screen.getByRole("menu")).getByText(NO_SOUND)).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Change window" })).toHaveAccessibleDescription(NO_SOUND);
   });
 
   it("has no screen button where the browser can't share a screen", () => {

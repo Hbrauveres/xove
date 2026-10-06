@@ -99,6 +99,32 @@ describe("change window (spec 0098)", () => {
     expect(local.screens).toHaveLength(1);
   });
 
+  it("stops the new pick when the share ended while the picker was open", async () => {
+    const hook = await connected();
+    const local = await shareScreen(hook, true);
+    const video = local.screens[0].track as FakeLocalScreenTrack;
+    // The browser's own "Stop sharing" bar, used while the picker is open.
+    local.duringPicker = () => lastRoom().browserStopsMyShare();
+
+    expect(await change(hook)).toBeNull();
+
+    expect(video.replaceTrack).not.toHaveBeenCalled();
+    expect(local.lastPicked.length).toBeGreaterThan(0);
+    expect(local.lastPicked.every((t) => t.stopped)).toBe(true);
+  });
+
+  it("stops the new pick when the swap fails", async () => {
+    const hook = await connected();
+    const local = await shareScreen(hook, true);
+    const video = local.screens[0].track as FakeLocalScreenTrack;
+    video.replaceTrack.mockRejectedValueOnce(new Error("unable to replace an unpublished track"));
+
+    expect(await change(hook)).toBeNull();
+
+    expect(local.lastPicked.every((t) => t.stopped)).toBe(true);
+    expect(hook.result.current.error).toBe("Couldn't change what you share.");
+  });
+
   it("keeps the current share when the picker is closed", async () => {
     const hook = await connected();
     const local = await shareScreen(hook, true);
@@ -143,10 +169,12 @@ describe("pick a camera (spec 0098)", () => {
     const camera = (await cameraOn(hook)) as FakeLocalCameraTrack;
 
     await act(async () => {
-      await hook.result.current.pickCamera("cam-2");
+      await hook.result.current.pickCamera("cam-2", { quality: "720p", mode: "sharp" });
     });
 
     expect(camera.restartTrack).toHaveBeenCalledWith(expect.objectContaining({ deviceId: { exact: "cam-2" } }));
+    // The new browser track keeps the stream's mode.
+    expect(camera.mediaStreamTrack.contentHint).toBe("detail");
     expect(lastRoom().localParticipant.camera?.track).toBe(camera);
     expect(lastRoom().localParticipant.unpublishTrack).not.toHaveBeenCalled();
     expect(hook.result.current.cameraId).toBe("cam-2");
@@ -162,11 +190,39 @@ describe("pick a camera (spec 0098)", () => {
     );
   });
 
+  it("goes back to the previous camera when the new one fails, and doesn't remember it", async () => {
+    const hook = await connected();
+    const camera = (await cameraOn(hook)) as FakeLocalCameraTrack;
+    camera.restartTrack.mockRejectedValueOnce(new DOMException("Device in use", "NotReadableError"));
+
+    await act(async () => {
+      await hook.result.current.pickCamera("cam-2", { quality: "720p", mode: "smooth" });
+    });
+
+    expect(camera.restartTrack).toHaveBeenLastCalledWith(expect.objectContaining({ deviceId: { exact: "cam-1" } }));
+    expect(lastRoom().localParticipant.camera?.track).toBe(camera);
+    expect(hook.result.current.error).toBe("Couldn't switch to that camera.");
+    expect(localStorage.getItem("xove.camera.device")).toBeNull();
+    expect(hook.result.current.cameraId).toBe("cam-1");
+  });
+
+  it("stops the camera when neither the new one nor the old one comes back", async () => {
+    const hook = await connected();
+    const camera = (await cameraOn(hook)) as FakeLocalCameraTrack;
+    camera.restartTrack.mockRejectedValue(new DOMException("Device in use", "NotReadableError"));
+
+    await act(async () => {
+      await hook.result.current.pickCamera("cam-2", { quality: "720p", mode: "smooth" });
+    });
+
+    expect(lastRoom().localParticipant.camera).toBeNull();
+  });
+
   it("still stops the camera when a switched camera is unplugged", async () => {
     const hook = await connected();
     const camera = (await cameraOn(hook)) as FakeLocalCameraTrack;
     await act(async () => {
-      await hook.result.current.pickCamera("cam-2");
+      await hook.result.current.pickCamera("cam-2", { quality: "720p", mode: "sharp" });
     });
 
     await act(async () => {
