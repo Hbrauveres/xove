@@ -14,7 +14,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `RoundButton.module.css` and `PlayerMenu` (with its items); each menu now sits above its own button, no taller than the stage (`.frame` is a size container, `100cqh`). 4 tests.
 - [x] **T3** `VolumeButton`: round speaker (on, muted, crossed); click mutes or unmutes; a vertical slider (a rotated range input) eases in on pointer or focus and goes 150 ms after leaving; none while muted, without sound, or on iPhones; crossed, disabled and "No sound in this stream" without sound · covers FR-5, FR-6, FR-7, FR-11 · verify: `VolumeButton.test.tsx` (new)
   - Done: `VolumeButton` on the shared pill; the slider is a turned range input in a capsule that eases in and out (kept mounted, `inert` while closed), after the button in Tab order. 6 tests.
-- [ ] **T4** `WatchSettings`: a gear opening a `PlayerMenu` with "Quality": Auto and the offered qualities, the current one ticked, a pick reported · covers FR-8, FR-11 · verify: `WatchSettings.test.tsx` (new)
+- [x] **T4** `WatchSettings`: a gear opening a `PlayerMenu` with "Quality": Auto and the offered qualities, the current one ticked, a pick reported · covers FR-8, FR-11 · verify: `WatchSettings.test.tsx` (new)
+  - Done: `WatchSettings`, a gear on the shared pill with a `PlayerMenu`; a pick closes it and gives the focus back to the gear. 5 tests.
 
 ## Wiring
 
