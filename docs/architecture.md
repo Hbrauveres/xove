@@ -135,16 +135,24 @@ sequenceDiagram
 
 - **The page** ([spec 0104](../specs/0104-room-theater/spec.md), the look in [its design](../specs/0104-room-theater/design.html)) is theater mode:
   - **Header and footer:** full width and see-through. The header holds the logo, the activity pill, the people button and the account button (connection dot; name, role and connection, ambilight, Admin, Sign out). The footer is plain text.
-  - **The middle:** a size container. Its one column is as wide as the stage can be at 16:9, so the stage and the info row under it share their edges.
+  - **The middle:** a size container. Its one column is the 16:9 box: as big as the window allows at 16:9, and the info row under it is exactly that wide.
+  - **The stage hugs the picture** ([spec 0107](../specs/0107-stage-hug/spec.md), [its design](../specs/0107-stage-hug/design.html)):
+    - `useVideoShape` reads the big video's width ÷ height, following its `resize` event and ignoring changes under 1%;
+    - the stage's box sizes itself from it in container units, inside the 16:9 box: a wider picture keeps the full width and gets shorter, a taller one keeps the full height and gets narrower, centred. No black bars.
+    - Empty and loading stages are 16:9; fullscreen keeps its bars.
   - **Dropdowns** (`components/ui/Dropdown.tsx`): frosted sections with 2 px clear cuts. They unroll by their height, since a clip or fade would stop the blur. One opens at a time.
 - **Ambilight** (`media/ambilight.ts`, `stage/Ambilight.tsx`):
-  - the big video is read into a 64×36 frame about 12 times a second (2 with reduced motion), only while the tab is visible and the video plays;
-  - its edges give 200 LEDs, eased towards their new colours;
+  - the big video is read into a small frame about 12 times a second (2 with reduced motion), only while the tab is visible and the video plays. Its grid follows the stage's shape with square cells (`gridFor`): 64×36 at 16:9, 36×64 for a portrait picture, at most 96 along the longer side, so the glow reaches as far on every side;
+  - its edges give the LEDs (200 at 16:9), eased towards their new colours;
   - they're painted as fading strips into a small canvas, blurred 3 px at that size, which the page only stretches past the frame. No blur at screen size, so a 4K monitor costs the same.
   - On and brightness are saved in the browser (`xove.ambilight.*`).
 - **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
 - **Who watches what:** each browser reports what's on its stage (`PUT /api/streams/watching`), once it has been still for a second, and again when a poll shows the API lost it. The streams poll returns everyone's, for the people panel.
-- **The info row:** who is on the stage (LIVE, what, how long), then "Also live · N of 6" with the other streams as previews and the places left. A preview shows their screen, or their camera when that's all they share.
+- **The info row** (spec 0107): both sides centred on one line.
+  - **Left:** who is on the stage (the avatar's ring drawn inside it, a filled LIVE badge, what, how long), and who's watching: up to 4 avatars and "N watching", me included, never the sharer.
+  - **Empty stage:** "The stage is yours." with who's here.
+  - **Right:** the other streams as previews, then a dashed box with "N of 6 live" and the places left, gone when all 6 are live. A preview shows their screen, or their camera when that's all they share.
+  - **When room runs short:** the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
 - **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
 - **Sound:** the big person's plays. Previews are muted, each with its own speaker and a horizontal volume slider; a muted preview's sound isn't downloaded at all. A preview without sound has no speaker.
 - **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so previews and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.

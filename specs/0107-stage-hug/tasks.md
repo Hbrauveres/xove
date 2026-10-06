@@ -52,11 +52,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs
 
-- [ ] **T7** Docs:
+- [x] **T7** Docs:
   - `docs/architecture.md` and `docs/overview.md`: the stage's shape, the light's grid, the info row;
   - `docs/decisions.md`: decision 37;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new behaviour
+  - Done: architecture (the stage's shape, the light's grid, the info row), overview, decision 37, web 304.
 
 ## Review
 
