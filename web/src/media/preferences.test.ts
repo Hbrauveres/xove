@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  loadAmbilight,
   loadCameraDevice,
   loadCameraPrefs,
   loadSharePrefs,
   loadWatchPrefs,
+  saveAmbilight,
   saveCameraDevice,
   saveCameraPrefs,
   saveSharePrefs,
@@ -86,5 +88,18 @@ describe("when the browser's storage fails", () => {
     expect(loadSharePrefs()).toEqual({ quality: "1080p", mode: "smooth" });
     expect(loadWatchPrefs()).toEqual({ quality: "auto", volume: 1, muted: false });
     vi.restoreAllMocks();
+  });
+});
+
+describe("the ambilight (spec 0104)", () => {
+  it("is on at 90% until changed, then remembered", () => {
+    expect(loadAmbilight()).toEqual({ on: true, brightness: 0.9 });
+    saveAmbilight({ on: false, brightness: 0.4 });
+    expect(loadAmbilight()).toEqual({ on: false, brightness: 0.4 });
+  });
+
+  it("ignores a brightness out of range", () => {
+    localStorage.setItem("xove.ambilight.brightness", "7");
+    expect(loadAmbilight().brightness).toBe(0.9);
   });
 });

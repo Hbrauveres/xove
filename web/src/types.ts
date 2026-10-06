@@ -71,7 +71,8 @@ export type StreamStats = {
   latencyMs: number;
 };
 
-export type ActivityKind = "joined" | "left" | "started" | "stopped";
+/** "reconnected": my connection came back after dropping (spec 0104). */
+export type ActivityKind = "joined" | "left" | "started" | "stopped" | "reconnected";
 
 export type ActivityEvent = {
   id: string;

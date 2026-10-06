@@ -1,0 +1,102 @@
+/*
+ * The room's floating panels (spec 0104): activity, people and account. See
+ * specs/0104-room-theater/design.html, which this matches.
+ */
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 340px;
+  color: var(--text);
+  /*
+   * Unrolls downward when it opens and rolls back up when it closes, by its height. Never a
+   * clip, a fade or a filter here or on an ancestor: those stop the sections' blur.
+   */
+  display: grid; /* grid-template-rows: 0fr → 1fr, set by the component */
+  transition: grid-template-rows 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.end {
+  right: 0;
+}
+
+.center {
+  left: 50%;
+  width: min(440px, 92vw);
+  transform: translateX(-50%);
+}
+
+/* Sections stacked with a clear 2px cut between them: the divider is the page behind, sharp. */
+.roll {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 16px;
+}
+
+.section {
+  /* Full size while the panel unrolls: only its edge reveals them, so no scrollbar flashes. */
+  flex: none;
+  background: rgba(9, 12, 17, 0.74);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-block-width: 0;
+}
+
+.section:first-child {
+  border-top-width: 1px;
+  border-radius: 16px 16px 0 0;
+}
+
+.section:last-child {
+  border-bottom-width: 1px;
+  border-radius: 0 0 16px 16px;
+}
+
+.section:only-child {
+  border-radius: 16px;
+}
+
+/* A long list scrolls inside its section, with a thin scrollbar that matches. */
+.scroll {
+  max-height: min(56vh, 440px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (max-width: 760px) {
+  .panel,
+  .center {
+    position: fixed;
+    top: 72px;
+    left: 8px;
+    right: 8px;
+    width: auto !important; /* full width on a phone, whatever the panel's own width */
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+}

@@ -16,6 +16,8 @@ const KEYS = {
   cameraQuality: "xove.camera.quality",
   cameraMode: "xove.camera.mode",
   cameraDevice: "xove.camera.device",
+  ambilightOn: "xove.ambilight.on",
+  ambilightBrightness: "xove.ambilight.brightness",
   watchQuality: "xove.watch.quality",
   watchVolume: "xove.watch.volume",
   watchMuted: "xove.watch.muted",
@@ -76,6 +78,24 @@ export function loadCameraDevice(): string | null {
 
 export function saveCameraDevice(deviceId: string) {
   write(KEYS.cameraDevice, deviceId);
+}
+
+/** The light around the stage (spec 0104): on or off, and how bright, 0 to 1. */
+export type AmbilightPrefs = { on: boolean; brightness: number };
+
+export const DEFAULT_AMBILIGHT: AmbilightPrefs = { on: true, brightness: 0.9 };
+
+export function loadAmbilight(): AmbilightPrefs {
+  const brightness = Number(read(KEYS.ambilightBrightness) ?? DEFAULT_AMBILIGHT.brightness);
+  return {
+    on: read(KEYS.ambilightOn) !== "false",
+    brightness: Number.isFinite(brightness) && brightness >= 0 && brightness <= 1 ? brightness : DEFAULT_AMBILIGHT.brightness,
+  };
+}
+
+export function saveAmbilight(prefs: AmbilightPrefs) {
+  write(KEYS.ambilightOn, String(prefs.on));
+  write(KEYS.ambilightBrightness, String(prefs.brightness));
 }
 
 export function loadWatchPrefs(): WatchPrefs {

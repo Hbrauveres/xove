@@ -1,35 +1,19 @@
-import type { Friend, StreamStats } from "../../types";
-import { useElapsed } from "../../hooks/useElapsed";
-import { Avatar } from "../ui/Avatar";
-import { LiveDot } from "../ui/LiveDot";
 import styles from "./StageOverlay.module.css";
 
 type Props = {
-  sharer: Friend;
-  startedAt: number;
-  stats: StreamStats | null;
-  isMeSharing: boolean;
   /** The player is fullscreen: the button leaves it. */
   fullscreen: boolean;
   onFullscreen: () => void;
 };
 
-/** Who's live, for how long, and the stream numbers, drawn over the video. */
-export function StageOverlay({ sharer, startedAt, stats, isMeSharing, fullscreen, onFullscreen }: Props) {
-  const elapsed = useElapsed(startedAt);
-
+/**
+ * What sits over the video: the fullscreen button. Who is live, and for how long, is in the
+ * info row under the stage (spec 0104).
+ */
+export function StageOverlay({ fullscreen, onFullscreen }: Props) {
   return (
     <div className={styles.overlay}>
       <div className={styles.top}>
-        <div className={styles.who}>
-          <span className={styles.live}>
-            <LiveDot />
-            LIVE
-          </span>
-          <Avatar person={sharer} size={24} onAir={isMeSharing} />
-          <span className={styles.name}>{isMeSharing ? "You are sharing" : `${sharer.name} is sharing`}</span>
-          <span className={styles.elapsed}>{elapsed}</span>
-        </div>
         <button
           type="button"
           className={styles.iconButton}
@@ -49,33 +33,6 @@ export function StageOverlay({ sharer, startedAt, stats, isMeSharing, fullscreen
           </svg>
         </button>
       </div>
-
-      {stats && (
-        <dl className={styles.stats} aria-label="Stream quality">
-          <div>
-            <dt>Resolution</dt>
-            <dd>
-              {stats.width}×{stats.height}
-            </dd>
-          </div>
-          <div>
-            <dt>Frame rate</dt>
-            <dd>{stats.fps} fps</dd>
-          </div>
-          <div>
-            <dt>Codec</dt>
-            <dd>{stats.codec}</dd>
-          </div>
-          <div>
-            <dt>Bitrate</dt>
-            <dd>{stats.bitrateMbps.toFixed(1)} Mbps</dd>
-          </div>
-          <div>
-            <dt>Delay</dt>
-            <dd>{stats.latencyMs} ms</dd>
-          </div>
-        </dl>
-      )}
     </div>
   );
 }

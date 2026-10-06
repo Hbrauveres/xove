@@ -38,6 +38,18 @@ describe("api client", () => {
     });
   });
 
+  it("reports what's on my stage, or an empty stage as {} (spec 0104)", async () => {
+    const server = installFakeApi();
+    document.cookie = "XSRF-TOKEN=abc-123";
+
+    await api.streams.watching({ sharerId: 7, kind: "camera" });
+    expect(server.calls.at(-1)).toMatchObject({ method: "PUT", path: "/api/streams/watching", body: { sharerId: 7, kind: "camera" } });
+    expect(server.calls.at(-1)!.headers["X-XSRF-TOKEN"]).toBe("abc-123");
+
+    await api.streams.watching(null);
+    expect(server.calls.at(-1)!.body).toEqual({});
+  });
+
   it("sends an empty message as null", async () => {
     const server = installFakeApi();
     await api.requestAccess("   ");

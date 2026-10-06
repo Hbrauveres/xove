@@ -1,0 +1,42 @@
+/* The header (spec 0104): see specs/0104-room-theater/design.html. Above the light, no background. */
+.header {
+  position: relative;
+  z-index: 20;
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
+  align-items: center;
+  gap: 16px;
+  height: 60px;
+  padding: 0 var(--room-edge, 24px);
+}
+
+.logo {
+  justify-self: start;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.dot {
+  color: var(--tally);
+}
+
+.middle {
+  min-width: 0;
+}
+
+.right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 760px) {
+  .header {
+    grid-template-columns: auto 1fr auto;
+  }
+}

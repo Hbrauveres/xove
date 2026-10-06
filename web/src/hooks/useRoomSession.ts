@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
 import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, Sharer, StreamKind } from "../types";
-import type { LiveStream } from "../api/types";
+import type { LiveStream, RoomSeatsState } from "../api/types";
 import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
+import { api as client } from "../api/client";
 
 /**
  * Everything the room page shows, from two sources:
@@ -47,6 +48,12 @@ export type RoomSession = {
   /** My connection to the video room, to confirm my seat when entering again. */
   participantSid: () => string | undefined;
   activity: ActivityEvent[];
+  /** How full the room is, when the API says (spec 0104). */
+  seats: RoomSeatsState | null;
+  /** Per person (by their id in the room): whose stream is on their stage (spec 0104). */
+  watchingOf: Record<string, { sharerId: string; kind: StreamKind }>;
+  /** What's on my stage, for everyone's people panel (spec 0104); null for an empty stage. */
+  watchStage: (target: { personId: string; kind: StreamKind } | null) => void;
   connection: ConnectionState;
   error: string | null;
   busy: boolean;
@@ -176,10 +183,69 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     if (events.length) setStreamEvents((prev) => [...prev, ...events].slice(-30));
   }, [streamKeys]);
 
+  // My connection coming back after a drop is an event too (spec 0104).
+  const [connectionEvents, setConnectionEvents] = useState<ActivityEvent[]>([]);
+  const lastConnection = useRef(lk.connection);
+  useEffect(() => {
+    const before = lastConnection.current;
+    lastConnection.current = lk.connection;
+    if (before === "reconnecting" && lk.connection === "connected") {
+      setConnectionEvents((prev) =>
+        [...prev, { id: `conn${++streamSeq}`, at: Date.now(), kind: "reconnected" as const, actorId: me.id }].slice(-30),
+      );
+    }
+  }, [lk.connection, me.id]);
+
   const activity = useMemo(
-    () => [...lk.presence, ...streamEvents].sort((a, b) => a.at - b.at),
-    [lk.presence, streamEvents],
+    () => [...lk.presence, ...streamEvents, ...connectionEvents].sort((a, b) => a.at - b.at).slice(-30),
+    [lk.presence, streamEvents, connectionEvents],
   );
+
+  // Who watches what, in the room's ids: "me" for me, "user-42" for everyone else.
+  const watchers = api.state?.watching;
+  const watchingOf = useMemo(() => {
+    const idOf = (userId: number, mine: boolean) => (mine ? me.id : identityOf(userId));
+    const sharerIsMe = (userId: number) => (live ?? []).some((s) => s.mine && s.userId === userId);
+    const byPerson: Record<string, { sharerId: string; kind: StreamKind }> = {};
+    for (const w of watchers ?? []) {
+      byPerson[idOf(w.userId, w.mine)] = { sharerId: idOf(w.sharerId, sharerIsMe(w.sharerId)), kind: w.kind };
+    }
+    return byPerson;
+  }, [watchers, live, me.id]);
+
+  // What's on my stage, reported to the API after 1 s of stillness (quick clicks send one
+  // report), and again when the API lost it (a restart). Undefined until the room says.
+  const [onStage, setOnStage] = useState<{ personId: string; kind: StreamKind } | null | undefined>(undefined);
+  const watchStage = useCallback((target: { personId: string; kind: StreamKind } | null) => setOnStage(target), []);
+  const wantedKey = useMemo(() => {
+    if (onStage === undefined) return undefined;
+    if (onStage === null) return "none";
+    const userId = onStage.personId === me.id ? live?.find((s) => s.mine)?.userId : Number(onStage.personId.slice(5));
+    return userId === undefined || Number.isNaN(userId) ? undefined : `${userId}|${onStage.kind}`;
+  }, [onStage, live, me.id]);
+  const mineWatch = watchers?.find((w) => w.mine);
+  // An older API doesn't list watches: nothing to compare with, report on change only.
+  const apiKey = watchers === undefined ? undefined : mineWatch ? `${mineWatch.sharerId}|${mineWatch.kind}` : "none";
+  const sentKey = useRef<string | undefined>(undefined);
+  // A failed report is tried again a moment later.
+  const [retries, setRetries] = useState(0);
+  // Only the page that's really in the video room reports: a second tab of mine, or one
+  // that LiveKit disconnected, would overwrite it back and forth (the API keeps one per person).
+  const reporting = seated === true && lk.connection === "connected";
+  useEffect(() => {
+    if (wantedKey === undefined || !reporting) return;
+    if (apiKey === undefined ? sentKey.current === wantedKey : apiKey === wantedKey) return;
+    const timer = window.setTimeout(() => {
+      sentKey.current = wantedKey;
+      const [sharerId, kind] = wantedKey.split("|");
+      const target = wantedKey === "none" ? null : { sharerId: Number(sharerId), kind: kind as StreamKind };
+      client.streams.watching(target).catch(() => {
+        sentKey.current = undefined;
+        window.setTimeout(() => setRetries((n) => n + 1), 2000);
+      });
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [wantedKey, apiKey, reporting, retries]);
 
   // ---- keeping my streams and the API in step ----
 
@@ -376,6 +442,9 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     seated,
     participantSid: lk.participantSid,
     activity,
+    seats: api.state?.seats ?? null,
+    watchingOf,
+    watchStage,
     connection: lk.connection,
     error: api.error ?? lk.error,
     busy: api.busy || isStarting || isChanging,

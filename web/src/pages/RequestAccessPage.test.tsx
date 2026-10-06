@@ -58,6 +58,6 @@ describe("request access page", () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: /here now/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: /(people|person) here/i })).toBeInTheDocument());
   });
 });

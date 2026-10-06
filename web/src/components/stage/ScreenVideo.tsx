@@ -10,10 +10,12 @@ type Props = {
   /** 0 to 1. */
   volume?: number;
   muted?: boolean;
+  /** Hands out the <video> element, for the ambilight to read (spec 0104); null when it goes. */
+  onVideo?: (el: HTMLVideoElement | null) => void;
 };
 
 /** Plays someone's shared screen or camera (and the screen's sound, if they shared it). */
-export function ScreenVideo({ video, sound, label, volume = 1, muted = false }: Props) {
+export function ScreenVideo({ video, sound, label, volume = 1, muted = false, onVideo }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -25,6 +27,12 @@ export function ScreenVideo({ video, sound, label, volume = 1, muted = false }: 
       video.detach(el);
     };
   }, [video]);
+
+  useEffect(() => {
+    if (!onVideo) return;
+    onVideo(videoRef.current);
+    return () => onVideo(null);
+  }, [onVideo]);
 
   useEffect(() => {
     const el = audioRef.current;

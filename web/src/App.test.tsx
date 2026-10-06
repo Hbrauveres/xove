@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { aUser, installFakeApi } from "./test/fakeApi";
@@ -37,7 +38,7 @@ describe("who sees which screen", () => {
     installFakeApi({ me: aUser({ status: "MEMBER" }) });
     renderApp("/");
 
-    expect(await screen.findByRole("heading", { name: /here now/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /(people|person) here/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();
   });
 
@@ -45,20 +46,22 @@ describe("who sees which screen", () => {
     installFakeApi({ me: aUser({ status: "MEMBER", admin: true }), requests: [], members: [] });
     renderApp("/room");
 
-    expect(await screen.findByRole("link", { name: /^admin$/i })).toHaveAttribute("href", "/admin");
+    // Admin is in the account menu (spec 0104).
+    await userEvent.setup().click(await screen.findByRole("button", { name: /: account/ }));
+    expect(screen.getByRole("link", { name: /^admin$/i })).toHaveAttribute("href", "/admin");
   });
 
   it("keeps non-admins out of the admin page", async () => {
     installFakeApi({ me: aUser({ status: "MEMBER", admin: false }) });
     renderApp("/admin");
 
-    expect(await screen.findByRole("heading", { name: /here now/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /(people|person) here/i })).toBeInTheDocument();
   });
 
   it("sends members away from the request-access page", async () => {
     installFakeApi({ me: aUser({ status: "MEMBER" }) });
     renderApp("/request-access");
 
-    expect(await screen.findByRole("heading", { name: /here now/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /(people|person) here/i })).toBeInTheDocument();
   });
 });
