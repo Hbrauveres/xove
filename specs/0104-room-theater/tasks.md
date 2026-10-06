@@ -28,13 +28,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - an API without the new fields still works.
   - · covers FR-9, FR-10, FR-13, FR-14a · verify: `RoomPage.test.tsx` (session through the page), `client` tests
   - Done: `seats` and `watchingOf` (room ids, "me" for me) and a "reconnected" event from `useRoomSession`; `api.streams.watching`; the API's watch entries gained `mine`, since `/api/me` has no user id. Tested in `useRoomSession.test.ts` (new, 3) and `client.test.ts` (1); the fake API serves the new fields.
-- [ ] **T4** `media/ambilight.ts` and the preferences:
+- [x] **T4** `media/ambilight.ts` and the preferences:
   - the edge colours from a 64×36 frame (200 LEDs, averaged inward);
   - the easing;
   - painting the ring with the soft-curve falloff and the 3 px blur at small size;
   - the ring's placement over the stage;
   - `xove.ambilight.on` and `xove.ambilight.brightness`.
   - · covers FR-4, FR-5, FR-6a · verify: `ambilight.test.ts` (new), `preferences.test.ts`
+  - Done: `media/ambilight.ts` (`edgeColors`, `easeColors`, `ringPlacement`, `paintRing`, the falloff) and `loadAmbilight`/`saveAmbilight` (on, 90% by default). 7 tests.
 - [ ] **T5** `stage/Ambilight.tsx`: samples a given `<video>` about 12 times a second (2 with reduced motion), with `requestVideoFrameCallback` or a timer. It stops while the tab is hidden, the video is paused or missing, or it's switched off. Brightness sets the opacity; an unreadable frame turns it off quietly · covers FR-4, FR-5, FR-6, FR-6a · verify: `Ambilight.test.tsx` (new)
 - [ ] **T6** `ui/Dropdown.tsx`:
   - frosted sections with 2 px clear cuts, as in the design;
