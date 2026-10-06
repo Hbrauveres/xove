@@ -38,13 +38,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `media/ambilight.ts` (`edgeColors`, `easeColors`, `ringPlacement`, `paintRing`, the falloff) and `loadAmbilight`/`saveAmbilight` (on, 90% by default). 7 tests.
 - [x] **T5** `stage/Ambilight.tsx`: samples a given `<video>` about 12 times a second (2 with reduced motion), with `requestVideoFrameCallback` or a timer. It stops while the tab is hidden, the video is paused or missing, or it's switched off. Brightness sets the opacity; an unreadable frame turns it off quietly · covers FR-4, FR-5, FR-6, FR-6a · verify: `Ambilight.test.tsx` (new)
   - Done: `Ambilight` with a timer that runs only while the tab is visible (no `requestVideoFrameCallback`: the timer already caps the reads at 12 a second); it follows the video's play and pause events. 7 tests.
-- [ ] **T6** `ui/Dropdown.tsx`:
+- [x] **T6** `ui/Dropdown.tsx`:
   - frosted sections with 2 px clear cuts, as in the design;
   - the height roll in both directions, instant with reduced motion;
   - sections that don't shrink while rolling, and a thin styled scrollbar only when needed;
   - one open at a time, closed by a click outside or Escape with the focus back on its button;
   - menu or dialog roles.
   - · covers FR-15, FR-16, FR-17, FR-18 · verify: `Dropdown.test.tsx` (new)
+  - Done: `Dropdown` and `DropdownSection`; the roll's height is set on the element (with `data-rolled` for tests, since jsdom drops grid styles); one-at-a-time through a window event. 5 tests.
 - [ ] **T7** `ActivityPill` and `ActivityList`:
   - the pill: bell, avatar, latest event, time, unseen count, slide-in, and the amber reconnecting state;
   - the list: every kind, newest first, unseen highlighted;
