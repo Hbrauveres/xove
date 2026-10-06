@@ -8,10 +8,11 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** `useVideoShape(video)`: the picture's width ÷ height from a `<video>`.
+- [x] **T1** `useVideoShape(video)`: the picture's width ÷ height from a `<video>`.
   - It's 16:9 without a video, or until the size is known.
   - It follows `loadedmetadata` and `resize`, and ignores changes under 1%.
   - · covers FR-2, FR-3, FR-6 · verify: `useVideoShape.test.ts` (new)
+  - Done: `hooks/useVideoShape.ts` with `WIDESCREEN`; 6 tests.
 - [ ] **T2** `gridFor(r)` in `media/ambilight.ts`:
   - square cells, 36 along the shorter side, the longer side to scale, capped at 96;
   - 64×36 at 16:9, 36×64 at 9:16.
