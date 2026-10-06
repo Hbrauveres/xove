@@ -13,11 +13,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `stream/Watching`: who has which stream on their stage, by user id. It can set, clear and forget, and its read keeps only seated watchers and live targets.
   - · covers FR-13, FR-14a · verify: `RoomSeatsTest`, `WatchingTest` (new)
   - Done: `Occupancy` and `RoomSeats.occupancy()`; `Watching` with `watch`, `clear` and `current(seated, streams)`. 8 tests.
-- [ ] **T2** HTTP:
+- [x] **T2** HTTP:
   - `PUT /api/streams/watching` (members, CSRF; `{sharerId, kind}` or `{}`; 204, or 400 for a bad kind);
   - the streams view gains `seats` and `watching`;
   - a person leaving the room (webhook) forgets what they watched.
   - · covers FR-13, FR-14a · verify: `StreamsControllerTest`, `LiveKitWebhookControllerTest`; `cd api && ./mvnw test`
+  - Done: `PUT /api/streams/watching` (`WatchRequest`); `StreamsView` gains `seats` and `watching`; `participant_left` clears the watch. 7 tests; API 163.
 
 ## Web core
 
