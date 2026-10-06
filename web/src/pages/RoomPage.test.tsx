@@ -875,6 +875,46 @@ describe("room: fullscreen (spec 0098)", () => {
   });
 });
 
+describe("room: starting from fullscreen (spec 0101)", () => {
+  /** Plays the browser putting the stage's player in fullscreen (jsdom has none). */
+  function enterFullscreen() {
+    const frame = stage().querySelector("[class*='frame']") as HTMLElement;
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => frame });
+    act(() => {
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    return frame;
+  }
+  afterEach(() => {
+    delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+  });
+
+  it("shows the setup window over the fullscreen player, and keeps it fullscreen", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    const frame = enterFullscreen();
+
+    await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
+
+    const setup = await setupWindow();
+    expect(frame).toContainElement(setup);
+    expect(document.fullscreenElement).toBe(frame);
+    await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
+    expect(await screen.findByText("You are sharing")).toBeInTheDocument();
+  });
+
+  it("shows a failed start over the fullscreen player too", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    const frame = enterFullscreen();
+    lastRoom().localParticipant.nextPicker = "no-video";
+
+    await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
+
+    expect(frame).toContainElement(await screen.findByRole("alert"));
+  });
+});
+
 describe("room: change window and pick a camera (spec 0098)", () => {
   afterEach(() => localStorage.clear());
 

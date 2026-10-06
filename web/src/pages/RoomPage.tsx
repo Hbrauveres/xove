@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
@@ -8,6 +9,7 @@ import { canShareScreen } from "../media/shareSettings";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
+import { useFullscreenElement } from "../hooks/useFullscreenElement";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import type { Friend } from "../types";
@@ -46,6 +48,8 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [me?.name, me?.email],
   );
   const session = useRoomSession(meAsFriend, pollMs);
+  const fullscreen = useFullscreenElement();
+  const inside = (node: ReactNode) => (fullscreen ? createPortal(node, fullscreen) : node);
   const onlineCount = session.people.length;
 
   // The API forgot my seat (it restarted): ask again, with my video connection, which
@@ -90,23 +94,33 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               onPickCamera: session.pickCamera,
             }}
           />
-          {session.error && (
+          {session.error && !fullscreen && (
             <p className={styles.error} role="alert">
               {session.error}
             </p>
           )}
         </main>
 
-        {session.pending && (
-          <ShareSetup
-            kind={session.pending.kind}
-            preview={session.pending.video}
-            initial={session.prefs[session.pending.kind]}
-            hasSound={session.pending.audio !== undefined}
-            onStart={session.confirm}
-            onCancel={session.cancelPending}
-          />
-        )}
+        {/* In fullscreen only the player can be seen: these go inside it (spec 0101). */}
+        {fullscreen &&
+          session.error &&
+          createPortal(
+            <p className={`${styles.error} ${styles.errorOver}`} role="alert">
+              {session.error}
+            </p>,
+            fullscreen,
+          )}
+        {session.pending &&
+          inside(
+            <ShareSetup
+              kind={session.pending.kind}
+              preview={session.pending.video}
+              initial={session.prefs[session.pending.kind]}
+              hasSound={session.pending.audio !== undefined}
+              onStart={session.confirm}
+              onCancel={session.cancelPending}
+            />,
+          )}
 
         <aside className={styles.side}>
           <ViewerList people={session.people} meId={session.me.id} sharingIds={session.sharers.map((s) => s.person.id)} />

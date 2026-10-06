@@ -46,3 +46,14 @@
   background: color-mix(in srgb, var(--live) 10%, transparent);
   font-size: var(--text-sm);
 }
+
+/* The same line over the fullscreen player (spec 0101): at its top, readable over video. */
+.errorOver {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100% - 32px));
+  background: color-mix(in srgb, var(--live) 18%, var(--surface));
+}
