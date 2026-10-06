@@ -38,7 +38,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T10** Docs: the controls on the player in `docs/architecture.md` and `docs/overview.md`; decision 34 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
+- [x] **T10** Docs: the controls on the player in `docs/architecture.md` and `docs/overview.md`; decision 34 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
+  - Done: architecture (buttons, menus, change window, camera list, no-sound lock, centred thumbnails), overview, decision 34, web 192 tests.
 - [ ] **T11** Review every AC (`/review`), fix what it finds, open the PR with `Closes #98`. Then on staging after merge, written in the PR (Henrique, Chrome):
   - "Change window" during a share: viewers see the new window without a break, sound follows (AC-5);
   - switching between two webcams while live (AC-6);

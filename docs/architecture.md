@@ -69,7 +69,7 @@ flowchart TD
 | --- | --- | --- |
 | `/` | Signed out | What Xovê is, "Continue with Google" |
 | `/request-access` | Signed in, not a member | "You need access", optional message, request button; a pending state that checks every 20 s and moves you in when approved; a declined state that allows asking again |
-| `/room` | Members | Stage, share controls, people, activity feed |
+| `/room` | Members | Stage (with my screen and camera buttons), people, activity feed |
 | `/admin` | Admins | Pending requests (approve, decline), members (remove) |
 
 Every sign-in gets a session, even for non-members; it just can't reach member-only endpoints.
@@ -122,16 +122,19 @@ sequenceDiagram
 ### Streams
 
 1. **Up to 6 live streams,** each a person's screen or camera. Someone with both uses 2. Nobody is pushed out: with 6 live, the start buttons wait.
-2. **Share or turn on the camera:** the browser's picker (or camera prompt) opens first, then a setup window with a preview and the settings. Nothing is sent until its "Start" button. Closing the picker does nothing. The camera is asked for only on that click, never with the microphone.
-3. **Stop:** the Stop or "Turn off camera" button, or the browser's own bar, stops the video and ends the stream. Only its person can stop or change a stream.
-4. **Reload while sharing:** the page sees the API lists a stream of its own that nothing sends, and ends it.
-5. **Everyone** polls the streams every 2 seconds and plays them from LiveKit. People sharing see their own streams, as viewers do, without their sound.
-6. **A sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API ends all of that person's streams at once, so nobody watches a frozen picture; their seat is kept as above. A stopped track ends just that stream. Only one connection per person: opening the room on a second device disconnects the first. Specs: [`0038`](../specs/0038-stale-slot/spec.md), [`0060`](../specs/0060-several-streams/spec.md).
+2. **Share or turn on the camera** with the round buttons over the bottom of the stage ([spec 0098](../specs/0098-player-buttons/spec.md)). They fade with the player's bars over a stream, stay while focused or while a menu is open, and come along in fullscreen. A full room greys them out, with the reason in their tooltip; a phone that can't share a screen shows only the camera button. The browser's picker (or camera prompt) opens first, then a setup window with a preview and the settings. Nothing is sent until its "Start" button. Closing the picker does nothing. The camera is asked for only on that click, never with the microphone.
+3. **While live,** the arrow on a stream's button opens its menu: quality and mode (below), then:
+   - **Change window** opens the picker again and swaps the new pick into the same LiveKit track (`replaceTrack`): no setup window, no new stream for the API or viewers. The sound follows: swapped, added as a new sound track, or removed.
+   - **A camera list** switches the camera being sent (`restartTrack` on the same track); the pick is saved in the browser (`xove.camera.device`).
+4. **Stop:** the lit button, the menu's Stop, or the browser's own bar stops the video and ends the stream. Only its person can stop or change a stream.
+5. **Reload while sharing:** the page sees the API lists a stream of its own that nothing sends, and ends it.
+6. **Everyone** polls the streams every 2 seconds and plays them from LiveKit. People sharing see their own streams, as viewers do, without their sound.
+7. **A sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API ends all of that person's streams at once, so nobody watches a frozen picture; their seat is kept as above. A stopped track ends just that stream. Only one connection per person: opening the room on a second device disconnects the first. Specs: [`0038`](../specs/0038-stale-slot/spec.md), [`0060`](../specs/0060-several-streams/spec.md).
 
 ### Watching
 
 - **Each viewer picks who is big:** a click on a thumbnail. By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`).
-- **Thumbnails** under the player, one per other person sharing: their screen, or their camera when that's all they share.
+- **Thumbnails** centred under the player (scrolling sideways when they don't fit), one per other person sharing: their screen, or their camera when that's all they share.
 - **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
 - **Sound:** the big person's plays. Thumbnails are muted, each with its own mute button and volume; a muted thumbnail's sound isn't downloaded at all.
 - **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so thumbnails and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
@@ -153,11 +156,11 @@ How a screen or a camera is sent is decided in one place, `web/src/media/shareSe
 - **And a mode:**
   - **Smooth** (the default): marked as motion. When the connection is tight, the picture gets softer and the frame rate holds.
   - **Sharp:** marked as detail. The picture keeps its detail and the frame rate drops.
-- **Changing them mid-share,** from the sharer's own player bar (one set per stream: "Camera quality" and "Camera mode" next to the screen's), is live: same stream, no reload.
+- **Changing them mid-share,** from the stream button's menu (each stream has its own), is live: same stream, no reload.
   - The sharer's browser applies the new cap and mode right away, and tells the API (`POST /api/streams/{kind}/settings`).
   - Every viewer's app reads the settings with the streams (every 2 seconds) and follows them: its quality menu offers nothing above the cap, and Auto asks for no more than the cap.
   - Since no viewer asks for the layers above the cap, LiveKit stops sending them (dynacast), so the sharer's upload really drops.
-- **Sound** is captured without the microphone filters (echo cancellation, noise suppression, automatic volume), in stereo, and sent at 128 kbit/s without silence skipping. Chrome gives sound only from a tab, or from the whole screen on Windows; Firefox and Safari give none, and the sharer sees a notice.
+- **Sound** is captured without the microphone filters (echo cancellation, noise suppression, automatic volume), in stereo, and sent at 128 kbit/s without silence skipping. Chrome gives sound only from a tab, or from the whole screen on Windows; Firefox and Safari give none. A screen without sound shows a muted-speaker badge on its button, and viewers see its volume muted and locked until it has sound.
 - **Viewers** have a bar over the player:
   - The speaker icon mutes, and unmutes back to the same volume.
   - The volume slider is hidden on iPhones and iPads, which ignore a page's volume.

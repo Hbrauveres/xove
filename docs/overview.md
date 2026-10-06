@@ -20,11 +20,12 @@ Admins are configured on the server (a list of emails). Admins are always member
 ## What you can do in the room
 
 - **See who's here:** everyone connected right now, and a feed of who joined, left, started or stopped sharing.
-- **Share your screen:** the browser's own picker opens; pick a screen, window or tab.
+- **Share your screen:** the round buttons at the bottom of the player share your screen or turn on your camera. The browser's own picker opens; pick a screen, window or tab.
 - **Turn on your camera:** alongside your screen or on its own. Your camera then shows as a facecam over your screen.
 - **Several at once:** up to 6 streams live (screens and cameras), nobody is pushed out.
+- **While live:** the small arrow on your button opens its menu: quality, mode, "Change window" (share something else without stopping) or another camera.
 - **Stop:** with the buttons or the browser's own "Stop sharing" bar.
-- **Watch:** one person fills the stage, with a timer and a full-screen button; the others are thumbnails. Click one to watch it big. Only the big one's sound plays, unless you unmute a thumbnail.
+- **Watch:** one person fills the stage, with a timer and a fullscreen button (click it again to leave); the others are thumbnails. Click one to watch it big. Only the big one's sound plays, unless you unmute a thumbnail.
 - **Wait your turn:** up to 20 people in the room. When it's full, you get a place in the queue and a popup when a seat frees.
 
 The limits live on the server, so every browser agrees on who is in and what's live.
