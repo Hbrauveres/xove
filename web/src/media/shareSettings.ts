@@ -39,6 +39,12 @@ export const DEFAULT_SHARE: { quality: ShareQuality; mode: ShareMode } = { quali
 
 const presetOf = (quality: ShareQuality) => SHARE_QUALITIES.find((q) => q.id === quality) ?? SHARE_QUALITIES[0];
 
+/** The modes and how the sharer sees them, in the setup window and the stream menus. */
+export const MODES: { id: ShareMode; label: string }[] = [
+  { id: "smooth", label: "Smooth (games, videos)" },
+  { id: "sharp", label: "Sharp (text, code)" },
+];
+
 /** The content hint for a mode: how the browser encodes the screen. */
 export const contentHintOf = (mode: ShareMode) => (mode === "smooth" ? "motion" : "detail");
 
@@ -56,6 +62,20 @@ export type ScreenCaptureRequest = DisplayMediaStreamOptions & {
   selfBrowserSurface: "include" | "exclude";
   windowAudio: "exclude" | "window" | "system";
 };
+
+/** Chrome's `CaptureController` (spec 0101); TypeScript's DOM types don't know it yet. */
+export type CaptureControllerLike = {
+  setFocusBehavior?: (behaviour: "focus-captured-surface" | "no-focus-change") => void;
+};
+
+/**
+ * A controller for one pick, so the browser can be asked to stay on Xovê afterwards.
+ * Undefined where the browser has none (Firefox, Safari): they behave as before.
+ */
+export function newCaptureController(): CaptureControllerLike | undefined {
+  const Controller = (globalThis as { CaptureController?: new () => CaptureControllerLike }).CaptureController;
+  return Controller ? new Controller() : undefined;
+}
 
 /** Phones and some browsers can't share a screen at all (spec 0098). */
 export const canShareScreen = () => typeof navigator.mediaDevices?.getDisplayMedia === "function";

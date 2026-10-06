@@ -1,0 +1,104 @@
+/*
+ * A round button's menu (specs 0098 and 0101), above its button. The stage is a size
+ * container, so a menu never grows past the top of a small stage: it scrolls instead.
+ */
+.menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-height: calc(100cqh - 84px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #10141b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  pointer-events: auto;
+  z-index: 4;
+}
+
+.heading {
+  margin: 0;
+  padding: 6px 10px 4px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--tally);
+  color: var(--tally-ink);
+  outline: none;
+}
+
+.item[role="menuitemradio"]::after {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+}
+
+.item[aria-checked="true"]::after {
+  border-color: var(--tally);
+  background: radial-gradient(circle, var(--tally) 0 3px, transparent 4px);
+}
+
+.item:hover::after,
+.item:focus-visible::after {
+  border-color: var(--tally-ink);
+}
+
+.item[aria-checked="true"]:hover::after,
+.item[aria-checked="true"]:focus-visible::after {
+  background: radial-gradient(circle, var(--tally-ink) 0 3px, transparent 4px);
+}
+
+.item[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.danger {
+  color: #ff7a7a;
+}
+
+.separator {
+  height: 1px;
+  margin: 5px 4px;
+  border: 0;
+  background: var(--line);
+}
+
+.note {
+  margin: 0;
+  max-width: 240px;
+  padding: 6px 10px;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--text-muted);
+}

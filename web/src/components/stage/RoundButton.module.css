@@ -1,0 +1,122 @@
+/*
+ * The player's round buttons (specs 0098 and 0101): screen, camera, volume and settings
+ * share this look, so they read as one family. A button sits in a pill; a live stream's
+ * pill also holds its arrow.
+ */
+.pill {
+  position: relative;
+  display: flex;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+}
+
+/* One ring around the whole pill, its arrow included, whichever part has the focus. */
+.pill:has(:focus-visible) {
+  outline: 2px solid var(--tally);
+  outline-offset: 3px;
+}
+
+.main,
+.arrow {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  outline: none;
+}
+
+.main {
+  width: 48px;
+  border-radius: 999px;
+}
+
+.arrow {
+  width: 26px;
+  margin-left: -8px;
+  border-radius: 0 999px 999px 0;
+}
+
+.main:hover,
+.main:focus-visible,
+.arrow:hover,
+.arrow:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Live: the pill lights up. */
+.live {
+  background: var(--tally);
+  color: var(--tally-ink);
+}
+
+.live .main:hover,
+.live .main:focus-visible,
+.live .arrow:hover,
+.live .arrow:focus-visible {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* Can't be used right now (a full room, no sound): faded, and says why in its tooltip. */
+.disabled {
+  opacity: 0.45;
+}
+
+.main[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.main[aria-disabled="true"]:hover {
+  background: transparent;
+}
+
+.tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  background: #05070a;
+  color: var(--text);
+  font-size: var(--text-xs);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  z-index: 3;
+}
+
+.pill:hover .tip,
+.pill:has(:focus-visible) .tip {
+  opacity: 1;
+}
+
+/* A menu or a slider open over the pill hides its tooltip. */
+.pill[data-open] .tip {
+  opacity: 0;
+}
+
+@media (max-width: 520px) {
+  .pill {
+    height: 42px;
+  }
+
+  .main {
+    width: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition: none;
+  }
+}

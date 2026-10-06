@@ -1,0 +1,5 @@
+/* The gear with its menu, which opens above it. */
+.control {
+  position: relative;
+  display: flex;
+}

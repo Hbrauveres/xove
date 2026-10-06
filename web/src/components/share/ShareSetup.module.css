@@ -2,6 +2,8 @@
   position: fixed;
   inset: 0;
   z-index: 10;
+  /* Inside the fullscreen player (spec 0101), which hides the cursor when the mouse rests. */
+  cursor: auto;
   display: grid;
   place-items: center;
   padding: var(--gutter);

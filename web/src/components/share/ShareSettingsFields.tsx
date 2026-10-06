@@ -1,5 +1,5 @@
 import type { SharePrefs } from "../../media/preferences";
-import { CAMERA_QUALITIES, SHARE_QUALITIES, type ShareMode, type ShareQuality } from "../../media/shareSettings";
+import { CAMERA_QUALITIES, MODES, SHARE_QUALITIES, type ShareMode, type ShareQuality } from "../../media/shareSettings";
 import type { StreamKind } from "../../types";
 import styles from "./ShareSettingsFields.module.css";
 
@@ -10,11 +10,6 @@ type Props = {
   onChange: (prefs: SharePrefs) => void;
   disabled?: boolean;
 };
-
-export const MODES: { id: ShareMode; label: string }[] = [
-  { id: "smooth", label: "Smooth (games, videos)" },
-  { id: "sharp", label: "Sharp (text, code)" },
-];
 
 /**
  * The sharer's two choices in the setup window: the best quality viewers can get, and

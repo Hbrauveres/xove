@@ -21,6 +21,7 @@ import {
   capOf,
   contentHintOf,
   degradationOf,
+  newCaptureController,
   screenCaptureRequest,
   screenPublishOptions,
   type ShareMode,
@@ -28,11 +29,31 @@ import {
 import type { ActivityEvent, CameraDevice, ConnectionState, MediaTrack, RemoteVideo, StreamKind } from "../types";
 
 /**
+ * Opens the browser's picker, and asks it to stay on Xovê once something is picked
+ * (spec 0101): by default Chrome switches to the picked window or tab, and the sharer
+ * never sees the setup window.
+ */
+async function pickScreen(): Promise<MediaStream> {
+  const controller = newCaptureController();
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    ...screenCaptureRequest(),
+    ...(controller ? { controller } : {}),
+  } as DisplayMediaStreamOptions);
+  // First thing after the answer, before any other await: Chrome only accepts it now.
+  try {
+    controller?.setFocusBehavior?.("no-focus-change");
+  } catch {
+    /* A whole screen has no window to stay on; sharing goes on as before. */
+  }
+  return stream;
+}
+
+/**
  * The browser's screen picker, asked directly because livekit-client drops `windowAudio`
  * (spec 0095). Wraps the capture as LiveKit's own `createScreenTracks` does.
  */
 async function captureScreen(room: Room, mode: ShareMode): Promise<(LocalVideoTrack | LocalAudioTrack)[]> {
-  const stream = await navigator.mediaDevices.getDisplayMedia(screenCaptureRequest());
+  const stream = await pickScreen();
   const [screen] = stream.getVideoTracks();
   const [sound] = stream.getAudioTracks();
   if (!screen) {
@@ -383,7 +404,7 @@ export function useLiveKitRoom(): LiveKitRoom {
       let stream: MediaStream;
       try {
         setError(null);
-        stream = await navigator.mediaDevices.getDisplayMedia(screenCaptureRequest());
+        stream = await pickScreen();
       } catch (e) {
         // Closing the picker keeps the current share.
         if (!(e instanceof DOMException && e.name === "NotAllowedError")) setError("Couldn't change what you share.");

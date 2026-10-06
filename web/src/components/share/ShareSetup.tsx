@@ -76,12 +76,12 @@ export function ShareSetup({ kind, preview, initial, hasSound, onStart, onCancel
         />
         {!camera && !hasSound && (
           <p className={styles.notice}>
-            No sound with this screen. To share sound, pick a browser tab (or your whole screen on Windows) and tick
-            "Share audio". Firefox and Safari can't share sound.
+            No sound with this screen. To share sound, pick a tab, or a window with “Share this app's audio too”. Firefox
+            and Safari can't share sound.
           </p>
         )}
         <ShareSettingsFields kind={kind} prefs={prefs} onChange={setPrefs} />
-        <p className={styles.hint}>You can change both while sharing, from your player.</p>
+        <p className={styles.hint}>You can change both while sharing, from the button's menu.</p>
         <div className={styles.actions}>
           <Button autoFocus onClick={() => onStart(prefs)}>
             {camera ? "Start camera" : "Start sharing"}

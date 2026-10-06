@@ -1,0 +1,29 @@
+/* The centred row over the bottom of the stage; only the buttons take clicks. */
+.row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.buttons {
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+/* One button with its tooltip and menu, which open above it. */
+.control {
+  position: relative;
+  display: flex;
+}
+
+@media (max-width: 520px) {
+  .buttons {
+    gap: 8px;
+  }
+}
