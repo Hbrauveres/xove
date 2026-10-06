@@ -49,7 +49,7 @@ describe("room: joining the video room", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Video isn't set up on this server yet.");
     // The account button's dot and name say it (spec 0104).
     expect(screen.getByRole("button", { name: /: account, disconnected$/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(screen.getByText("0 of 6 live")).toBeInTheDocument();
   });
 
   it("lists the people connected, and notes who joins and leaves", async () => {
@@ -104,7 +104,7 @@ describe("room: watching", () => {
   it("picks up a new sharer from the API without reloading", async () => {
     const server = installFakeApi({ me: member });
     renderRoom();
-    expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
 
     act(() => {
       server.streams = [someoneSharing("Duda", 9)];
@@ -125,18 +125,18 @@ describe("room: watching", () => {
       server.streams = [];
     });
 
-    expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
     expect(await screen.findByText(/ana stopped sharing/i)).toBeInTheDocument();
   });
 });
 
 // ---- sharing: pick a screen, set it up, start (spec 0086) ----
 
-/** The room, connected, with a free stage. */
+/** The room, connected, with a free stage ("0 of 6 live": a text lookup, quicker than a heading by role). */
 async function readyRoom() {
   renderRoom();
   await connected();
-  await screen.findByRole("heading", { name: "The stage is yours." });
+  await screen.findByText("0 of 6 live");
   return userEvent.setup();
 }
 
@@ -267,7 +267,7 @@ describe("room: sharing", () => {
     await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(screen.getByText("0 of 6 live")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(server.calls.some((c) => c.path === "/api/streams" && c.method === "POST")).toBe(false);
   });
@@ -337,7 +337,7 @@ describe("room: sharing", () => {
 
     await user.click(within(controls()).getByRole("button", { name: /stop sharing/i }));
 
-    expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
     expect(lastRoom().localParticipant.isScreenShareEnabled).toBe(false);
     expect(myLiveStream(server)).toBeUndefined();
   });
@@ -352,7 +352,7 @@ describe("room: sharing", () => {
     });
 
     await waitFor(() => expect(myLiveStream(server)).toBeUndefined());
-    expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
   });
 
   // AC-1: six streams at once; a seventh can't start, and the buttons say why.
@@ -416,7 +416,7 @@ describe("room: sharing", () => {
     renderRoom();
 
     await waitFor(() => expect(myLiveStream(server)).toBeUndefined());
-    expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
   });
 
   it("shows the API's message when starting the stream fails, and stops the video", async () => {
@@ -576,7 +576,7 @@ describe("room: changing the stream while sharing", () => {
 
     await user.click(within(controls()).getByRole("button", { name: /stop sharing/i }));
 
-    expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
     expect(local.screens).toHaveLength(0);
     expect(local.screenAudio).toBeNull();
     expect(local.lastCapture.every((t) => t.stopped)).toBe(true);
@@ -1067,7 +1067,7 @@ describe("room: the player on touch screens and keyboards", () => {
   it("doesn't hide anything over an empty stage", async () => {
     installFakeApi({ me: member });
     renderRoom();
-    await screen.findByRole("heading", { name: "The stage is yours." });
+    await screen.findByText("0 of 6 live");
 
     expect(stage().querySelector("[data-chrome]")).toBeNull();
   });
@@ -1994,7 +1994,7 @@ describe("room: the stage hugs the picture (spec 0107)", () => {
     const server = installFakeApi({ me: member });
     renderRoom();
     await connected();
-    await screen.findByRole("heading", { name: "The stage is yours." });
+    await screen.findByText("0 of 6 live");
     expect(shapeOfStage()).toBeCloseTo(16 / 9);
 
     server.streams = [someoneSharing("Bruno Lima", 7)];

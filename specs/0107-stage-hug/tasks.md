@@ -61,12 +61,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Review
 
-- [ ] **T8** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #107`.
+- [x] **T8** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #107`.
   - Henrique on staging:
     - AC-3: a Steam window, then a portrait monitor;
     - AC-4: 1080p, 2K and a narrow window;
     - AC-8: a narrow window with previews.
   - · verify: no gaps left; manual ACs written in the PR
+  - Done: review fixes. A preview's focus ring is drawn inside (the strip clipped it). The left's line is cut instead of spilling. "N watching" stays for screen readers. A new light grid starts a fresh light. The 1% test compares exactly. Page tests wait on "0 of 6 live" (a quick text lookup) instead of a heading by role. Staging checks (AC-3, AC-4, AC-8) are Henrique's.
 
 ## Coverage
 

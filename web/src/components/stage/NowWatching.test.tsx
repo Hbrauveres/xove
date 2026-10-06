@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { Sharer } from "../../types";
-import type { Friend } from "../../types";
+import type { Friend, Sharer } from "../../types";
 import { NowWatching } from "./NowWatching";
 import { whoIsHere } from "./whoIsHere";
 

@@ -44,8 +44,8 @@ describe("useVideoShape", () => {
   it("ignores a change under 1%", () => {
     const { el, resize } = videoOf(1920, 1080);
     const { result } = renderHook(() => useVideoShape(el));
-    act(() => resize(1918, 1080));
-    expect(result.current).toBeCloseTo(16 / 9);
+    act(() => resize(1910, 1080));
+    expect(result.current).toBe(16 / 9);
   });
 
   it("goes back to 16:9 when the video goes", () => {

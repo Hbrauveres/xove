@@ -17,6 +17,7 @@ import { Ambilight } from "./Ambilight";
 import { NowWatching } from "./NowWatching";
 import { MUTED, type PreviewSound } from "./previewSound";
 import { useVideoShape } from "../../hooks/useVideoShape";
+import { gridFor } from "../../media/ambilight";
 import styles from "./Stage.module.css";
 
 type Props = {
@@ -40,6 +41,12 @@ export const CHROME_IDLE_MS = 2500;
 /** iPhones and iPads ignore a page's volume (only their buttons change it). */
 const canSetVolume = () =>
   !/iPad|iPhone|iPod/.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/** The light's grid for a shape: a new grid starts a fresh light (spec 0107). */
+const gridKey = (shape: number) => {
+  const { cols, rows } = gridFor(shape);
+  return `${cols}x${rows}`;
+};
 
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
@@ -218,7 +225,7 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
         {/* Behind the frame, outside it: the frame clips what's inside it. */}
         {/* One per stream: a stream the browser won't let it read doesn't darken the next one. */}
         <Ambilight
-          key={big ? `${big.person.id}|${stage.mainKind}` : "none"}
+          key={big ? `${big.person.id}|${stage.mainKind}|${gridKey(shape)}` : "none"}
           video={big ? bigVideoEl : null}
           prefs={ambilight}
           shape={shape}

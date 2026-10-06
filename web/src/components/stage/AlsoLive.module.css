@@ -72,8 +72,7 @@
 }
 
 .preview:focus-visible {
-  outline: 2px solid var(--tally);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .video {
@@ -95,7 +94,9 @@
   pointer-events: none;
 }
 
-.preview:hover .video::after {
+/* Hover and keyboard focus: drawn inside, so the scrolling strip never cuts it (spec 0107). */
+.preview:hover .video::after,
+.preview:focus-visible .video::after {
   box-shadow: inset 0 0 0 2px var(--tally);
 }
 

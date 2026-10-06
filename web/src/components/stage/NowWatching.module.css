@@ -30,6 +30,8 @@
 }
 
 .meta {
+  /* Past its room the line is cut, never spilling under the previews. */
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -116,14 +118,29 @@
 
 /* Short of room, the left gives way first: the words go, then the avatars (spec 0107). */
 @container (max-width: 900px) {
+  /* Hidden to the eye only: screen readers still hear "N watching". */
   .count {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
 @container (max-width: 760px) {
-  .watchers {
+  .row,
+  .watchers::before {
     display: none;
+  }
+
+  .watchers .count {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 }
 
