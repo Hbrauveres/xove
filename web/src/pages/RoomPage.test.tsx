@@ -649,6 +649,7 @@ describe("room: the viewer's quality and volume", () => {
 
     // The slider shows on the volume button (spec 0101).
     await user.hover(within(stage()).getByRole("button", { name: "Mute" }));
+    expect(screen.getByRole("slider", { name: "Volume" }).closest("[inert]")).toBeNull();
     fireEvent.change(screen.getByRole("slider", { name: "Volume" }), { target: { value: "0.3" } });
     expect(audio().volume).toBeCloseTo(0.3);
     await user.click(screen.getByRole("button", { name: "Mute" }));
@@ -918,6 +919,27 @@ describe("room: starting from fullscreen (spec 0101)", () => {
     expect(document.fullscreenElement).toBe(frame);
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
     expect(await screen.findByText("You are sharing")).toBeInTheDocument();
+  });
+
+  it("keeps the setup window's choices, and gives the focus back, when fullscreen ends while it's open", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    enterFullscreen();
+    const share = within(controls()).getByRole("button", { name: /share your screen/i });
+    await user.click(share);
+    const setup = await setupWindow();
+    await user.selectOptions(within(setup).getByLabelText("Send quality"), "720p");
+
+    // The browser leaves fullscreen (Esc does, in Chrome).
+    delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+    act(() => {
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+
+    const after = await setupWindow();
+    expect(within(after).getByLabelText("Send quality")).toHaveValue("720p");
+    await user.click(within(after).getByRole("button", { name: /cancel/i }));
+    expect(share).toHaveFocus();
   });
 
   it("shows a failed start over the fullscreen player too", async () => {
@@ -1582,8 +1604,12 @@ describe("room: whose sound plays", () => {
     act(() => {
       lastRoom().publishSound("user-3");
     });
-    expect(await within(stage()).findByRole("button", { name: "Mute" })).not.toHaveAttribute("aria-disabled");
-    expect(within(stage()).getByRole("slider", { name: "Volume" })).toHaveValue("0.6");
+    const mute = await within(stage()).findByRole("button", { name: "Mute" });
+    expect(mute).not.toHaveAttribute("aria-disabled");
+    await userEvent.setup().hover(mute);
+    const slider = within(stage()).getByRole("slider", { name: "Volume" });
+    expect(slider.closest("[inert]")).toBeNull();
+    expect(slider).toHaveValue("0.6");
     expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
     localStorage.clear();
   });

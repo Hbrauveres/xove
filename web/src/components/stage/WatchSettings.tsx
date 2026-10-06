@@ -28,8 +28,10 @@ export function WatchSettings({ sharerHeight, layers, cap, prefs, onChange, onOp
   const gear = useRef<HTMLButtonElement>(null);
   const tipId = useId();
   const menuId = useId();
+  // Also when it goes away while open (the stream stops), so the player doesn't stay held.
   useEffect(() => {
     onOpenChange?.(open);
+    return () => onOpenChange?.(false);
   }, [open, onOpenChange]);
 
   const qualities = viewerQualities(sharerHeight, layers, cap);

@@ -29,12 +29,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 ## Docs and review
 
 - [x] **T8** Docs: the row, volume and settings in `docs/architecture.md` and `docs/overview.md`; decision 35 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
-  - Done: architecture (the row, staying on Xovê, fullscreen, volume and settings), overview, decision 35, web 214 tests.
+  - Done: architecture (the row, staying on Xovê, fullscreen, volume and settings), overview, decision 35, web 218 tests.
 - [ ] **T9** Review every AC (`/review`), fix what it finds, open the PR with `Closes #101`. Then on staging after merge, written in the PR (Henrique, Chrome):
   - picking a window stays on Xovê with the setup window open (AC-1);
   - in fullscreen, share and camera show the setup window over the player (AC-2);
   - the row matches the preview, the slider eases in, the ring goes around the whole screen button, the crossed speaker and its tooltip (AC-10).
   - · verify: no gaps left; every check written in the PR
+  - Review done: no AC uncovered. Fixed: leaving fullscreen with the setup window open kept its choices and focus (windows go in a container that moves with fullscreen), the cursor over the setup window in fullscreen, the player's hold when the volume or settings go away while open, the slider staying after a mouse click, and two room tests that now check the slider is shown. 4 tests. The staging checks are Henrique's, after merge.
 
 ## Coverage
 

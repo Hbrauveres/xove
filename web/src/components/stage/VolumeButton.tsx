@@ -26,14 +26,19 @@ export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenCh
   const [focused, setFocused] = useState(false);
   const control = useRef<HTMLDivElement>(null);
   const leaveTimer = useRef<number | undefined>(undefined);
+  // A click focuses the button too: only keyboard focus opens the slider, so after a
+  // click it still goes when the pointer leaves.
+  const pressing = useRef(false);
   const tipId = useId();
   useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
 
   // No slider while muted, without sound, or where the volume can't be set.
   const canSlide = hasSound && !prefs.muted && canSetVolume;
   const open = canSlide && (hovered || focused);
+  // Also when it goes away while open (the stream stops), so the player doesn't stay held.
   useEffect(() => {
     onOpenChange?.(open);
+    return () => onOpenChange?.(false);
   }, [open, onOpenChange]);
 
   const silent = !hasSound || prefs.muted || prefs.volume === 0;
@@ -51,7 +56,15 @@ export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenCh
         window.clearTimeout(leaveTimer.current);
         leaveTimer.current = window.setTimeout(() => setHovered(false), LEAVE_MS);
       }}
-      onFocus={() => setFocused(true)}
+      onPointerDown={() => {
+        pressing.current = true;
+      }}
+      onPointerUp={() => {
+        pressing.current = false;
+      }}
+      onFocus={() => {
+        if (!pressing.current) setFocused(true);
+      }}
       onBlur={(e) => {
         if (!control.current?.contains(e.relatedTarget as Node | null)) setFocused(false);
       }}

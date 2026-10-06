@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
@@ -9,7 +9,7 @@ import { canShareScreen } from "../media/shareSettings";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
-import { useFullscreenElement } from "../hooks/useFullscreenElement";
+import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import type { Friend } from "../types";
@@ -48,8 +48,9 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [me?.name, me?.email],
   );
   const session = useRoomSession(meAsFriend, pollMs);
+  // In fullscreen only the player can be seen: the setup window and errors go inside it (spec 0101).
   const fullscreen = useFullscreenElement();
-  const inside = (node: ReactNode) => (fullscreen ? createPortal(node, fullscreen) : node);
+  const overPage = useFullscreenHost();
   const onlineCount = session.people.length;
 
   // The API forgot my seat (it restarted): ask again, with my video connection, which
@@ -101,17 +102,16 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
           )}
         </main>
 
-        {/* In fullscreen only the player can be seen: these go inside it (spec 0101). */}
         {fullscreen &&
           session.error &&
           createPortal(
             <p className={`${styles.error} ${styles.errorOver}`} role="alert">
               {session.error}
             </p>,
-            fullscreen,
+            overPage,
           )}
         {session.pending &&
-          inside(
+          createPortal(
             <ShareSetup
               kind={session.pending.kind}
               preview={session.pending.video}
@@ -120,6 +120,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               onStart={session.confirm}
               onCancel={session.cancelPending}
             />,
+            overPage,
           )}
 
         <aside className={styles.side}>

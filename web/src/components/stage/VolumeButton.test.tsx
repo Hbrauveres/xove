@@ -88,6 +88,31 @@ describe("volume button (spec 0101)", () => {
     expect(sliderShown()).toBe(false);
   });
 
+  it("still slides away after a click, once the pointer leaves", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const button = screen.getByRole("button", { name: "Mute" });
+
+    await user.click(button);
+    await user.click(screen.getByRole("button", { name: "Unmute" }));
+    expect(sliderShown()).toBe(true);
+    await user.unhover(button);
+
+    await waitFor(() => expect(sliderShown()).toBe(false));
+  });
+
+  it("lets the player go when it disappears while open", async () => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    const view = render(<Harness onOpenChange={onOpenChange} />);
+    await user.hover(screen.getByRole("button", { name: "Mute" }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+
+    view.unmount();
+
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("has no slider while muted", async () => {
     const user = userEvent.setup();
     render(<Harness initial={{ quality: "auto", volume: 0.6, muted: true }} />);

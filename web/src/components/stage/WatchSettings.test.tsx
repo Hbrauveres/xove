@@ -62,6 +62,18 @@ describe("the viewer's settings (spec 0101)", () => {
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
   });
 
+  it("lets the player go when it disappears while open", async () => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    const view = render(<WatchSettings sharerHeight={1080} prefs={PREFS} onChange={vi.fn()} onOpenChange={onOpenChange} />);
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+
+    view.unmount();
+
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("works with the keyboard: Enter opens, arrows move, Escape goes back to the gear", async () => {
     const { user, onChange } = setup();
 
