@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureRequest, screenPublishOptions } from "../media/shareSettings";
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, myLiveStream, someoneSharing } from "../test/fakeApi";
@@ -785,6 +785,45 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
   });
 });
 
+describe("room: fullscreen (spec 0098)", () => {
+  it("enters fullscreen, and leaves it with the same button", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const frame = (await screen.findByLabelText("Bruno's shared screen")).closest("[data-chrome]") as HTMLElement;
+    // jsdom has no fullscreen: play the browser's part.
+    let current: Element | null = null;
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => current });
+    const enter = vi.fn(async () => {
+      current = frame;
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    const exit = vi.fn(async () => {
+      current = null;
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    frame.requestFullscreen = enter;
+    document.exitFullscreen = exit;
+    const user = userEvent.setup();
+
+    try {
+      await user.click(within(stage()).getByRole("button", { name: "Fullscreen" }));
+      expect(enter).toHaveBeenCalled();
+
+      await user.click(await within(stage()).findByRole("button", { name: "Exit fullscreen" }));
+      expect(exit).toHaveBeenCalled();
+      expect(enter).toHaveBeenCalledTimes(1);
+      expect(await within(stage()).findByRole("button", { name: "Fullscreen" })).toBeInTheDocument();
+    } finally {
+      delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+    }
+  });
+});
+
 describe("room: change window and pick a camera (spec 0098)", () => {
   afterEach(() => localStorage.clear());
 
@@ -877,7 +916,7 @@ describe("room: the player on touch screens and keyboards", () => {
     const { frame } = await watchBruno();
 
     act(() => {
-      within(stage()).getByRole("button", { name: "Full screen" }).focus();
+      within(stage()).getByRole("button", { name: "Fullscreen" }).focus();
     });
     expect(frame).toHaveAttribute("data-chrome", "shown");
 

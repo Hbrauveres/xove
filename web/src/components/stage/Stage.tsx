@@ -130,7 +130,20 @@ export function Stage({ sharers, connection, controls }: Props) {
     return () => set("auto");
   }, [bigVideo, request]);
 
-  const goFullscreen = () => {
+  // The same button enters and leaves fullscreen; Esc (the browser's own way out) is followed too.
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const follow = () => setFullscreen(document.fullscreenElement != null && document.fullscreenElement === frameRef.current);
+    document.addEventListener("fullscreenchange", follow);
+    return () => document.removeEventListener("fullscreenchange", follow);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => {
+        /* Already left. */
+      });
+      return;
+    }
     frameRef.current?.requestFullscreen?.().catch(() => {
       /* Not allowed here (some phones and app views). The stage stays inline. */
     });
@@ -192,7 +205,8 @@ export function Stage({ sharers, connection, controls }: Props) {
           startedAt={big.since}
           stats={null}
           isMeSharing={big.isMe}
-          onFullscreen={goFullscreen}
+          fullscreen={fullscreen}
+          onFullscreen={toggleFullscreen}
         />
       </>
     );
