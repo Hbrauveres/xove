@@ -28,7 +28,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T8** Docs: the row, volume and settings in `docs/architecture.md` and `docs/overview.md`; decision 35 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
+- [x] **T8** Docs: the row, volume and settings in `docs/architecture.md` and `docs/overview.md`; decision 35 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
+  - Done: architecture (the row, staying on Xovê, fullscreen, volume and settings), overview, decision 35, web 214 tests.
 - [ ] **T9** Review every AC (`/review`), fix what it finds, open the PR with `Closes #101`. Then on staging after merge, written in the PR (Henrique, Chrome):
   - picking a window stays on Xovê with the setup window open (AC-1);
   - in fullscreen, share and camera show the setup window over the player (AC-2);
