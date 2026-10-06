@@ -1,0 +1,133 @@
+/* The activity pill (spec 0104): see specs/0104-room-theater/design.html. */
+.wrap {
+  position: relative;
+}
+
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  width: min(440px, 40vw);
+  padding: 0 12px 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(16, 20, 27, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.pill:hover,
+.pill[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--tally) 55%, transparent);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--tally);
+  outline-offset: 2px;
+}
+
+/* The connection, when it drops, takes the pill: amber, with a spinner. */
+.warn {
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn) 14%, rgba(16, 20, 27, 0.85));
+  color: var(--warn);
+}
+
+.bell {
+  flex: none;
+  margin-left: 4px;
+  color: var(--text-muted);
+}
+
+.tick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.enter {
+  animation: tick-in 0.35s ease;
+}
+
+@keyframes tick-in {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+.what {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.time {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.new {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--tally);
+  color: var(--tally-ink);
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.chev {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.spin {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .pill {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .spin {
+    animation: none;
+  }
+}

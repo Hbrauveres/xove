@@ -46,11 +46,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - menu or dialog roles.
   - · covers FR-15, FR-16, FR-17, FR-18 · verify: `Dropdown.test.tsx` (new)
   - Done: `Dropdown` and `DropdownSection`; the roll's height is set on the element (with `data-rolled` for tests, since jsdom drops grid styles); one-at-a-time through a window event. 5 tests.
-- [ ] **T7** `ActivityPill` and `ActivityList`:
+- [x] **T7** `ActivityPill` and `ActivityList`:
   - the pill: bell, avatar, latest event, time, unseen count, slide-in, and the amber reconnecting state;
   - the list: every kind, newest first, unseen highlighted;
   - events about live streams show WATCH (on hover or focus) and WATCHING, and a click picks that stream.
   - · covers FR-8, FR-9, FR-10, FR-11, FR-12 · verify: `ActivityPill.test.tsx`, `ActivityList.test.tsx` (new)
+  - Done: `ActivityPill` (in a `Dropdown`), `ActivityList`, `ActivityIcon` and `activityText` (the texts and short times). New counts from the last event seen; opening marks them seen. 8 tests.
 - [ ] **T8** `PeopleButton` and `AccountButton`:
   - people: the icon and number; the panel's seats bar, people with "Sharing …", "Watching <name>" or "In the room", icons, and the queue line;
   - account: the avatar with its connection dot; the menu's name, role and connection, the ambilight switch and brightness slider (saved), Admin for admins, and Sign out.
