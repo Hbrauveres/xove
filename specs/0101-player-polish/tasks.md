@@ -23,7 +23,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `PlayerButtons` with `before`/`after` slots; the stage fills them while watching someone else and holds the controls while a menu, the slider or the settings are open; `PlayerControls`, the `.player` styles and the container query deleted; no badge. `MODES` moved to `shareSettings.ts`. Room tests use the new buttons; 2 new tests (row order).
 - [x] **T6** Fullscreen: `useFullscreenElement()`; the room draws the setup window and the error line inside the fullscreen element while there is one · covers FR-2 · verify: `RoomPage.test.tsx`
   - Done: `useFullscreenElement`; `RoomPage` portals the setup window and the error line into the fullscreen element (the error at the top of the player). 2 tests.
-- [ ] **T7** The setup window's texts: "from the button's menu", and today's sound hint · covers FR-3 · verify: `RoomPage.test.tsx`
+- [x] **T7** The setup window's texts: "from the button's menu", and today's sound hint · covers FR-3 · verify: `RoomPage.test.tsx`
+  - Done: both texts in `ShareSetup`. 1 test.
 
 ## Docs and review
 

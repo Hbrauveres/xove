@@ -875,6 +875,23 @@ describe("room: fullscreen (spec 0098)", () => {
   });
 });
 
+describe("room: the setup window's texts (spec 0101)", () => {
+  it("points to the button's menu, and gives today's sound hint", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    lastRoom().localParticipant.nextPickerAudio = false;
+
+    const setup = await pickScreen(user);
+
+    expect(within(setup).getByText("You can change both while sharing, from the button's menu.")).toBeInTheDocument();
+    expect(
+      within(setup).getByText(
+        "No sound with this screen. To share sound, pick a tab, or a window with “Share this app's audio too”. Firefox and Safari can't share sound.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("room: starting from fullscreen (spec 0101)", () => {
   /** Plays the browser putting the stage's player in fullscreen (jsdom has none). */
   function enterFullscreen() {
