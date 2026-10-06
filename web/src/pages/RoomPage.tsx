@@ -73,6 +73,16 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [session.sharers],
   );
   const isLive = (personId: string, kind: StreamKind) => Boolean(sharing[personId]?.[kind]);
+  // Under the stage (spec 0107): who has its person on their stage (me included, never that
+  // person), and, for an empty stage, the others in the room.
+  const bigId = stage.big?.person.id;
+  const { people, watchingOf } = session;
+  const meId = session.me.id;
+  const watchers = useMemo(
+    () => (bigId ? people.filter((p) => p.id !== bigId && watchingOf[p.id]?.sharerId === bigId) : []),
+    [people, watchingOf, bigId],
+  );
+  const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
 
   // The API forgot my seat (it restarted): ask again, with my video connection, which
   // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
@@ -127,6 +137,8 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
             sharers={session.sharers}
             stage={stage}
             ambilight={ambilight}
+            watchers={watchers}
+            others={others}
             controls={{
               mine: session.mine,
               free: session.free,

@@ -36,12 +36,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 - [x] **T4** `Avatar` gains `ring="inside"`, drawn inside the avatar. The info row becomes a flex row, centred on one line, and an inline-size container; the right side never runs past the box; phones stack as today.
   - · covers FR-7, FR-8 (ring), FR-10, FR-12 · verify: `Avatar` rendered with the option in `NowWatching.test.tsx`; build green
   - Done: `Avatar` `ring="inside"` (`data-ring`); `.info` a flex row and container, stacked on phones; `.now` grows, `.also` stops 280 px short of the left. 1 test.
-- [ ] **T5** `NowWatching`:
+- [x] **T5** `NowWatching`:
   - a 52 px avatar with the inner ring, the name, a filled LIVE badge, what's shared and for how long;
   - who's watching: up to 4 avatars side by side and "N watching", hidden when none. Container queries drop the words, then the avatars.
   - Empty: "The stage is *yours*." and `whoIsHere()` (three names, "and N others", alone "Nobody else is here yet.").
   - RoomPage passes the watchers (from `people` and `watchingOf`: me included, never the sharer) and the others in the room through `Stage`.
   - · covers FR-8, FR-10, FR-11 · verify: `NowWatching.test.tsx`, `RoomPage.test.tsx#who's watching the stage`
+  - Done: `NowWatching` with the 52 px inner-ring avatar, filled LIVE, watchers (4 avatars, "N watching", container queries) and the invitation; `whoIsHere()` in its own file; RoomPage computes watchers and others. 8 tests; the page tests now look for "The stage is yours.".
 - [ ] **T6** `AlsoLive`:
   - no head; the previews in their own scroller, with the slim scrollbar;
   - the free box outside it, with "N of 6 live" / "M free · share yours", and gone when nothing is free;

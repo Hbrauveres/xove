@@ -3,7 +3,7 @@ import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/pre
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
-import type { LiveFeed, Sharer } from "../../types";
+import type { Friend, LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { ScreenVideo } from "./ScreenVideo";
@@ -28,6 +28,10 @@ type Props = {
   stage: StagePick;
   /** The light around the stage (spec 0104). */
   ambilight: AmbilightPrefs;
+  /** Who has the person on the stage on theirs, me included, never that person (spec 0107). */
+  watchers?: Friend[];
+  /** The others in the room, for an empty stage's invitation (spec 0107). */
+  others?: Friend[];
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -40,7 +44,7 @@ const canSetVolume = () =>
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** Where the big stream plays: in a 16:9 box, with the picture's own shape (spec 0107). */
-export function Stage({ sharers, controls, stage, ambilight }: Props) {
+export function Stage({ sharers, controls, stage, ambilight, watchers, others }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -269,7 +273,7 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
 
       {/* Under the stage, like YouTube's title row (spec 0104). */}
       <div className={styles.info}>
-        <NowWatching sharer={big} />
+        <NowWatching sharer={big} watchers={watchers} others={others} />
         <AlsoLive
           others={sharers.filter((s) => s !== big)}
           liveCount={6 - controls.free}

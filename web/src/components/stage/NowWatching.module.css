@@ -1,4 +1,4 @@
-/* Who is on the stage (spec 0104): see specs/0104-room-theater/design.html. */
+/* Who is on the stage (specs 0104 and 0107): see specs/0107-stage-hug/design.html. */
 .now {
   /* The left grows and gives way first (spec 0107). */
   flex: 1 1 auto;
@@ -18,47 +18,57 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   font-family: var(--font-display);
-  font-size: 1.3rem;
-  line-height: 1.15;
+  font-weight: 700;
+  font-size: 1.45rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
-.quiet {
-  color: var(--text-muted);
-  font-size: 1.1rem;
+.yours {
+  font-style: normal;
+  color: var(--tally);
 }
 
 .meta {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   white-space: nowrap;
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
 
+.meta > * {
+  flex: none;
+}
+
+/* A filled LIVE badge, its dot pulsing (spec 0107). */
 .live {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 5px;
+  background: var(--live);
+  color: #fff;
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  color: var(--live);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
 }
 
 .live::before {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--live);
+  background: #fff;
   animation: pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes pulse {
   50% {
-    opacity: 0.35;
+    opacity: 0.3;
   }
 }
 
@@ -67,6 +77,54 @@
   font-size: var(--text-xs);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
+}
+
+/* Who's watching: a small dot apart, then the avatars side by side, never overlapping. */
+.watchers {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.watchers::before {
+  content: "";
+  width: 3px;
+  height: 3px;
+  margin-right: 2px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.row {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.face {
+  display: inline-flex;
+}
+
+/* An empty stage: who's here, in a sentence that may shorten. */
+.here {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta > .here {
+  flex: 0 1 auto;
+}
+
+/* Short of room, the left gives way first: the words go, then the avatars (spec 0107). */
+@container (max-width: 900px) {
+  .count {
+    display: none;
+  }
+}
+
+@container (max-width: 760px) {
+  .watchers {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
