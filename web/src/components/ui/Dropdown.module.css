@@ -8,6 +8,7 @@
   z-index: 30;
   width: 340px;
   color: var(--text);
+  line-height: 1.25; /* the design's rows, tighter than the page's text */
   /*
    * Unrolls downward when it opens and rolls back up when it closes, by its height. Never a
    * clip, a fade or a filter here or on an ancestor: those stop the sections' blur.

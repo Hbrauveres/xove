@@ -284,19 +284,20 @@ describe("room: sharing", () => {
     expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
   });
 
-  it("says so when the browser can't share a screen at all", async () => {
+  // A browser without a picker at all never shows the button (StreamButtons.test); here the
+  // picker is there but fails. Removing the picker instead raced the room's next render,
+  // which hides the button (it failed on CI's slower machine).
+  it("says so when the browser's picker fails", async () => {
     installFakeApi({ me: member });
     const user = await readyRoom();
-    const devices = Object.getOwnPropertyDescriptor(navigator, "mediaDevices")!;
-    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {} });
-    try {
-      await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
+    lastRoom().localParticipant.getDisplayMedia.mockImplementation(async () => {
+      throw new TypeError("getDisplayMedia is not supported here");
+    });
 
-      expect(await screen.findByText("Couldn't start sharing your screen.")).toBeInTheDocument();
-      expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
-    } finally {
-      Object.defineProperty(navigator, "mediaDevices", devices);
-    }
+    await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
+
+    expect(await screen.findByText("Couldn't start sharing your screen.")).toBeInTheDocument();
+    expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
   });
 
   it("stops sharing and says so when the screen track can't be identified", async () => {

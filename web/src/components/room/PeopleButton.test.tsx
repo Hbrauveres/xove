@@ -54,6 +54,16 @@ describe("people button (spec 0104)", () => {
     expect(within(panel).getByText("Nobody is waiting for a seat.")).toBeInTheDocument();
   });
 
+  it("lists the people sharing first, then me, then everyone else, as in the design", async () => {
+    const user = setup();
+    await user.click(screen.getByRole("button", { name: "4 people here" }));
+
+    const names = within(screen.getByRole("dialog", { name: "Here now" }))
+      .getAllByRole("listitem")
+      .map((li) => li.querySelector("b")?.textContent);
+    expect(names).toEqual(["Bruno", "Ana", "Henrique", "Diego"]);
+  });
+
   it("says who's just in the room, and how many wait", async () => {
     const user = setup({ watchingOf: {}, seats: { total: 20, taken: 20, waiting: 2 } });
     await user.click(screen.getByRole("button", { name: "4 people here" }));

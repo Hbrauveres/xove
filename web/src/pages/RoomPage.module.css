@@ -10,6 +10,8 @@
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+  /* The design's base size (14px): the room's text and panels are set from it. */
+  font-size: 0.875rem;
 }
 
 /* The middle: as big as the window leaves, and a size container for the column. */
