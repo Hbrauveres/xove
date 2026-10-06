@@ -52,10 +52,11 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - events about live streams show WATCH (on hover or focus) and WATCHING, and a click picks that stream.
   - · covers FR-8, FR-9, FR-10, FR-11, FR-12 · verify: `ActivityPill.test.tsx`, `ActivityList.test.tsx` (new)
   - Done: `ActivityPill` (in a `Dropdown`), `ActivityList`, `ActivityIcon` and `activityText` (the texts and short times). New counts from the last event seen; opening marks them seen. 8 tests.
-- [ ] **T8** `PeopleButton` and `AccountButton`:
+- [x] **T8** `PeopleButton` and `AccountButton`:
   - people: the icon and number; the panel's seats bar, people with "Sharing …", "Watching <name>" or "In the room", icons, and the queue line;
   - account: the avatar with its connection dot; the menu's name, role and connection, the ambilight switch and brightness slider (saved), Admin for admins, and Sign out.
   - · covers FR-6a, FR-13, FR-14 · verify: `PeopleButton.test.tsx`, `AccountButton.test.tsx` (new)
+  - Done: `PeopleButton` (seats bar as a progressbar, people notes, queue line; seats and queue left out when the API doesn't say) and `AccountButton`. The account panel is a dialog, not a menu: a menu's arrow keys would fight the brightness slider. 8 tests.
 - [ ] **T9** `NowWatching` and `AlsoLive`:
   - now watching: the avatar with its ring, name, pulsing LIVE, what, and elapsed time; or "Nobody is sharing right now";
   - also live: "N of 6", the previews with their chip (a click picks), and the dashed free slot;

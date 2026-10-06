@@ -1,0 +1,134 @@
+/* People (spec 0104): see specs/0104-room-theater/design.html. */
+.wrap {
+  position: relative;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:hover,
+.button[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--tally);
+  outline-offset: 2px;
+}
+
+.count {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.head {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 12px;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: #c3ccd8;
+}
+
+.line b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok);
+}
+
+.people {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+}
+
+.person {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.person:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.who {
+  min-width: 0;
+}
+
+.who b {
+  font-weight: 700;
+}
+
+.you {
+  color: #9aa5b6;
+  font-weight: 500;
+}
+
+.who small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #aab4c4;
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.icons {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tally) 18%, transparent);
+  color: var(--tally);
+}
+
+.foot {
+  padding: 10px 16px 12px;
+  color: #aab4c4;
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
