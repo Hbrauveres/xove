@@ -1,15 +1,13 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { SharePrefs } from "../../media/preferences";
 import { CAMERA_QUALITIES, SHARE_QUALITIES } from "../../media/shareSettings";
-import type { StreamKind } from "../../types";
+import type { CameraDevice, StreamKind } from "../../types";
 import { MODES } from "../share/ShareSettingsFields";
 import styles from "./StreamButtons.module.css";
 
 export const FULL_ROOM = "6 streams are live, the most at once. You can start yours when one stops.";
 export const NO_SOUND =
   "No sound is being shared. Share a tab, or a window with “Share this app's audio too”, from Change window.";
-
-export type CameraDevice = { deviceId: string; label: string };
 
 type Props = {
   /** Which of my streams are live. */

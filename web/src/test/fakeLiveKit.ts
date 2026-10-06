@@ -50,10 +50,24 @@ export class FakeTrack {
   }
 }
 
+/** The cameras this browser has (`navigator.mediaDevices.enumerateDevices`, see setup.ts). */
+export const fakeCameras = [
+  { deviceId: "cam-1", label: "Logitech C920" },
+  { deviceId: "cam-2", label: "Integrated Webcam" },
+];
+
 /** The browser's captured screen, as a MediaStreamTrack. */
 export class FakeMediaStreamTrack {
   contentHint = "";
   stopped = false;
+  /** For a camera: which one. */
+  readonly deviceId?: string;
+  constructor(deviceId?: string) {
+    this.deviceId = deviceId;
+  }
+  getSettings() {
+    return { deviceId: this.deviceId };
+  }
   readonly listeners: (() => void)[] = [];
   addEventListener(event: string, listener: () => void) {
     if (event === "ended") this.listeners.push(listener);
@@ -73,7 +87,7 @@ export class FakeMediaStreamTrack {
 
 /** A track this browser captured: the screen, or its sound. */
 export class FakeLocalTrack extends FakeTrack {
-  readonly mediaStreamTrack: FakeMediaStreamTrack;
+  mediaStreamTrack: FakeMediaStreamTrack;
   readonly kind: "video" | "audio";
   source: string;
   stopped = false;
@@ -87,6 +101,12 @@ export class FakeLocalTrack extends FakeTrack {
     this.stopped = true;
     this.mediaStreamTrack.stop();
   }
+  /** Swaps the browser track under the same published track (LiveKit stops the old one). */
+  readonly replaceTrack = vi.fn(async (mediaStreamTrack: FakeMediaStreamTrack, _options?: unknown) => {
+    this.mediaStreamTrack.stop();
+    this.mediaStreamTrack = mediaStreamTrack;
+    return this;
+  });
 }
 
 /** The captured screen. */
@@ -100,9 +120,14 @@ export class FakeLocalScreenTrack extends FakeLocalTrack {
 
 /** The captured camera: a video track like the screen's, from another source. */
 export class FakeLocalCameraTrack extends FakeLocalScreenTrack {
-  constructor() {
-    super(new FakeMediaStreamTrack(), Track.Source.Camera);
+  constructor(deviceId = fakeCameras[0].deviceId) {
+    super(new FakeMediaStreamTrack(deviceId), Track.Source.Camera);
   }
+  /** Captures again with new constraints: another camera, same published track. */
+  readonly restartTrack = vi.fn(async (options?: { deviceId?: { exact?: string } }) => {
+    this.mediaStreamTrack.stop();
+    this.mediaStreamTrack = new FakeMediaStreamTrack(options?.deviceId?.exact ?? this.mediaStreamTrack.deviceId);
+  });
 }
 
 /** The screen's video, wrapped by the app after the browser's picker. */
@@ -194,7 +219,9 @@ export class Room {
     createTracks: vi.fn(async (_options?: { video?: unknown; audio?: unknown }) => {
       const local = this.localParticipant;
       if (local.nextCamera !== "allow") throw new DOMException("No camera", local.nextCamera);
-      local.lastCamera = new FakeLocalCameraTrack();
+      // `ideal`: a camera that's gone falls back to the first one.
+      const wanted = (_options?.video as { deviceId?: { ideal?: string } } | undefined)?.deviceId?.ideal;
+      local.lastCamera = new FakeLocalCameraTrack(fakeCameras.find((c) => c.deviceId === wanted)?.deviceId);
       return [local.lastCamera];
     }),
     /**
