@@ -98,14 +98,17 @@ export function Ambilight({ video, prefs }: Props) {
     };
   }, [shown, video]);
 
-  if (!shown) return null;
+  // No stream, or one the browser won't let it read: no light at all. Switched off or
+  // paused: the light fades out (and nothing is read), and fades back in.
+  if (!video || video === unreadable) return null;
   return (
     <canvas
       ref={canvas}
       className={styles.light}
       width={COLS + SPREAD * 2}
       height={ROWS + SPREAD * 2}
-      style={{ ...PLACE, opacity: prefs.brightness }}
+      style={{ ...PLACE, opacity: shown ? prefs.brightness : 0 }}
+      data-on={shown || undefined}
       aria-hidden="true"
     />
   );

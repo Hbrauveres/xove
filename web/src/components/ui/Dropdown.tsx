@@ -19,6 +19,8 @@ type Props = {
   /** Under the end of its button (the right side), or centred under it. */
   align?: "end" | "center";
   className?: string;
+  /** Its width, when not the usual 340 px. */
+  width?: number;
   children: ReactNode;
 };
 
@@ -26,7 +28,17 @@ type Props = {
  * The room's floating panel (spec 0104): frosted sections with clear cuts between them, that
  * unroll downward and roll back up. One open at a time; a click outside or Escape closes it.
  */
-export function Dropdown({ open, onClose, anchor, label, role = "dialog", align = "end", className, children }: Props) {
+export function Dropdown({
+  open,
+  onClose,
+  anchor,
+  label,
+  role = "dialog",
+  align = "end",
+  className,
+  width,
+  children,
+}: Props) {
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
   // Stays on the page while it rolls up.
@@ -95,7 +107,7 @@ export function Dropdown({ open, onClose, anchor, label, role = "dialog", align 
       tabIndex={-1}
       className={[styles.panel, styles[align], className].filter(Boolean).join(" ")}
       // The roll is the height only: a clip, fade or filter would stop the sections' blur.
-      style={{ gridTemplateRows: rolledOut ? "1fr" : "0fr" }}
+      style={{ gridTemplateRows: rolledOut ? "1fr" : "0fr", width }}
       data-rolled={rolledOut ? "out" : "up"}
       onKeyDown={onKeyDown}
     >

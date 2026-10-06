@@ -333,6 +333,9 @@ class StreamsControllerTest {
         watch("sub-m3", "{\"sharerId\":" + idOf("sub-m1") + ",\"kind\":\"screen\"}").andExpect(status().isNoContent());
 
         mvc.perform(get("/api/streams").with(as("sub-friend"))).andExpect(jsonPath("$.watching").isEmpty());
+        // Not even kept for later: seating them afterwards lists nothing.
+        mvc.perform(post("/api/room/enter").with(as("sub-m3")).with(csrf()));
+        mvc.perform(get("/api/streams").with(as("sub-friend"))).andExpect(jsonPath("$.watching").isEmpty());
     }
 
     @Test

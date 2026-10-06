@@ -1673,6 +1673,38 @@ describe("room: what's on my stage is reported (spec 0104)", () => {
     expect(watchCalls(server)).toHaveLength(1);
   });
 
+  it("tries a failed report again a moment later", async () => {
+    const server = installFakeApi({ me: member });
+    server.failures.set("PUT /api/streams/watching", { status: 503, body: { status: 503, detail: "Deploying" } });
+    server.streams = [someoneSharing("Ana Souza", 3)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-3");
+    });
+    await waitFor(() => expect(watchCalls(server)).toHaveLength(1), { timeout: 3000 });
+
+    server.failures.delete("PUT /api/streams/watching");
+
+    await waitFor(() => expect(server.myWatch).toEqual({ sharerId: 3, kind: "screen" }), { timeout: 5000 });
+  }, 12000);
+
+  it("reports nothing while the stream is still loading", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Ana Souza", 3)];
+    renderRoom();
+    await connected();
+    await screen.findByRole("heading", { name: "Ana" });
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(watchCalls(server)).toHaveLength(0);
+
+    act(() => {
+      lastRoom().publishScreen("user-3");
+    });
+    await waitFor(() => expect(server.myWatch).toEqual({ sharerId: 3, kind: "screen" }), { timeout: 3000 });
+  }, 10000);
+
   it("reports it again when the API forgot it (a restart)", async () => {
     const server = await anaAndBruno();
     await waitFor(() => expect(server.myWatch).not.toBeNull(), { timeout: 3000 });

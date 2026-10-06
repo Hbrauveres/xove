@@ -7,6 +7,8 @@ export type StagePick = {
   big: Sharer | null;
   /** What of theirs is big: their screen, or their camera (only one, or swapped). */
   mainKind: StreamKind | null;
+  /** The big video plays (not still loading): only then does it count as watched (spec 0104). */
+  playing: boolean;
   /** Per person: their camera big and their screen in the facecam. For this visit only. */
   swappedFor: Record<string, boolean>;
   /** Puts a person on the stage; with a kind, that stream of theirs big. */
@@ -43,6 +45,9 @@ export function useStagePick(sharers: Sharer[]): StagePick {
         ? "screen"
         : "camera";
 
+  const mainFeed = big && mainKind ? big[mainKind] : undefined;
+  const playing = Boolean(big && mainFeed && (big.isMe ? mainFeed.local : mainFeed.remote));
+
   const pick = useCallback((personId: string, kind?: StreamKind) => {
     setPicked(personId);
     if (kind) setSwappedFor((prev) => ({ ...prev, [personId]: kind === "camera" }));
@@ -52,5 +57,5 @@ export function useStagePick(sharers: Sharer[]): StagePick {
     [],
   );
 
-  return { big, mainKind, swappedFor, pick, toggleSwap };
+  return { big, mainKind, playing, swappedFor, pick, toggleSwap };
 }

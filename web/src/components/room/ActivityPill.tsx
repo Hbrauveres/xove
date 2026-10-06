@@ -27,8 +27,8 @@ export function ActivityPill({ events, people, meId, connection, isLive, watchin
   const button = useRef<HTMLButtonElement>(null);
   // The newest event seen in the list; everything after it is new.
   const [seenId, setSeenId] = useState<string | null>(null);
-  // How many were new when the list opened: those stay highlighted while it's open.
-  const [newWhenOpened, setNewWhenOpened] = useState(0);
+  // The ones that were new when the list opened: they stay highlighted while it's open.
+  const [newWhenOpened, setNewWhenOpened] = useState<ReadonlySet<string>>(new Set());
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 15000);
@@ -43,12 +43,20 @@ export function ActivityPill({ events, people, meId, connection, isLive, watchin
   const actor = latest ? (people.find((p) => p.id === latest.actorId) ?? null) : null;
   const reconnecting = connection === "reconnecting";
 
+  // Opening shows what's new; closing marks everything seen, events that came in meanwhile too.
+  const close = (returnFocus: boolean) => {
+    setSeenId(events.at(-1)?.id ?? null);
+    setOpen(false);
+    if (returnFocus) button.current?.focus();
+  };
   const toggle = () => {
-    if (!open) {
-      setNewWhenOpened(unseen);
-      setSeenId(latest?.id ?? null);
+    if (open) {
+      close(false);
+      return;
     }
-    setOpen(!open);
+    setNewWhenOpened(new Set(unseen > 0 ? events.slice(-unseen).map((e) => e.id) : []));
+    setSeenId(latest?.id ?? null);
+    setOpen(true);
   };
 
   let label: string;
@@ -64,7 +72,7 @@ export function ActivityPill({ events, people, meId, connection, isLive, watchin
   } else if (latest) {
     const text = describeEvent(latest, nameOf, meId);
     const ago = shortAgo(latest.at, now);
-    label = `Activity: ${text}, ${ago}${fresh ? `, ${fresh} new` : ""}`;
+    label = `Activity: ${text}, ${ago === "now" ? "just now" : `${ago} ago`}${fresh ? `, ${fresh} new` : ""}`;
     content = (
       <span key={latest.id} className={`${styles.tick} ${styles.enter}`}>
         {actor && <Avatar person={actor} size={22} />}
@@ -115,10 +123,7 @@ export function ActivityPill({ events, people, meId, connection, isLive, watchin
         label="Activity"
         align="center"
         anchor={anchor}
-        onClose={(returnFocus) => {
-          setOpen(false);
-          if (returnFocus) button.current?.focus();
-        }}
+        onClose={close}
       >
         <DropdownSection scroll>
           <ActivityList
@@ -130,7 +135,8 @@ export function ActivityPill({ events, people, meId, connection, isLive, watchin
             watching={watching}
             onWatch={(personId, kind) => {
               onWatch(personId, kind);
-              setOpen(false);
+              // The list closes; the keyboard stays on the pill.
+              close(true);
             }}
           />
         </DropdownSection>

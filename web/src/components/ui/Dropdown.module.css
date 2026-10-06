@@ -87,10 +87,10 @@
   .panel,
   .center {
     position: fixed;
-    top: 68px;
+    top: 72px;
     left: 8px;
     right: 8px;
-    width: auto;
+    width: auto !important; /* full width on a phone, whatever the panel's own width */
     transform: none;
   }
 }

@@ -79,24 +79,44 @@ describe("ambilight (spec 0104)", () => {
     expect(reads - whileHidden).toBeGreaterThanOrEqual(11);
   });
 
-  it("reads nothing, and shows no light, when the video is paused or there is none", () => {
+  it("reads nothing, and fades the light out, when the video is paused; no light without a video", () => {
     const { container, rerender } = render(
       <Ambilight video={playingVideo(false)} prefs={{ on: true, brightness: 0.9 }} />,
     );
     advance(1000);
-    rerender(<Ambilight video={null} prefs={{ on: true, brightness: 0.9 }} />);
-    advance(1000);
-
     expect(reads).toBe(0);
+    expect(container.querySelector("canvas")).toHaveStyle({ opacity: "0" });
+
+    rerender(<Ambilight video={null} prefs={{ on: true, brightness: 0.9 }} />);
     expect(container.querySelector("canvas")).toBeNull();
   });
 
-  it("reads nothing and shows nothing when switched off", () => {
+  it("stops reading when a playing video is paused", () => {
+    const video = document.createElement("video");
+    let playing = true;
+    Object.defineProperty(video, "paused", { configurable: true, get: () => !playing });
+    Object.defineProperty(video, "readyState", { configurable: true, get: () => 4 });
+    const { container } = render(<Ambilight video={video} prefs={{ on: true, brightness: 0.9 }} />);
+    advance(500);
+    const before = reads;
+
+    playing = false;
+    act(() => {
+      video.dispatchEvent(new Event("pause"));
+    });
+    advance(1000);
+
+    expect(before).toBeGreaterThan(0);
+    expect(reads).toBe(before);
+    expect(container.querySelector("canvas")).toHaveStyle({ opacity: "0" });
+  });
+
+  it("reads nothing, and fades out, when switched off", () => {
     const { container } = render(<Ambilight video={playingVideo()} prefs={{ on: false, brightness: 0.9 }} />);
     advance(1000);
 
     expect(reads).toBe(0);
-    expect(container.querySelector("canvas")).toBeNull();
+    expect(container.querySelector("canvas")).toHaveStyle({ opacity: "0" });
   });
 
   it("shows the light at the chosen brightness", () => {

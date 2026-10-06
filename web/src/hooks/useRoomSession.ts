@@ -197,7 +197,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   }, [lk.connection, me.id]);
 
   const activity = useMemo(
-    () => [...lk.presence, ...streamEvents, ...connectionEvents].sort((a, b) => a.at - b.at),
+    () => [...lk.presence, ...streamEvents, ...connectionEvents].sort((a, b) => a.at - b.at).slice(-30),
     [lk.presence, streamEvents, connectionEvents],
   );
 
@@ -227,19 +227,25 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   // An older API doesn't list watches: nothing to compare with, report on change only.
   const apiKey = watchers === undefined ? undefined : mineWatch ? `${mineWatch.sharerId}|${mineWatch.kind}` : "none";
   const sentKey = useRef<string | undefined>(undefined);
+  // A failed report is tried again a moment later.
+  const [retries, setRetries] = useState(0);
+  // Only the page that's really in the video room reports: a second tab of mine, or one
+  // that LiveKit disconnected, would overwrite it back and forth (the API keeps one per person).
+  const reporting = seated === true && lk.connection === "connected";
   useEffect(() => {
-    if (wantedKey === undefined || seated !== true) return;
+    if (wantedKey === undefined || !reporting) return;
     if (apiKey === undefined ? sentKey.current === wantedKey : apiKey === wantedKey) return;
     const timer = window.setTimeout(() => {
       sentKey.current = wantedKey;
       const [sharerId, kind] = wantedKey.split("|");
       const target = wantedKey === "none" ? null : { sharerId: Number(sharerId), kind: kind as StreamKind };
       client.streams.watching(target).catch(() => {
-        sentKey.current = undefined; // tried again on the next change
+        sentKey.current = undefined;
+        window.setTimeout(() => setRetries((n) => n + 1), 2000);
       });
     }, 1000);
     return () => window.clearTimeout(timer);
-  }, [wantedKey, apiKey, seated]);
+  }, [wantedKey, apiKey, reporting, retries]);
 
   // ---- keeping my streams and the API in step ----
 

@@ -44,30 +44,36 @@ export function AlsoLive({ others, liveCount, free, onPick, sound, onSoundChange
           const id = s.person.id;
           const mine = sound[id] ?? MUTED;
           const what = kindOf(feed);
+          // My own stream plays from my browser; someone else's from LiveKit, once it arrives.
+          const video = s.isMe ? feed.local : feed.remote?.video;
+          const name = s.isMe ? "You" : s.person.name;
+          const whose = s.isMe ? "your" : `${s.person.name}'s`;
           return (
             <li key={id} className={styles.item}>
               <button
                 type="button"
                 className={styles.preview}
-                aria-label={`Watch ${s.person.name}'s ${what}`}
+                aria-label={`Watch ${whose} ${what}`}
                 onClick={() => onPick(id)}
               >
                 <span className={styles.video}>
-                  {feed.remote?.video && (
+                  {video ? (
                     <ScreenVideo
-                      video={feed.remote.video}
-                      sound={mine.muted ? undefined : s.sound}
+                      video={video}
+                      sound={s.isMe || mine.muted ? undefined : s.sound}
                       volume={mine.volume}
-                      label={`${s.person.name}'s ${what === "screen" ? "shared screen" : "camera"}`}
+                      label={`${s.isMe ? "Your" : `${s.person.name}'s`} ${what === "screen" ? "shared screen" : "camera"}`}
                     />
+                  ) : (
+                    <span className={styles.loading}>Loading…</span>
                   )}
                 </span>
                 <span className={styles.chip}>
                   <Avatar person={s.person} size={16} />
-                  {s.person.name} · {what}
+                  {name} · {what}
                 </span>
               </button>
-              {s.hasSound && (
+              {!s.isMe && s.hasSound && (
                 <PreviewSpeaker
                   name={s.person.name}
                   sound={mine}

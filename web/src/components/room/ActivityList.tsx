@@ -9,8 +9,8 @@ type Props = {
   events: ActivityEvent[];
   people: Friend[];
   meId: string;
-  /** How many of the newest ones weren't seen yet: highlighted. */
-  unseen: number;
+  /** The events not seen yet: highlighted. */
+  unseen: ReadonlySet<string>;
   /** Whether that person's stream is still live. */
   isLive: (personId: string, kind: StreamKind) => boolean;
   /** What's on my stage. */
@@ -33,7 +33,7 @@ export function ActivityList({ events, people, meId, unseen, isLive, watching, o
 
   return (
     <ul className={styles.list}>
-      {newestFirst.map((e, i) => {
+      {newestFirst.map((e) => {
         const text = describeEvent(e, nameOf, meId);
         const kind: StreamKind = e.stream ?? "screen";
         const isStream = e.kind === "started" || e.kind === "stopped";
@@ -43,7 +43,7 @@ export function ActivityList({ events, people, meId, unseen, isLive, watching, o
           </span>
         );
         const time = <time className={styles.time}>{shortAgo(e.at, now)}</time>;
-        const unseenMark = i < unseen ? { "data-unseen": true } : {};
+        const unseenMark = unseen.has(e.id) ? { "data-unseen": true } : {};
         if (e.kind === "started" && isLive(e.actorId, kind)) {
           const here = watching?.personId === e.actorId && watching.kind === kind;
           return (

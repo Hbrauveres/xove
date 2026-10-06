@@ -71,5 +71,6 @@ describe("account button (spec 0104)", () => {
 
     fireEvent.change(screen.getByRole("slider", { name: "Ambilight brightness" }), { target: { value: "0.85" } });
     expect(onAmbilightChange).toHaveBeenLastCalledWith({ on: true, brightness: 0.85 });
+    expect(loadAmbilight().brightness).toBe(0.85);
   });
 });

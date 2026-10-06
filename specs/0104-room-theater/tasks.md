@@ -79,12 +79,22 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 ## Docs and review
 
 - [x] **T12** Docs: the room's layout, ambilight and who-watches-what in `docs/architecture.md` and `docs/overview.md`; decision 36 in `docs/decisions.md`; test counts in `CLAUDE.md` · verify: the pages describe the new behaviour
-  - Done: architecture (the page, ambilight, who watches what, the info row, sound, the API table), overview, decision 36, API 163 and web 275 tests.
+  - Done: architecture (the page, ambilight, who watches what, the info row, sound, the API table), overview, decision 36, API 163 and web 281 tests.
 - [ ] **T13** Review every AC (`/review`), fix what it finds, and open the PR with `Closes #104`. Then on staging after merge, written in the PR (Henrique):
   - at 1080p, 2K and a narrow window: sizes, edges, the header and footer see-through above the light (AC-2, AC-12);
   - on the 2K monitor: the ambilight looks like the design and stays smooth, under a millisecond per update in Chrome's performance panel (AC-4);
   - dropdowns: frosted and readable, clear cuts, a smooth roll with the blur, no scrollbar flash (AC-10).
   - · verify: no gaps left; every check written in the PR
+  - Review done: no FR or AC uncovered. Fixed:
+    - my own stream's preview (it played nothing, now it plays my video as "You"), with Loading while a video arrives;
+    - a failed watch report is tried again; only the connected tab reports (two tabs fought); a loading stream counts as "In the room";
+    - the light fades on and off, and one unreadable video no longer darkens the next stream;
+    - activity: 30 events in all, highlights by event, all seen on close, focus back after WATCH, "ago" for screen readers;
+    - the API keeps a watch only from someone seated;
+    - the error line sits over the middle, not inside the sized column;
+    - no on-air border (FR-19), the account panel 260 px, the mobile panels at 72 px, ☕ in the footer.
+
+    10 tests. The staging checks are Henrique's, after merge.
 
 ## Coverage
 

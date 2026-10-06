@@ -59,6 +59,28 @@ function Harness({
 const preview = (name: RegExp) => screen.getByRole("button", { name });
 
 describe("also live (spec 0104)", () => {
+  it("shows my own stream from my browser, as You, with no speaker", () => {
+    const local = video();
+    const me: Sharer = {
+      person: { id: "me", name: "Henrique", hue: 36, online: true },
+      isMe: true,
+      since: Date.now(),
+      screen: { kind: "screen", startedAt: Date.now(), settings: { quality: "1080p", mode: "smooth" }, local },
+      hasSound: true,
+    };
+    render(<Harness others={[me]} />);
+
+    expect(preview(/Watch your screen/)).toHaveTextContent("You · screen");
+    expect((local as unknown as FakeTrack).attached).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /mute/i })).not.toBeInTheDocument();
+  });
+
+  it("says Loading until someone's video arrives", () => {
+    const waiting: Sharer = { ...ANA, screen: { ...ANA.screen!, remote: undefined } };
+    render(<Harness others={[waiting]} />);
+    expect(preview(/Watch Ana's screen/)).toHaveTextContent("Loading…");
+  });
+
   it("counts the live streams, shows each other one with its chip, and the free places", () => {
     render(<Harness others={[ANA, DIEGO]} free={3} />);
 

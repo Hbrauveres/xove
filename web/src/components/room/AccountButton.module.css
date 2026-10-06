@@ -45,10 +45,6 @@
   background: var(--live);
 }
 
-.panel {
-  width: 280px;
-}
-
 .me {
   padding: 6px;
 }

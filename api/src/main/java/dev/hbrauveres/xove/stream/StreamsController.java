@@ -103,7 +103,13 @@ public class StreamsController {
         if (request.sharerId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Say whose stream you're watching.");
         }
-        watching.watch(me.getId(), request.sharerId(), kindOf(request.kind()));
+        StreamKind kind = kindOf(request.kind());
+        // Only a seated person's watch is kept: anyone else's would never be listed anyway.
+        if (seats.isSeated(me.getId())) {
+            watching.watch(me.getId(), request.sharerId(), kind);
+        } else {
+            watching.clear(me.getId());
+        }
     }
 
     private StreamsView view(User me) {

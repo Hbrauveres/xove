@@ -54,7 +54,7 @@ export function AccountButton({ me, isAdmin, connection, ambilight, onAmbilightC
         open={open}
         label="Account"
         anchor={anchor}
-        className={styles.panel}
+        width={260}
         onClose={(returnFocus) => {
           setOpen(false);
           if (returnFocus) button.current?.focus();

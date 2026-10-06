@@ -21,17 +21,12 @@
   border-radius: 12px;
   overflow: hidden;
   z-index: 1;
-  transition: outline-color 200ms ease;
 }
 
 .frame:fullscreen {
   border-radius: 0;
 }
 
-/* Amber tally border while you are the one on air. */
-.onAir {
-  outline: 3px solid var(--tally);
-}
 
 .frame[data-chrome="hidden"] {
   cursor: none;

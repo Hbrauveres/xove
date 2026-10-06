@@ -42,7 +42,7 @@ function setup(watching: { personId: string; kind: "screen" | "camera" } | null 
       events={EVENTS}
       people={people}
       meId="me"
-      unseen={2}
+      unseen={new Set(["8", "7"])}
       // Bruno's screen and camera and Ana's screen are live; Diego's ended.
       isLive={(personId, kind) => ["user-7|screen", "user-7|camera", "user-3|screen"].includes(`${personId}|${kind}`)}
       watching={watching}

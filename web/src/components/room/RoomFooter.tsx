@@ -6,7 +6,7 @@ export function RoomFooter() {
     <footer className={styles.footer}>
       <span>xovê · Made by Hbrauveres</span>
       <span className={styles.links}>
-        <span className={styles.coffee}>Buy me a coffee</span>
+        <span className={styles.coffee}>☕ Buy me a coffee</span>
         <span>GitHub</span>
         <span>LinkedIn</span>
       </span>

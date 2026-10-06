@@ -27,7 +27,7 @@
 
 .pill:hover,
 .pill[aria-expanded="true"] {
-  border-color: color-mix(in srgb, var(--tally) 55%, transparent);
+  border-color: color-mix(in srgb, var(--tally) 55%, var(--line));
 }
 
 .pill:focus-visible {

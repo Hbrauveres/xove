@@ -55,7 +55,8 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   // Who is on the stage (spec 0104): the stage, the previews and the activity list can change it.
   const stage = useStagePick(session.sharers);
   const { watchStage } = session;
-  const stagePersonId = stage.big?.person.id ?? null;
+  // A stream still loading counts as nothing watched yet ("In the room").
+  const stagePersonId = stage.playing ? (stage.big?.person.id ?? null) : null;
   useEffect(() => {
     watchStage(stagePersonId && stage.mainKind ? { personId: stagePersonId, kind: stage.mainKind } : null);
   }, [watchStage, stagePersonId, stage.mainKind]);
@@ -142,12 +143,13 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               onPickCamera: session.pickCamera,
             }}
           />
-          {session.error && !fullscreen && (
-            <p className={styles.error} role="alert">
-              {session.error}
-            </p>
-          )}
         </div>
+        {/* Over the bottom of the middle: the column is sized exactly, nothing may push it. */}
+        {session.error && !fullscreen && (
+          <p className={`${styles.error} ${styles.errorBelow}`} role="alert">
+            {session.error}
+          </p>
+        )}
       </main>
 
       <RoomFooter />

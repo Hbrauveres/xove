@@ -35,6 +35,19 @@ function Pill({ events, connection = "connected" }: { events: ActivityEvent[]; c
 const pill = () => screen.getByRole("button", { name: /^Activity|Connection/ });
 
 describe("activity pill (spec 0104)", () => {
+  it("counts events that came in while the list was open as seen once it closes", async () => {
+    const user = userEvent.setup();
+    const first = [ev("joined", "user-9")];
+    const { rerender } = render(<Pill events={first} />);
+    await user.click(pill());
+
+    rerender(<Pill events={[...first, ev("left", "user-9")]} />);
+    await user.keyboard("{Escape}");
+
+    expect(pill()).toHaveAccessibleName("Activity: Diego left, just now");
+    expect(pill()).toHaveFocus();
+  });
+
   it("shows the latest event with how long ago, and counts the new ones", () => {
     const first = [ev("joined", "user-9")];
     const { rerender } = render(<Pill events={first} />);
@@ -44,7 +57,7 @@ describe("activity pill (spec 0104)", () => {
     rerender(<Pill events={[...first, ev("started", "user-3", "screen")]} />);
 
     expect(pill()).toHaveTextContent("Ana started sharing");
-    expect(pill()).toHaveAccessibleName("Activity: Ana started sharing, now, 2 new");
+    expect(pill()).toHaveAccessibleName("Activity: Ana started sharing, just now, 2 new");
   });
 
   it("opens the list on a click, and the new ones count as seen", async () => {
@@ -55,7 +68,7 @@ describe("activity pill (spec 0104)", () => {
 
     const list = screen.getByRole("dialog", { name: "Activity" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
-    expect(pill()).toHaveAccessibleName("Activity: Ana started sharing, now");
+    expect(pill()).toHaveAccessibleName("Activity: Ana started sharing, just now");
   });
 
   it("says when the connection drops, then shows the latest event again", () => {

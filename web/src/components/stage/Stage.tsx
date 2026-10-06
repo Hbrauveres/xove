@@ -205,10 +205,15 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
     <section className={styles.stage} aria-label="Shared screen">
       <div className={styles.box}>
         {/* Behind the frame, outside it: the frame clips what's inside it. */}
-        <Ambilight video={big ? bigVideoEl : null} prefs={ambilight} />
+        {/* One per stream: a stream the browser won't let it read doesn't darken the next one. */}
+        <Ambilight
+          key={big ? `${big.person.id}|${stage.mainKind}` : "none"}
+          video={big ? bigVideoEl : null}
+          prefs={ambilight}
+        />
         <div
           ref={frameRef}
-          className={`${styles.frame} ${big?.isMe ? styles.onAir : ""}`}
+          className={styles.frame}
           // Only over a playing video: notices and the empty stage never fade.
           data-chrome={playing ? (chromeShown ? "shown" : "hidden") : undefined}
           onPointerMove={showChrome}
