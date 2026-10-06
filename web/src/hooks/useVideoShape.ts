@@ -11,27 +11,27 @@ const IGNORE = 0.01;
  * then the picture's own, following it when the sharer resizes or switches the window.
  */
 export function useVideoShape(video: HTMLVideoElement | null): number {
-  const [shape, setShape] = useState(WIDESCREEN);
+  // The shape read, and the video it was read from: another video starts again at 16:9.
+  const [read, setRead] = useState<{ video: HTMLVideoElement; shape: number } | null>(null);
 
   useEffect(() => {
-    if (!video) {
-      setShape(WIDESCREEN);
-      return;
-    }
-    const read = () => {
+    if (!video) return;
+    const update = () => {
       const { videoWidth: w, videoHeight: h } = video;
       if (!w || !h) return;
       const next = w / h;
-      setShape((prev) => (Math.abs(next - prev) / prev < IGNORE ? prev : next));
+      setRead((prev) =>
+        prev?.video === video && Math.abs(next - prev.shape) / prev.shape < IGNORE ? prev : { video, shape: next },
+      );
     };
-    read();
-    video.addEventListener("loadedmetadata", read);
-    video.addEventListener("resize", read);
+    update();
+    video.addEventListener("loadedmetadata", update);
+    video.addEventListener("resize", update);
     return () => {
-      video.removeEventListener("loadedmetadata", read);
-      video.removeEventListener("resize", read);
+      video.removeEventListener("loadedmetadata", update);
+      video.removeEventListener("resize", update);
     };
   }, [video]);
 
-  return shape;
+  return video && read?.video === video ? read.shape : WIDESCREEN;
 }

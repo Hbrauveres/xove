@@ -22,13 +22,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The stage
 
-- [ ] **T3** The stage hugs the picture:
+- [x] **T3** The stage hugs the picture:
   - the shape from T1 goes to the box as `--shape`;
   - the stage is an inline-size container, and the box takes `min()` sizes, centred;
   - the frame fills it, with a 0.35 s transition (none with reduced motion);
   - the ambilight gets the shape;
   - empty and loading stay 16:9.
   - · covers FR-1–FR-6 · verify: `RoomPage.test.tsx#the stage takes the picture's shape` (wide, tall, empty, loading); `cd web && npm test && npm run build`
+  - Done: `Stage` reads the shape from its big video into `--shape` (and `data-shape`); `.box` sizes with `min()` in container units, the frame fills it; the ambilight gets the shape. 1 page test; the hook keeps the shape per video (no state reset in an effect).
 
 ## The info row
 

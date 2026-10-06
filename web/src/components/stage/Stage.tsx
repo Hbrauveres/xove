@@ -16,6 +16,7 @@ import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching } from "./NowWatching";
 import { MUTED, type PreviewSound } from "./previewSound";
+import { useVideoShape } from "../../hooks/useVideoShape";
 import styles from "./Stage.module.css";
 
 type Props = {
@@ -38,7 +39,7 @@ const canSetVolume = () =>
 
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
-/** The 16:9 area where the big stream plays. */
+/** Where the big stream plays: in a 16:9 box, with the picture's own shape (spec 0107). */
 export function Stage({ sharers, controls, stage, ambilight }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
@@ -100,6 +101,8 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
   const [thumbnailSound, setThumbnailSound] = useState<Record<string, PreviewSound>>({});
   // The big video, for the ambilight to read.
   const [bigVideoEl, setBigVideoEl] = useState<HTMLVideoElement | null>(null);
+  // The stage hugs the picture: no bars (spec 0107). 16:9 while empty or loading.
+  const shape = useVideoShape(bigVideoEl);
   useEffect(() => {
     for (const s of sharers) {
       if (s.isMe || !s.setSoundOn) continue;
@@ -203,13 +206,18 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
 
   return (
     <section className={styles.stage} aria-label="Shared screen">
-      <div className={styles.box}>
+      <div
+        className={styles.box}
+        data-shape={shape.toFixed(4)}
+        style={{ "--shape": shape } as React.CSSProperties}
+      >
         {/* Behind the frame, outside it: the frame clips what's inside it. */}
         {/* One per stream: a stream the browser won't let it read doesn't darken the next one. */}
         <Ambilight
           key={big ? `${big.person.id}|${stage.mainKind}` : "none"}
           video={big ? bigVideoEl : null}
           prefs={ambilight}
+          shape={shape}
         />
         <div
           ref={frameRef}

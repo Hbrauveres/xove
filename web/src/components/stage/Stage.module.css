@@ -1,12 +1,23 @@
 .stage {
   min-width: 0;
+  /* The column is the 16:9 box (spec 0107): the stage's size comes from its width. */
+  container-type: inline-size;
 }
 
-/* The stage's box: the light behind, the frame on top (spec 0104). */
+/*
+ * The stage's box: the light behind, the frame on top (spec 0104). It takes the picture's
+ * shape inside the 16:9 box (spec 0107): a wider picture keeps the full width and gets
+ * shorter, a taller one keeps the full height and gets narrower, centred. No black bars.
+ */
 .box {
+  --shape: 1.7778;
   position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  width: min(100cqw, 100cqw * 9 / 16 * var(--shape));
+  height: min(100cqw / var(--shape), 100cqw * 9 / 16);
+  margin-inline: auto;
+  transition:
+    width 0.35s ease,
+    height 0.35s ease;
 }
 
 .frame {
@@ -14,8 +25,7 @@
   /* Its own size decides where the buttons go and how tall a menu can be, not the window's. */
   container-type: size;
   width: 100%;
-  max-width: 100%;
-  aspect-ratio: 16 / 9;
+  height: 100%;
   background: #000;
   /* Rounded, no border: the light around it is the frame (spec 0104). */
   border-radius: 12px;
@@ -57,6 +67,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .box,
   .controls {
     transition: none;
   }

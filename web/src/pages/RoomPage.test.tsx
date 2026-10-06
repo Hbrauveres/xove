@@ -1975,3 +1975,39 @@ describe("room: after the review", () => {
     expect(within(facecam()).getByLabelText("Bruno's camera")).toBeInTheDocument();
   });
 });
+
+describe("room: the stage hugs the picture (spec 0107)", () => {
+  const shapeOfStage = () =>
+    Number(screen.getByRole("region", { name: "Shared screen" }).querySelector("[data-shape]")?.getAttribute("data-shape"));
+
+  /** The browser learns the picture's size, or a new one when the sharer resizes the window. */
+  const pictureSize = (video: HTMLElement, width: number, height: number) =>
+    act(() => {
+      Object.defineProperty(video, "videoWidth", { configurable: true, get: () => width });
+      Object.defineProperty(video, "videoHeight", { configurable: true, get: () => height });
+      video.dispatchEvent(new Event("resize"));
+    });
+
+  it("is 16:9 while empty and while a stream loads, then takes the picture's shape", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    await screen.findByText(/nobody is sharing right now/i);
+    expect(shapeOfStage()).toBeCloseTo(16 / 9);
+
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    await screen.findByText(/loading bruno's screen/i);
+    expect(shapeOfStage()).toBeCloseTo(16 / 9);
+
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const video = await screen.findByLabelText("Bruno's shared screen");
+    pictureSize(video, 1840, 1000);
+    expect(shapeOfStage()).toBeCloseTo(1.84);
+
+    // A portrait monitor: taller than 16:9.
+    pictureSize(video, 1080, 1920);
+    expect(shapeOfStage()).toBeCloseTo(0.5625);
+  });
+});
