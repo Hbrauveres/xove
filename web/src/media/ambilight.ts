@@ -49,6 +49,18 @@ export function easeColors(current: Float32Array, next: Float32Array, k: number)
   for (let i = 0; i < current.length; i++) current[i] += (next[i] - current[i]) * k;
 }
 
+/** The most cells along the stage's longer side: past that, a very long stage gets wider cells. */
+const MAX_CELLS = 96;
+
+/**
+ * The grid for a stage of shape `r` (width ÷ height, spec 0107): square cells, ROWS of them
+ * along the shorter side, so the light reaches as far beyond every edge. 64×36 at 16:9.
+ */
+export function gridFor(r: number): { cols: number; rows: number } {
+  const long = (k: number) => Math.min(MAX_CELLS, Math.round(ROWS * k));
+  return r >= 1 ? { cols: long(r), rows: ROWS } : { cols: ROWS, rows: long(1 / r) };
+}
+
 /** Where the light's canvas goes, relative to the stage, so its middle covers the stage exactly. */
 export function ringPlacement(cols = COLS, rows = ROWS, spread = SPREAD) {
   return {

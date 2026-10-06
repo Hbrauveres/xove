@@ -13,11 +13,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - It follows `loadedmetadata` and `resize`, and ignores changes under 1%.
   - · covers FR-2, FR-3, FR-6 · verify: `useVideoShape.test.ts` (new)
   - Done: `hooks/useVideoShape.ts` with `WIDESCREEN`; 6 tests.
-- [ ] **T2** `gridFor(r)` in `media/ambilight.ts`:
+- [x] **T2** `gridFor(r)` in `media/ambilight.ts`:
   - square cells, 36 along the shorter side, the longer side to scale, capped at 96;
   - 64×36 at 16:9, 36×64 at 9:16.
   - `Ambilight` samples, paints and places with that grid, and is keyed by it.
   - · covers FR-5 · verify: `ambilight.test.ts#gridFor`, `Ambilight.test.tsx` still green
+  - Done: `gridFor()`; `Ambilight` takes `shape` and reads, paints and places with its grid. 6 tests.
 
 ## The stage
 
