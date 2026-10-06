@@ -66,7 +66,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Wiring
 
-- [ ] **T10** The stage pick at room level (`useStagePick`): the stage, the activity list and the previews all pick through it, and a camera event shows that person's camera big. The pick is reported to the API once after 1 s of stillness, and again when the poll lost it. `ScreenVideo` exposes its video; `StageOverlay` loses the LIVE chip · covers FR-12, FR-14a, FR-19 · verify: `RoomPage.test.tsx`
+- [x] **T10** The stage pick at room level (`useStagePick`): the stage, the activity list and the previews all pick through it, and a camera event shows that person's camera big. The pick is reported to the API once after 1 s of stillness, and again when the poll lost it. `ScreenVideo` exposes its video; `StageOverlay` loses the LIVE chip · covers FR-12, FR-14a, FR-19 · verify: `RoomPage.test.tsx`
+  - Done: `useStagePick` (pick, swap, the main kind; a camera pick swaps); the session's `watchStage` reports after 1 s of stillness and again when the poll lost it; `ScreenVideo` hands out its video (`onVideo`). The LIVE chip leaves with the new info row in T11. 3 room tests.
 - [ ] **T11** The room page:
   - the full-height layout with the stage-width column (24 px margins);
   - the new header, info row, ambilight and footer ("xovê · Made by Hbrauveres", with Buy me a coffee, GitHub and LinkedIn as plain text);

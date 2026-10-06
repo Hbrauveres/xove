@@ -1550,6 +1550,61 @@ describe("room: the facecam", () => {
 
 // ---- sound and settings for each stream (spec 0060, AC-7, FR-11) ----
 
+describe("room: what's on my stage is reported (spec 0104)", () => {
+  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+  async function anaAndBruno() {
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "screen", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "screen", undefined, minutesAgo(5)),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-3");
+      lastRoom().publishScreen("user-7");
+    });
+    await screen.findByLabelText("Ana's shared screen");
+    return server;
+  }
+  const watchCalls = (server: { calls: { method: string; path: string }[] }) =>
+    server.calls.filter((c) => c.method === "PUT" && c.path === "/api/streams/watching");
+
+  it("reports whose stream is on my stage, once it settles", async () => {
+    const server = await anaAndBruno();
+
+    await waitFor(() => expect(server.myWatch).toEqual({ sharerId: 3, kind: "screen" }), { timeout: 3000 });
+    expect(watchCalls(server)).toHaveLength(1);
+  });
+
+  it("sends one report for quick changes, the last one", async () => {
+    const server = await anaAndBruno();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Watch Bruno" }));
+    await user.click(screen.getByRole("button", { name: "Watch Ana" }));
+    await user.click(screen.getByRole("button", { name: "Watch Bruno" }));
+
+    await waitFor(() => expect(server.myWatch).toEqual({ sharerId: 7, kind: "screen" }), { timeout: 3000 });
+    expect(watchCalls(server)).toHaveLength(1);
+  });
+
+  it("reports it again when the API forgot it (a restart)", async () => {
+    const server = await anaAndBruno();
+    await waitFor(() => expect(server.myWatch).not.toBeNull(), { timeout: 3000 });
+    // A poll or two, so the room sees the API has it.
+    await new Promise((resolve) => setTimeout(resolve, FAST_POLL * 3));
+
+    act(() => {
+      server.myWatch = null;
+    });
+
+    // The next poll (every 2 s) shows it's gone; the report follows after 1 s.
+    await waitFor(() => expect(watchCalls(server)).toHaveLength(2), { timeout: 5000 });
+    expect(server.myWatch).toEqual({ sharerId: 3, kind: "screen" });
+  }, 12000);
+});
+
 describe("room: whose sound plays", () => {
   const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
   const thumbnails = () => screen.getByRole("list", { name: /other streams/i });

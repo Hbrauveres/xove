@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
-import { stagePick } from "../../media/stagePick";
+import type { StagePick } from "../../hooks/useStagePick";
 import type { ConnectionState, LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
@@ -20,6 +20,8 @@ type Props = {
   connection: ConnectionState;
   /** My screen and camera: the round buttons over the bottom of the stage (spec 0098). */
   controls: StreamControls;
+  /** Who is on the stage, kept by the room (spec 0104). */
+  stage: StagePick;
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -32,28 +34,16 @@ const canSetVolume = () =>
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** The 16:9 area where the big stream plays. */
-export function Stage({ sharers, connection, controls }: Props) {
+export function Stage({ sharers, connection, controls, stage }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
-  // Each viewer picks who is big; by default, and when that person stops, the
-  // longest sharing person is.
-  const [picked, setPicked] = useState<string | null>(null);
-  // A pick holds while that person shares: if they stop and share again later, the
-  // longest sharing person is big again.
-  const pickedSharing = picked !== null && sharers.some((s) => s.person.id === picked);
-  useEffect(() => {
-    if (picked !== null && !pickedSharing) setPicked(null);
-  }, [picked, pickedSharing]);
-  const bigId = stagePick(
-    sharers.map((s) => s.person.id),
-    picked,
-  );
-  const big = sharers.find((s) => s.person.id === bigId) ?? null;
+  // Who is big comes from the room (spec 0104), which the previews and the activity can change too.
+  const { big, swappedFor, pick, toggleSwap } = stage;
+  const bigId = big?.person.id ?? null;
 
   // Screen and camera together: the screen big, the camera in the facecam over it,
   // unless the viewer swapped them (for that person). Remembered for this visit only.
-  const [swappedFor, setSwappedFor] = useState<Record<string, boolean>>({});
   const swapped = big ? Boolean(swappedFor[big.person.id]) : false;
   const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>({ x: 0.74, y: 0.72 });
   const [facecamCollapsed, setFacecamCollapsed] = useState(false);
@@ -193,7 +183,7 @@ export function Stage({ sharers, connection, controls }: Props) {
             label={big.isMe ? `Your ${what(small)}` : `${big.person.name}'s ${what(small)}`}
             place={facecamPlace}
             collapsed={facecamCollapsed}
-            onSwap={() => setSwappedFor((prev) => ({ ...prev, [big.person.id]: !prev[big.person.id] }))}
+            onSwap={() => toggleSwap(big.person.id)}
             onMove={setFacecamPlace}
             onCollapse={setFacecamCollapsed}
           />
@@ -268,7 +258,7 @@ export function Stage({ sharers, connection, controls }: Props) {
 
       <Thumbnails
         sharers={sharers.filter((s) => s !== big)}
-        onPick={setPicked}
+        onPick={(id) => pick(id)}
         sound={thumbnailSound}
         onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
         canSetVolume={canSetVolume()}

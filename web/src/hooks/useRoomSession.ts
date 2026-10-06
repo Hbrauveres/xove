@@ -4,6 +4,7 @@ import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, Sh
 import type { LiveStream, RoomSeatsState } from "../api/types";
 import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
+import { api as client } from "../api/client";
 
 /**
  * Everything the room page shows, from two sources:
@@ -51,6 +52,8 @@ export type RoomSession = {
   seats: RoomSeatsState | null;
   /** Per person (by their id in the room): whose stream is on their stage (spec 0104). */
   watchingOf: Record<string, { sharerId: string; kind: StreamKind }>;
+  /** What's on my stage, for everyone's people panel (spec 0104); null for an empty stage. */
+  watchStage: (target: { personId: string; kind: StreamKind } | null) => void;
   connection: ConnectionState;
   error: string | null;
   busy: boolean;
@@ -209,6 +212,34 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     }
     return byPerson;
   }, [watchers, live, me.id]);
+
+  // What's on my stage, reported to the API after 1 s of stillness (quick clicks send one
+  // report), and again when the API lost it (a restart). Undefined until the room says.
+  const [onStage, setOnStage] = useState<{ personId: string; kind: StreamKind } | null | undefined>(undefined);
+  const watchStage = useCallback((target: { personId: string; kind: StreamKind } | null) => setOnStage(target), []);
+  const wantedKey = useMemo(() => {
+    if (onStage === undefined) return undefined;
+    if (onStage === null) return "none";
+    const userId = onStage.personId === me.id ? live?.find((s) => s.mine)?.userId : Number(onStage.personId.slice(5));
+    return userId === undefined || Number.isNaN(userId) ? undefined : `${userId}|${onStage.kind}`;
+  }, [onStage, live, me.id]);
+  const mineWatch = watchers?.find((w) => w.mine);
+  // An older API doesn't list watches: nothing to compare with, report on change only.
+  const apiKey = watchers === undefined ? undefined : mineWatch ? `${mineWatch.sharerId}|${mineWatch.kind}` : "none";
+  const sentKey = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (wantedKey === undefined || seated !== true) return;
+    if (apiKey === undefined ? sentKey.current === wantedKey : apiKey === wantedKey) return;
+    const timer = window.setTimeout(() => {
+      sentKey.current = wantedKey;
+      const [sharerId, kind] = wantedKey.split("|");
+      const target = wantedKey === "none" ? null : { sharerId: Number(sharerId), kind: kind as StreamKind };
+      client.streams.watching(target).catch(() => {
+        sentKey.current = undefined; // tried again on the next change
+      });
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [wantedKey, apiKey, seated]);
 
   // ---- keeping my streams and the API in step ----
 
@@ -407,6 +438,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     activity,
     seats: api.state?.seats ?? null,
     watchingOf,
+    watchStage,
     connection: lk.connection,
     error: api.error ?? lk.error,
     busy: api.busy || isStarting || isChanging,

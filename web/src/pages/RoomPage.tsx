@@ -12,6 +12,7 @@ import { ViewerList } from "../components/viewers/ViewerList";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
+import { useStagePick } from "../hooks/useStagePick";
 import type { Friend } from "../types";
 import styles from "./RoomPage.module.css";
 
@@ -48,6 +49,13 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [me?.name, me?.email],
   );
   const session = useRoomSession(meAsFriend, pollMs);
+  // Who is on the stage (spec 0104): the stage, the previews and the activity list can change it.
+  const stage = useStagePick(session.sharers);
+  const { watchStage } = session;
+  const stagePersonId = stage.big?.person.id ?? null;
+  useEffect(() => {
+    watchStage(stagePersonId && stage.mainKind ? { personId: stagePersonId, kind: stage.mainKind } : null);
+  }, [watchStage, stagePersonId, stage.mainKind]);
   // In fullscreen only the player can be seen: the setup window and errors go inside it (spec 0101).
   const fullscreen = useFullscreenElement();
   const overPage = useFullscreenHost();
@@ -79,6 +87,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
           <Stage
             sharers={session.sharers}
             connection={session.connection}
+            stage={stage}
             controls={{
               mine: session.mine,
               free: session.free,
