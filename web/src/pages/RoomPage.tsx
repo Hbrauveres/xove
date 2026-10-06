@@ -1,19 +1,22 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
-import { ActivityFeed } from "../components/activity/ActivityFeed";
+import { AccountButton } from "../components/room/AccountButton";
+import { ActivityPill } from "../components/room/ActivityPill";
+import { PeopleButton } from "../components/room/PeopleButton";
+import { RoomFooter } from "../components/room/RoomFooter";
+import { RoomHeader } from "../components/room/RoomHeader";
 import { WaitingRoom } from "../components/room/WaitingRoom";
 import { ShareSetup } from "../components/share/ShareSetup";
+import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
-import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
-import { ViewerList } from "../components/viewers/ViewerList";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useStagePick } from "../hooks/useStagePick";
-import type { Friend } from "../types";
+import type { Friend, StreamKind } from "../types";
 import styles from "./RoomPage.module.css";
 
 type Props = {
@@ -59,7 +62,16 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   // In fullscreen only the player can be seen: the setup window and errors go inside it (spec 0101).
   const fullscreen = useFullscreenElement();
   const overPage = useFullscreenHost();
-  const onlineCount = session.people.length;
+  const [ambilight, setAmbilight] = useState(loadAmbilight);
+  // What each person shares, for the people panel; and whether a stream is still live.
+  const sharing = useMemo(
+    () =>
+      Object.fromEntries(
+        session.sharers.map((s) => [s.person.id, { screen: Boolean(s.screen), camera: Boolean(s.camera) }]),
+      ),
+    [session.sharers],
+  );
+  const isLive = (personId: string, kind: StreamKind) => Boolean(sharing[personId]?.[kind]);
 
   // The API forgot my seat (it restarted): ask again, with my video connection, which
   // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
@@ -73,21 +85,47 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   }, [seated, reenter, participantSid, pollMs]);
 
   return (
-    <div className={styles.shell}>
-      <AppHeader
-        me={session.me}
-        connection={session.connection}
-        onlineCount={onlineCount}
-        onSignOut={onSignOut}
-        isAdmin={me?.admin ?? false}
+    <div className={styles.theater}>
+      <RoomHeader
+        middle={
+          <ActivityPill
+            events={session.activity}
+            people={session.knownPeople}
+            meId={session.me.id}
+            connection={session.connection}
+            isLive={isLive}
+            watching={stage.big && stage.mainKind ? { personId: stage.big.person.id, kind: stage.mainKind } : null}
+            onWatch={stage.pick}
+          />
+        }
+        right={
+          <>
+            <PeopleButton
+              people={session.people}
+              meId={session.me.id}
+              sharing={sharing}
+              watchingOf={session.watchingOf}
+              seats={session.seats}
+            />
+            <AccountButton
+              me={session.me}
+              isAdmin={me?.admin ?? false}
+              connection={session.connection}
+              ambilight={ambilight}
+              onAmbilightChange={setAmbilight}
+              onSignOut={onSignOut}
+            />
+          </>
+        }
       />
 
-      <div className={styles.layout}>
-        <main className={styles.main}>
+      {/* One column as wide as the stage can be: the stage and its info row share its edges. */}
+      <main className={styles.middle}>
+        <div className={styles.column}>
           <Stage
             sharers={session.sharers}
-            connection={session.connection}
             stage={stage}
+            ambilight={ambilight}
             controls={{
               mine: session.mine,
               free: session.free,
@@ -109,34 +147,31 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               {session.error}
             </p>
           )}
-        </main>
+        </div>
+      </main>
 
-        {fullscreen &&
-          session.error &&
-          createPortal(
-            <p className={`${styles.error} ${styles.errorOver}`} role="alert">
-              {session.error}
-            </p>,
-            overPage,
-          )}
-        {session.pending &&
-          createPortal(
-            <ShareSetup
-              kind={session.pending.kind}
-              preview={session.pending.video}
-              initial={session.prefs[session.pending.kind]}
-              hasSound={session.pending.audio !== undefined}
-              onStart={session.confirm}
-              onCancel={session.cancelPending}
-            />,
-            overPage,
-          )}
+      <RoomFooter />
 
-        <aside className={styles.side}>
-          <ViewerList people={session.people} meId={session.me.id} sharingIds={session.sharers.map((s) => s.person.id)} />
-          <ActivityFeed events={session.activity} people={session.knownPeople} meId={session.me.id} />
-        </aside>
-      </div>
+      {fullscreen &&
+        session.error &&
+        createPortal(
+          <p className={`${styles.error} ${styles.errorOver}`} role="alert">
+            {session.error}
+          </p>,
+          overPage,
+        )}
+      {session.pending &&
+        createPortal(
+          <ShareSetup
+            kind={session.pending.kind}
+            preview={session.pending.video}
+            initial={session.prefs[session.pending.kind]}
+            hasSound={session.pending.audio !== undefined}
+            onStart={session.confirm}
+            onCancel={session.cancelPending}
+          />,
+          overPage,
+        )}
     </div>
   );
 }

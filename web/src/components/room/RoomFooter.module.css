@@ -1,0 +1,25 @@
+/* The footer (spec 0104): see-through, no line, the same edges as the header. */
+.footer {
+  position: relative;
+  z-index: 20;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 40px;
+  padding: 0 var(--room-edge, 24px);
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--text-muted);
+}
+
+.coffee {
+  color: var(--tally);
+}

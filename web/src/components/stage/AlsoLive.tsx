@@ -37,7 +37,7 @@ export function AlsoLive({ others, liveCount, free, onPick, sound, onSoundChange
         <span>Also live</span>
         <b>{liveCount} of 6</b>
       </p>
-      <ul className={styles.strip}>
+      <ul className={styles.strip} aria-label="Other streams">
         {others.map((s) => {
           const feed = s.screen ?? s.camera;
           if (!feed) return null;
@@ -58,7 +58,7 @@ export function AlsoLive({ others, liveCount, free, onPick, sound, onSoundChange
                       video={feed.remote.video}
                       sound={mine.muted ? undefined : s.sound}
                       volume={mine.volume}
-                      label={`${s.person.name}'s ${what}`}
+                      label={`${s.person.name}'s ${what === "screen" ? "shared screen" : "camera"}`}
                     />
                   )}
                 </span>

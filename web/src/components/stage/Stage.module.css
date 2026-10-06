@@ -2,6 +2,13 @@
   min-width: 0;
 }
 
+/* The stage's box: the light behind, the frame on top (spec 0104). */
+.box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
 .frame {
   position: relative;
   /* Its own size decides where the buttons go and how tall a menu can be, not the window's. */
@@ -10,9 +17,10 @@
   max-width: 100%;
   aspect-ratio: 16 / 9;
   background: #000;
-  border-radius: var(--radius-md);
+  /* Rounded, no border: the light around it is the frame (spec 0104). */
+  border-radius: 12px;
   overflow: hidden;
-  outline: 1px solid var(--line);
+  z-index: 1;
   transition: outline-color 200ms ease;
 }
 
@@ -23,36 +31,6 @@
 /* Amber tally border while you are the one on air. */
 .onAir {
   outline: 3px solid var(--tally);
-}
-
-.reconnecting {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  background: rgba(13, 17, 23, 0.72);
-  backdrop-filter: blur(3px);
-  color: var(--warn);
-  font-weight: 500;
-  text-align: center;
-  padding-inline: var(--gutter);
-}
-
-.spinner {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .frame[data-chrome="hidden"] {
@@ -86,5 +64,25 @@
 @media (prefers-reduced-motion: reduce) {
   .controls {
     transition: none;
+  }
+}
+
+/* Under the stage, as wide as it (spec 0104): who's on it on the left, the other streams on the right. */
+.info {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  height: var(--info-h, 104px);
+  margin-top: var(--info-gap, 14px);
+}
+
+@media (max-width: 760px) {
+  .info {
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 12px;
   }
 }

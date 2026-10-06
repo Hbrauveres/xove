@@ -68,12 +68,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 - [x] **T10** The stage pick at room level (`useStagePick`): the stage, the activity list and the previews all pick through it, and a camera event shows that person's camera big. The pick is reported to the API once after 1 s of stillness, and again when the poll lost it. `ScreenVideo` exposes its video; `StageOverlay` loses the LIVE chip · covers FR-12, FR-14a, FR-19 · verify: `RoomPage.test.tsx`
   - Done: `useStagePick` (pick, swap, the main kind; a camera pick swaps); the session's `watchStage` reports after 1 s of stillness and again when the poll lost it; `ScreenVideo` hands out its video (`onVideo`). The LIVE chip leaves with the new info row in T11. 3 room tests.
-- [ ] **T11** The room page:
+- [x] **T11** The room page:
   - the full-height layout with the stage-width column (24 px margins);
   - the new header, info row, ambilight and footer ("xovê · Made by Hbrauveres", with Buy me a coffee, GitHub and LinkedIn as plain text);
   - the small-screen layout;
   - `AppHeader`, `ViewerList`, `ActivityFeed` and `Thumbnails` deleted, their tests moved.
   - · covers FR-1, FR-2, FR-3, FR-7, FR-19, FR-21b, FR-22, FR-23 · verify: `RoomPage.test.tsx`; `cd web && npm test && npm run build`
+  - Done: `RoomHeader`, `RoomFooter`, the theater layout in `RoomPage` (a size container and the stage-width column); the stage holds the ambilight behind its frame and the info row under it; the overlay keeps only fullscreen; the stage's own reconnecting notice is gone (the pill says it). Old pieces deleted; room and app tests moved to the new layout, plus 4 new ones.
 
 ## Docs and review
 

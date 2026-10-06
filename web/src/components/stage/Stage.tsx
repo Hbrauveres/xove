@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
-import type { ConnectionState, LiveFeed, Sharer } from "../../types";
+import type { AmbilightPrefs } from "../../media/preferences";
+import type { LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { ScreenVideo } from "./ScreenVideo";
@@ -11,17 +12,21 @@ import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
 import { VolumeButton } from "./VolumeButton";
 import { WatchSettings } from "./WatchSettings";
-import { MUTED, Thumbnails, type ThumbnailSound } from "./Thumbnails";
+import { AlsoLive } from "./AlsoLive";
+import { Ambilight } from "./Ambilight";
+import { NowWatching } from "./NowWatching";
+import { MUTED, type PreviewSound } from "./previewSound";
 import styles from "./Stage.module.css";
 
 type Props = {
   /** Everyone with a live stream, the longest sharing first. */
   sharers: Sharer[];
-  connection: ConnectionState;
   /** My screen and camera: the round buttons over the bottom of the stage (spec 0098). */
   controls: StreamControls;
   /** Who is on the stage, kept by the room (spec 0104). */
   stage: StagePick;
+  /** The light around the stage (spec 0104). */
+  ambilight: AmbilightPrefs;
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -34,7 +39,7 @@ const canSetVolume = () =>
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** The 16:9 area where the big stream plays. */
-export function Stage({ sharers, connection, controls, stage }: Props) {
+export function Stage({ sharers, controls, stage, ambilight }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -92,7 +97,9 @@ export function Stage({ sharers, connection, controls, stage }: Props) {
 
   // Only the big person's sound plays, plus any thumbnail this viewer unmuted. The
   // others aren't downloaded at all.
-  const [thumbnailSound, setThumbnailSound] = useState<Record<string, ThumbnailSound>>({});
+  const [thumbnailSound, setThumbnailSound] = useState<Record<string, PreviewSound>>({});
+  // The big video, for the ambilight to read.
+  const [bigVideoEl, setBigVideoEl] = useState<HTMLVideoElement | null>(null);
   useEffect(() => {
     for (const s of sharers) {
       if (s.isMe || !s.setSoundOn) continue;
@@ -156,7 +163,7 @@ export function Stage({ sharers, connection, controls, stage }: Props) {
     const content = big.isMe ? (
       main.local ? (
         // My quality and mode are in my buttons' menus (spec 0098).
-        <ScreenVideo video={main.local} label={`Your ${what(main)}`} />
+        <ScreenVideo video={main.local} label={`Your ${what(main)}`} onVideo={setBigVideoEl} />
       ) : (
         <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
       )
@@ -168,6 +175,7 @@ export function Stage({ sharers, connection, controls, stage }: Props) {
           label={`${big.person.name}'s ${what(main)}`}
           volume={watch.volume}
           muted={watch.muted}
+          onVideo={setBigVideoEl}
         />
       </>
     ) : (
@@ -188,81 +196,77 @@ export function Stage({ sharers, connection, controls, stage }: Props) {
             onCollapse={setFacecamCollapsed}
           />
         )}
-        <StageOverlay
-          sharer={big.person}
-          startedAt={big.since}
-          stats={null}
-          isMeSharing={big.isMe}
-          fullscreen={fullscreen}
-          onFullscreen={toggleFullscreen}
-        />
+        <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
       </>
     );
   };
 
   return (
     <section className={styles.stage} aria-label="Shared screen">
-      <div
-        ref={frameRef}
-        className={`${styles.frame} ${big?.isMe ? styles.onAir : ""}`}
-        // Only over a playing video: notices and the empty stage never fade.
-        data-chrome={playing ? (chromeShown ? "shown" : "hidden") : undefined}
-        onPointerMove={showChrome}
-        onPointerDown={showChrome}
-        onPointerLeave={leaveChrome}
-        onFocus={showChrome}
-      >
-        {body()}
+      <div className={styles.box}>
+        {/* Behind the frame, outside it: the frame clips what's inside it. */}
+        <Ambilight video={big ? bigVideoEl : null} prefs={ambilight} />
+        <div
+          ref={frameRef}
+          className={`${styles.frame} ${big?.isMe ? styles.onAir : ""}`}
+          // Only over a playing video: notices and the empty stage never fade.
+          data-chrome={playing ? (chromeShown ? "shown" : "hidden") : undefined}
+          onPointerMove={showChrome}
+          onPointerDown={showChrome}
+          onPointerLeave={leaveChrome}
+          onFocus={showChrome}
+        >
+          {body()}
 
-        {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
-        <div className={styles.controls}>
-          <PlayerButtons
-            {...controls}
-            onMenuChange={onMenuChange}
-            // Watching someone else: their volume first and the quality last (spec 0101).
-            before={
-              remote &&
-              big && (
-                <VolumeButton
-                  prefs={watch}
-                  onChange={changeWatch}
-                  canSetVolume={canSetVolume()}
-                  // Only a screen can be shared without sound; a camera never has any to lock.
-                  hasSound={!big.screen || Boolean(big.hasSound)}
-                  onOpenChange={onVolumeOpen}
-                />
-              )
-            }
-            after={
-              remote && (
-                <WatchSettings
-                  sharerHeight={remote.height ?? 0}
-                  layers={remote.layers}
-                  cap={cap}
-                  prefs={watch}
-                  onChange={changeWatch}
-                  onOpenChange={onSettingsOpen}
-                />
-              )
-            }
-          />
-        </div>
-
-        {connection === "reconnecting" && (
-          <div className={styles.reconnecting} role="status">
-            <span className={styles.spinner} aria-hidden="true" />
-            Connection dropped. Reconnecting…
+          {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
+          <div className={styles.controls}>
+            <PlayerButtons
+              {...controls}
+              onMenuChange={onMenuChange}
+              // Watching someone else: their volume first and the quality last (spec 0101).
+              before={
+                remote &&
+                big && (
+                  <VolumeButton
+                    prefs={watch}
+                    onChange={changeWatch}
+                    canSetVolume={canSetVolume()}
+                    // Only a screen can be shared without sound; a camera never has any to lock.
+                    hasSound={!big.screen || Boolean(big.hasSound)}
+                    onOpenChange={onVolumeOpen}
+                  />
+                )
+              }
+              after={
+                remote && (
+                  <WatchSettings
+                    sharerHeight={remote.height ?? 0}
+                    layers={remote.layers}
+                    cap={cap}
+                    prefs={watch}
+                    onChange={changeWatch}
+                    onOpenChange={onSettingsOpen}
+                  />
+                )
+              }
+            />
           </div>
-        )}
+        </div>
       </div>
 
-      <Thumbnails
-        sharers={sharers.filter((s) => s !== big)}
-        onPick={(id) => pick(id)}
-        sound={thumbnailSound}
-        onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
-        canSetVolume={canSetVolume()}
-      />
+      {/* Under the stage, like YouTube's title row (spec 0104). */}
+      <div className={styles.info}>
+        <NowWatching sharer={big} />
+        <AlsoLive
+          others={sharers.filter((s) => s !== big)}
+          liveCount={6 - controls.free}
+          free={controls.free}
+          onPick={(id) => pick(id)}
+          sound={thumbnailSound}
+          onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
+          canSetVolume={canSetVolume()}
+        />
+      </div>
     </section>
   );
 }

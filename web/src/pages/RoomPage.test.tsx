@@ -25,7 +25,8 @@ function renderRoom() {
 
 // My screen and camera buttons sit on the stage (spec 0098).
 const controls = () => screen.getByRole("region", { name: /shared screen/i });
-const connected = () => screen.findByText("Connected");
+// The account button's dot says the connection (spec 0104).
+const connected = () => screen.findByRole("button", { name: /: account, connected$/ });
 const stage = () => screen.getByRole("region", { name: /shared screen/i });
 
 describe("room: joining the video room", () => {
@@ -46,7 +47,8 @@ describe("room: joining the video room", () => {
     renderRoom();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Video isn't set up on this server yet.");
-    expect(screen.getByText("Video offline")).toBeInTheDocument();
+    // The account button's dot and name say it (spec 0104).
+    expect(screen.getByRole("button", { name: /: account, disconnected$/ })).toBeInTheDocument();
     expect(screen.getByText(/nobody is sharing right now/i)).toBeInTheDocument();
   });
 
@@ -58,15 +60,18 @@ describe("room: joining the video room", () => {
     act(() => {
       lastRoom().join("user-7", "Bruno Lima");
     });
-    const here = screen.getByRole("region", { name: /here now/i });
-    expect(within(here).getByText("Bruno")).toBeInTheDocument();
-    expect(screen.getByText(/bruno joined/i)).toBeInTheDocument();
+    // The people button counts them; its panel names them (spec 0104).
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "2 people here" }));
+    expect(within(screen.getByRole("dialog", { name: "Here now" })).getByText("Bruno")).toBeInTheDocument();
+    // The activity pill shows the latest event.
+    expect(screen.getByRole("button", { name: /^Activity: Bruno joined/ })).toBeInTheDocument();
 
     act(() => {
       lastRoom().leave("user-7");
     });
-    expect(within(here).queryByText("Bruno")).not.toBeInTheDocument();
-    expect(screen.getByText(/bruno left/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1 person here" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Activity: Bruno left/ })).toBeInTheDocument();
   });
 });
 
@@ -84,7 +89,7 @@ describe("room: watching", () => {
     renderRoom();
     await connected();
 
-    expect(await screen.findByText("Bruno is sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Bruno" })).toBeInTheDocument();
     expect(screen.getByText(/loading bruno's screen/i)).toBeInTheDocument();
 
     let track!: ReturnType<ReturnType<typeof lastRoom>["publishScreen"]>;
@@ -105,7 +110,7 @@ describe("room: watching", () => {
       server.streams = [someoneSharing("Duda", 9)];
     });
 
-    expect(await screen.findByText("Duda is sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Duda" })).toBeInTheDocument();
     expect(await screen.findByText(/duda started sharing/i)).toBeInTheDocument();
   });
 
@@ -114,7 +119,7 @@ describe("room: watching", () => {
     const server = installFakeApi({ me: member });
     server.streams = [someoneSharing("Ana Souza", 7)];
     renderRoom();
-    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Ana" })).toBeInTheDocument();
 
     act(() => {
       server.streams = [];
@@ -148,7 +153,7 @@ async function pickScreen(user: User, button: RegExp = /share your screen/i) {
 async function startSharing(user: User) {
   const setup = await pickScreen(user);
   await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
-  await screen.findByText("You are sharing");
+  await screen.findByRole("heading", { name: "You" });
 }
 
 type MenuKind = "Screen" | "Camera";
@@ -220,7 +225,7 @@ describe("room: sharing", () => {
     await user.selectOptions(within(setup).getByLabelText("Mode"), "sharp");
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
 
-    expect(await screen.findByText("You are sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "You" })).toBeInTheDocument();
     const take = server.calls.find((c) => c.method === "POST" && c.path === "/api/streams" && c.method === "POST");
     expect(take?.headers["X-XSRF-TOKEN"]).toBe("abc123");
     expect(take?.body).toEqual({ kind: "screen", participantSid: "PA_me", trackSid: "TR_my_screen", quality: "720p", mode: "sharp" });
@@ -313,7 +318,7 @@ describe("room: sharing", () => {
     server.streams = [someoneSharing("Bruno", 7)];
     renderRoom();
     await connected();
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     const user = userEvent.setup();
 
     await user.click(within(controls()).getByRole("button", { name: /share your screen/i }));
@@ -438,7 +443,7 @@ describe("room: what the screen is sent with", () => {
     const setup = await pickScreen(user);
     await user.selectOptions(within(setup).getByLabelText("Send quality"), "720p");
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
-    await screen.findByText("You are sharing");
+    await screen.findByRole("heading", { name: "You" });
 
     const local = lastRoom().localParticipant;
     // The browser is asked directly: livekit-client would drop `windowAudio` (spec 0095).
@@ -463,7 +468,7 @@ describe("room: what the screen is sent with", () => {
     expect(within(setup).getByLabelText("Mode")).toHaveValue("sharp");
     await user.selectOptions(within(setup).getByLabelText("Send quality"), "720p");
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
-    await screen.findByText("You are sharing");
+    await screen.findByRole("heading", { name: "You" });
 
     expect(localStorage.getItem("xove.share.quality")).toBe("720p");
     expect(lastRoom().localParticipant.getDisplayMedia).toHaveBeenCalledWith(screenCaptureRequest());
@@ -489,7 +494,7 @@ describe("room: what the screen is sent with", () => {
     expect(within(setup).queryByText(/no sound with this screen/i)).not.toBeInTheDocument();
 
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
-    await screen.findByText("You are sharing");
+    await screen.findByRole("heading", { name: "You" });
 
     expect(screen.queryByText(/no sound is being shared/i)).not.toBeInTheDocument();
   });
@@ -512,7 +517,7 @@ describe("room: changing the stream while sharing", () => {
     // No new track and no reload for viewers.
     expect(local.publishTrack).toHaveBeenCalledTimes(2);
     expect(local.unpublishTrack).not.toHaveBeenCalled();
-    expect(screen.getByText("You are sharing")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You" })).toBeInTheDocument();
     expect(localStorage.getItem("xove.share.quality")).toBe("480p");
   });
 
@@ -604,7 +609,7 @@ describe("room: the viewer's quality and volume", () => {
     server.streams = [someoneSharing("Bruno Lima", 7)];
     const view = renderRoom();
     await connected();
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     act(() => {
       lastRoom().publishScreen("user-7", options);
     });
@@ -693,7 +698,7 @@ describe("room: viewers follow the sharer's changes", () => {
     server.streams = [someoneSharing("Bruno Lima", 7)];
     renderRoom();
     await connected();
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     act(() => {
       lastRoom().publishScreen("user-7");
     });
@@ -725,7 +730,7 @@ describe("room: viewers follow the sharer's changes", () => {
     server.streams = [someoneSharing("Bruno Lima", 7)];
     renderRoom();
     await connected();
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     act(() => {
       lastRoom().publishScreen("user-7");
     });
@@ -746,7 +751,7 @@ describe("room: the player's labels and bars", () => {
     server.streams = [someoneSharing("Bruno Lima", 7)];
     renderRoom();
     await connected();
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     act(() => {
       lastRoom().publishScreen("user-7");
     });
@@ -791,7 +796,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
     act(() => {
       server.streams = [someoneSharing("Bruno Lima", 7)];
     });
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     act(() => {
       lastRoom().publishScreen("user-7", { withSound: true });
     });
@@ -918,7 +923,7 @@ describe("room: starting from fullscreen (spec 0101)", () => {
     expect(frame).toContainElement(setup);
     expect(document.fullscreenElement).toBe(frame);
     await user.click(within(setup).getByRole("button", { name: /start sharing/i }));
-    expect(await screen.findByText("You are sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "You" })).toBeInTheDocument();
   });
 
   it("keeps the setup window's choices, and gives the focus back, when fullscreen ends while it's open", async () => {
@@ -996,7 +1001,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
 
     expect(local.screens[0].track.replaceTrack).not.toHaveBeenCalled();
-    expect(screen.getByText("You are sharing")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -1028,7 +1033,7 @@ describe("room: the player on touch screens and keyboards", () => {
     server.streams = [someoneSharing("Bruno Lima", 7)];
     const view = renderRoom();
     await connected();
-    await screen.findByText("Bruno is sharing");
+    await screen.findByRole("heading", { name: "Bruno" });
     act(() => {
       lastRoom().publishScreen("user-7");
     });
@@ -1244,7 +1249,7 @@ describe("room: waiting for a seat", () => {
     // My video connection goes with it: that confirms the seat.
     expect(server.calls.filter((c) => c.path === "/api/room/enter").at(-1)?.body).toEqual({ participantSid: "PA_me" });
     expect(room.disconnected).toBe(false);
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /: account, connected$/ })).toBeInTheDocument();
   });
 
   it("goes to the queue when the API forgot the seat and the room filled up", async () => {
@@ -1379,7 +1384,8 @@ describe("room: my camera", () => {
     });
 
     expect(await screen.findByLabelText("Bruno's camera")).toBeInTheDocument();
-    expect(screen.getByText(/bruno turned on their camera|bruno is sharing/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bruno" })).toBeInTheDocument();
+    expect(screen.getByText("Camera")).toBeInTheDocument();
   });
 });
 
@@ -1410,9 +1416,9 @@ describe("room: several people sharing", () => {
   it("shows the first sharer big, and the others as thumbnails", async () => {
     await threeSharing();
 
-    expect(screen.getByText("Ana is sharing")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ana" })).toBeInTheDocument();
     const items = within(thumbnails()).getAllByRole("button", { name: /watch/i });
-    expect(items.map((b) => b.getAttribute("aria-label"))).toEqual(["Watch Bruno", "Watch Caio"]);
+    expect(items.map((b) => b.getAttribute("aria-label"))).toEqual(["Watch Bruno's screen", "Watch Caio's camera"]);
     expect(within(thumbnails()).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
     expect(within(thumbnails()).getByLabelText("Caio's camera")).toBeInTheDocument();
   });
@@ -1421,35 +1427,36 @@ describe("room: several people sharing", () => {
     await threeSharing();
     const user = userEvent.setup();
 
-    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+    await user.click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
 
-    expect(screen.getByText("Bruno is sharing")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bruno" })).toBeInTheDocument();
     expect(within(stage()).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
     const names = within(thumbnails()).getAllByRole("button", { name: /watch/i }).map((b) => b.getAttribute("aria-label"));
-    expect(names).toEqual(["Watch Ana", "Watch Caio"]);
+    expect(names).toEqual(["Watch Ana's screen", "Watch Caio's camera"]);
   });
 
   it("gives the big place to the longest sharing when the big one stops", async () => {
     const server = await threeSharing();
     const user = userEvent.setup();
-    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Caio" }));
-    expect(screen.getByText("Caio is sharing")).toBeInTheDocument();
+    await user.click(within(thumbnails()).getByRole("button", { name: /^Watch Caio/ }));
+    expect(screen.getByRole("heading", { name: "Caio" })).toBeInTheDocument();
 
     act(() => {
       server.streams = server.streams.filter((st) => st.userId !== 9);
     });
 
-    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Ana" })).toBeInTheDocument();
     expect(within(thumbnails()).getAllByRole("button", { name: /watch/i })).toHaveLength(1);
   });
 
-  it("shows no thumbnails with one sharer", async () => {
+  it("shows no previews with one sharer, just the free places", async () => {
     const server = installFakeApi({ me: member });
     server.streams = [someoneSharing("Ana Souza", 3)];
     renderRoom();
-    await screen.findByText("Ana is sharing");
+    await screen.findByRole("heading", { name: "Ana" });
 
-    expect(screen.queryByRole("list", { name: /other streams/i })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: /other streams/i })).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByText("5 free · share yours")).toBeInTheDocument();
   });
 
   it("puts a stream back to Auto when it leaves the big player", async () => {
@@ -1458,7 +1465,7 @@ describe("room: several people sharing", () => {
     const ana = lastRoom().screenPublication("user-3")!;
     expect(ana.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
 
-    await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+    await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
 
     expect(ana.setVideoQuality).toHaveBeenLastCalledWith(2);
     expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
@@ -1550,6 +1557,83 @@ describe("room: the facecam", () => {
 
 // ---- sound and settings for each stream (spec 0060, AC-7, FR-11) ----
 
+describe("room: theater mode (spec 0104)", () => {
+  it("has no sidebar or old header: a logo, the activity pill, people and account up top, and the footer", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+
+    const header = screen.getByRole("banner");
+    expect(within(header).getByText("xovê")).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: /^Activity/ })).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: "1 person here" })).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: /: account, connected$/ })).toBeInTheDocument();
+    expect(screen.queryByText("xove.app")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /here now/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveTextContent("xovê · Made by Hbrauveres");
+    expect(footer).toHaveTextContent(/Buy me a coffee.*GitHub.*LinkedIn/);
+    expect(within(footer).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("with nobody live: the empty stage, no light, and the info row says so", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+
+    expect(screen.getByText("Nobody is sharing right now")).toBeInTheDocument();
+    expect(screen.getByText("6 free · share yours")).toBeInTheDocument();
+    expect(screen.getByText(/share your screen or turn on your camera/i)).toBeInTheDocument();
+    expect(document.querySelector("canvas")).toBeNull();
+  });
+
+  it("puts a stream from the activity list on the stage, a camera event with the camera big", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    act(() => {
+      server.streams = [someoneSharing("Bruno Lima", 7, "screen"), someoneSharing("Bruno Lima", 7, "camera")];
+    });
+    await screen.findByRole("heading", { name: "Bruno" });
+    act(() => {
+      lastRoom().join("user-7", "Bruno Lima");
+      lastRoom().publishScreen("user-7");
+      lastRoom().publishCamera("user-7");
+    });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /^Activity/ }));
+    await user.click(screen.getByRole("button", { name: "Bruno turned on their camera: watch" }));
+
+    // Camera big, screen in the facecam.
+    await waitFor(() => expect(stage().querySelector("[data-facecam]")).not.toBeNull());
+    expect(within(stage().querySelector("[data-facecam]") as HTMLElement).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Activity" })).not.toBeInTheDocument());
+  });
+
+  it("shows who watches what in the people panel", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    server.watching = [{ userId: 3, sharerId: 7, kind: "screen", mine: false }];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().join("user-3", "Ana Souza");
+      lastRoom().join("user-7", "Bruno Lima");
+      lastRoom().publishScreen("user-7");
+    });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /people here/ }));
+
+    const panel = screen.getByRole("dialog", { name: "Here now" });
+    await waitFor(() => expect(within(panel).getByText("Watching Bruno", { selector: "small" })).toBeInTheDocument());
+  });
+});
+
 describe("room: what's on my stage is reported (spec 0104)", () => {
   const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
   async function anaAndBruno() {
@@ -1581,9 +1665,9 @@ describe("room: what's on my stage is reported (spec 0104)", () => {
     const server = await anaAndBruno();
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "Watch Bruno" }));
-    await user.click(screen.getByRole("button", { name: "Watch Ana" }));
-    await user.click(screen.getByRole("button", { name: "Watch Bruno" }));
+    await user.click(screen.getByRole("button", { name: /^Watch Bruno/ }));
+    await user.click(screen.getByRole("button", { name: /^Watch Ana/ }));
+    await user.click(screen.getByRole("button", { name: /^Watch Bruno/ }));
 
     await waitFor(() => expect(server.myWatch).toEqual({ sharerId: 7, kind: "screen" }), { timeout: 3000 });
     expect(watchCalls(server)).toHaveLength(1);
@@ -1653,7 +1737,8 @@ describe("room: whose sound plays", () => {
 
     expect(within(stage()).getByRole("button", { name: "No sound in this stream" })).toHaveAttribute("aria-disabled", "true");
     expect(within(stage()).queryByRole("slider", { name: "Volume" })).not.toBeInTheDocument();
-    expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
+    // A preview without sound has no speaker at all (spec 0104).
+    expect(within(thumbnails()).queryByRole("button", { name: /mute bruno/i })).not.toBeInTheDocument();
 
     // Ana changes to a window with sound: her volume works again, at mine.
     act(() => {
@@ -1665,7 +1750,7 @@ describe("room: whose sound plays", () => {
     const slider = within(stage()).getByRole("slider", { name: "Volume" });
     expect(slider.closest("[inert]")).toBeNull();
     expect(slider).toHaveValue("0.6");
-    expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
+    expect(within(thumbnails()).queryByRole("button", { name: /mute bruno/i })).not.toBeInTheDocument();
     localStorage.clear();
   });
 
@@ -1684,7 +1769,7 @@ describe("room: whose sound plays", () => {
     await screen.findByLabelText("Ana's camera");
 
     expect(within(stage()).queryByRole("button", { name: "No sound in this stream" })).not.toBeInTheDocument();
-    expect(within(thumbnails()).queryByRole("button", { name: /shares no sound/i })).not.toBeInTheDocument();
+    expect(within(thumbnails()).queryByRole("button", { name: /mute/i })).not.toBeInTheDocument();
   });
 
   it("plays a thumbnail's sound too when it's unmuted, at its own volume", async () => {
@@ -1708,7 +1793,7 @@ describe("room: whose sound plays", () => {
     const { room, sound } = await anaAndBrunoWithSound();
     const user = userEvent.setup();
 
-    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+    await user.click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
 
     await waitFor(() => expect(sound("user-7").attached).toHaveLength(1));
     expect(room.soundPublication("user-3")!.setSubscribed).toHaveBeenLastCalledWith(false);
@@ -1814,20 +1899,20 @@ describe("room: after the review", () => {
     ];
     renderRoom();
     await connected();
-    await screen.findByText("Ana is sharing");
-    await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
-    expect(screen.getByText("Bruno is sharing")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Ana" });
+    await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
+    expect(screen.getByRole("heading", { name: "Bruno" })).toBeInTheDocument();
 
     act(() => {
       server.streams = server.streams.filter((st) => st.userId !== 7);
     });
-    expect(await screen.findByText("Ana is sharing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Ana" })).toBeInTheDocument();
     act(() => {
       server.streams = [...server.streams, someoneSharing("Bruno Lima", 7)];
     });
 
-    await within(stage()).findByRole("button", { name: "Watch Bruno" });
-    expect(screen.getByText("Ana is sharing")).toBeInTheDocument();
+    await within(stage()).findByRole("button", { name: /^Watch Bruno/ });
+    expect(screen.getByRole("heading", { name: "Ana" })).toBeInTheDocument();
   });
 
   it("swaps the facecam for one person only", async () => {
@@ -1853,7 +1938,7 @@ describe("room: after the review", () => {
     await user.click(within(facecam()).getByRole("button", { name: "Swap views" }));
     expect(within(facecam()).getByLabelText("Ana's shared screen")).toBeInTheDocument();
 
-    await user.click(within(thumbnails()).getByRole("button", { name: "Watch Bruno" }));
+    await user.click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
     expect(within(facecam()).getByLabelText("Bruno's camera")).toBeInTheDocument();
   });
 });
