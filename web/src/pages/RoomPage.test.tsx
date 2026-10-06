@@ -785,6 +785,70 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
   });
 });
 
+describe("room: change window and pick a camera (spec 0098)", () => {
+  afterEach(() => localStorage.clear());
+
+  it("swaps what my screen shares from its menu, on the same stream", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    const local = lastRoom().localParticipant;
+    local.nextPickerAudio = false;
+    await startSharing(user);
+    const started = myLiveStream(server);
+    const video = local.screens[0].track;
+    expect(within(stage()).getByRole("img", { name: "No sound" })).toBeInTheDocument();
+
+    local.nextPickerAudio = true;
+    await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
+
+    await waitFor(() => expect(video.replaceTrack).toHaveBeenCalled());
+    expect(local.getDisplayMedia).toHaveBeenCalledTimes(2);
+    // No setup window, no new stream: the API's stream is the same one.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(myLiveStream(server)).toEqual(started);
+    expect(server.calls.filter((c) => c.path === "/api/streams" && c.method === "POST")).toHaveLength(1);
+    expect(local.screens).toHaveLength(1);
+    // The new pick has sound: it's sent, and the badge goes.
+    await waitFor(() => expect(within(stage()).queryByRole("img", { name: "No sound" })).not.toBeInTheDocument());
+    expect(local.screenAudio?.track.source).toBe("screen_share_audio");
+  });
+
+  it("keeps my share when the picker is closed", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    const local = lastRoom().localParticipant;
+    local.nextPicker = "cancel";
+
+    await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
+
+    expect(local.screens[0].track.replaceTrack).not.toHaveBeenCalled();
+    expect(screen.getByText("You are sharing")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("switches my camera from its menu without stopping it", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
+    await user.click(within(setup).getByRole("button", { name: /start camera/i }));
+    await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
+    const camera = lastRoom().localParticipant.lastCamera!;
+
+    const menu = await openMenu(user, "Camera");
+    await waitFor(() => expect(menu.getByRole("menuitemradio", { name: "Logitech C920" })).toHaveAttribute("aria-checked", "true"));
+    await user.click(menu.getByRole("menuitemradio", { name: "Integrated Webcam" }));
+
+    await waitFor(() => expect(camera.restartTrack).toHaveBeenCalled());
+    expect(lastRoom().localParticipant.camera?.track).toBe(camera);
+    expect(myLiveStream(server, "camera")).toBeDefined();
+    await waitFor(() =>
+      expect(menu.getByRole("menuitemradio", { name: "Integrated Webcam" })).toHaveAttribute("aria-checked", "true"),
+    );
+  });
+});
+
 describe("room: the player on touch screens and keyboards", () => {
   const watchBruno = async () => {
     const server = installFakeApi({ me: member });

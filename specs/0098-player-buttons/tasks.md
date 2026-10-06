@@ -27,7 +27,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: the stage draws `StreamButtons` in a layer that fades with its bars (and stays while a menu is open); `ShareControls` deleted; the empty stage's button gone. The session also gets `changeScreen`, `cameras` and `pickCamera` (tested in T6). The checks went into `RoomPage.test.tsx` (3 new tests), which already plays the stage's fading; no separate `Stage.test.tsx`.
 - [x] **T5** The sharer's own player loses its quality and mode fields; the menus change them live through the API, as before · covers FR-7, FR-10 · verify: `RoomPage.test.tsx`
   - Done: my player shows only my video; `ShareSettingsFields` keeps only the setup window's look. The live-change tests now go through the menus.
-- [ ] **T6** "Change window" and the camera list wired from the menus to the session · covers FR-8, FR-9 · verify: `RoomPage.test.tsx`
+- [x] **T6** "Change window" and the camera list wired from the menus to the session · covers FR-8, FR-9 · verify: `RoomPage.test.tsx`
+  - Done: wired in T4; 3 room tests here (swap on the same stream, sound and badge follow; closed picker; camera switch). Checked that they fail with the wiring removed.
 - [ ] **T7** A screen without sound: the viewer's volume (big player and thumbnail) shows muted and is disabled, and works again when the sharer's swap brings sound · covers FR-15 · verify: `PlayerControls.test.tsx`, `RoomPage.test.tsx`
 - [ ] **T8** Fullscreen toggles, following `fullscreenchange`; named "Fullscreen" or "Exit fullscreen" · covers FR-18 · verify: `Stage.test.tsx`
 - [ ] **T9** Thumbnails centred under the player (`safe center`), and the hover and focus ring drawn inside each thumbnail · covers FR-19, FR-20 · verify: `npm run build`; manual on staging (T11)
