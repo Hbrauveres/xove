@@ -3,7 +3,7 @@ import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/pre
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
-import type { LiveFeed, Sharer } from "../../types";
+import type { Friend, LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { ScreenVideo } from "./ScreenVideo";
@@ -16,6 +16,8 @@ import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching } from "./NowWatching";
 import { MUTED, type PreviewSound } from "./previewSound";
+import { useVideoShape } from "../../hooks/useVideoShape";
+import { gridFor } from "../../media/ambilight";
 import styles from "./Stage.module.css";
 
 type Props = {
@@ -27,6 +29,10 @@ type Props = {
   stage: StagePick;
   /** The light around the stage (spec 0104). */
   ambilight: AmbilightPrefs;
+  /** Who has the person on the stage on theirs, me included, never that person (spec 0107). */
+  watchers?: Friend[];
+  /** The others in the room, for an empty stage's invitation (spec 0107). */
+  others?: Friend[];
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -36,10 +42,16 @@ export const CHROME_IDLE_MS = 2500;
 const canSetVolume = () =>
   !/iPad|iPhone|iPod/.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
+/** The light's grid for a shape: a new grid starts a fresh light (spec 0107). */
+const gridKey = (shape: number) => {
+  const { cols, rows } = gridFor(shape);
+  return `${cols}x${rows}`;
+};
+
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
-/** The 16:9 area where the big stream plays. */
-export function Stage({ sharers, controls, stage, ambilight }: Props) {
+/** Where the big stream plays: in a 16:9 box, with the picture's own shape (spec 0107). */
+export function Stage({ sharers, controls, stage, ambilight, watchers, others }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -100,6 +112,8 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
   const [thumbnailSound, setThumbnailSound] = useState<Record<string, PreviewSound>>({});
   // The big video, for the ambilight to read.
   const [bigVideoEl, setBigVideoEl] = useState<HTMLVideoElement | null>(null);
+  // The stage hugs the picture: no bars (spec 0107). 16:9 while empty or loading.
+  const shape = useVideoShape(bigVideoEl);
   useEffect(() => {
     for (const s of sharers) {
       if (s.isMe || !s.setSoundOn) continue;
@@ -203,13 +217,18 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
 
   return (
     <section className={styles.stage} aria-label="Shared screen">
-      <div className={styles.box}>
+      <div
+        className={styles.box}
+        data-shape={shape.toFixed(4)}
+        style={{ "--shape": shape } as React.CSSProperties}
+      >
         {/* Behind the frame, outside it: the frame clips what's inside it. */}
         {/* One per stream: a stream the browser won't let it read doesn't darken the next one. */}
         <Ambilight
-          key={big ? `${big.person.id}|${stage.mainKind}` : "none"}
+          key={big ? `${big.person.id}|${stage.mainKind}|${gridKey(shape)}` : "none"}
           video={big ? bigVideoEl : null}
           prefs={ambilight}
+          shape={shape}
         />
         <div
           ref={frameRef}
@@ -261,7 +280,7 @@ export function Stage({ sharers, controls, stage, ambilight }: Props) {
 
       {/* Under the stage, like YouTube's title row (spec 0104). */}
       <div className={styles.info}>
-        <NowWatching sharer={big} />
+        <NowWatching sharer={big} watchers={watchers} others={others} />
         <AlsoLive
           others={sharers.filter((s) => s !== big)}
           liveCount={6 - controls.free}

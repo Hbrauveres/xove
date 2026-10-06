@@ -81,14 +81,16 @@ describe("also live (spec 0104)", () => {
     expect(preview(/Watch Ana's screen/)).toHaveTextContent("Loading…");
   });
 
-  it("counts the live streams, shows each other one with its chip, and the free places", () => {
+  it("shows each other stream with its chip, then the count and the free places in one box (spec 0107)", () => {
     render(<Harness others={[ANA, DIEGO]} free={3} />);
 
-    expect(screen.getByText("Also live")).toBeInTheDocument();
-    expect(screen.getByText("3 of 6")).toBeInTheDocument();
+    expect(screen.queryByText("Also live")).not.toBeInTheDocument();
     expect(preview(/Watch Ana's screen/)).toHaveTextContent("Ana · screen");
     expect(preview(/Watch Diego's camera/)).toHaveTextContent("Diego · camera");
-    expect(screen.getByText("3 free · share yours")).toBeInTheDocument();
+    const box = screen.getByText("3 of 6 live").closest("[data-free]");
+    expect(box).toHaveTextContent("3 free · share yours");
+    // The box stays put while the previews scroll: it's not one of them.
+    expect(within(screen.getByRole("list", { name: "Other streams" })).queryByText(/free/)).not.toBeInTheDocument();
   });
 
   it("puts a preview on the stage when clicked", async () => {
@@ -98,10 +100,11 @@ describe("also live (spec 0104)", () => {
     expect(onPick).toHaveBeenCalledWith("user-3");
   });
 
-  it("has no free slot when all 6 places are taken", () => {
-    render(<Harness others={[ANA]} free={0} />);
-    expect(screen.getByText("6 of 6")).toBeInTheDocument();
+  it("has no box at all when all 6 places are taken (spec 0107)", () => {
+    const { container } = render(<Harness others={[ANA]} free={0} />);
+    expect(screen.queryByText(/of 6 live/)).not.toBeInTheDocument();
     expect(screen.queryByText(/free · share yours/)).not.toBeInTheDocument();
+    expect(container.querySelector("[data-free]")).toBeNull();
   });
 
   it("keeps previews muted, with a crossed speaker, and their sound not played", () => {

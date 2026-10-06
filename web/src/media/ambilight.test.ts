@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { COLS, FALLOFF, LED_COUNT, ROWS, SPREAD, easeColors, edgeColors, paintRing, ringPlacement } from "./ambilight";
+import {
+  COLS,
+  FALLOFF,
+  LED_COUNT,
+  ROWS,
+  SPREAD,
+  easeColors,
+  edgeColors,
+  gridFor,
+  paintRing,
+  ringPlacement,
+} from "./ambilight";
 
 /** A frame of the given size, every pixel the colour `at(x, y)` says. */
 function frame(cols: number, rows: number, at: (x: number, y: number) => [number, number, number]) {
@@ -95,5 +106,33 @@ describe("ambilight: painting the ring (spec 0104)", () => {
       FALLOFF.map(([at, alpha]) => [at, `rgba(80,80,80,${alpha})`]),
     );
     expect(filters).toContain("blur(3px)");
+  });
+});
+
+describe("ambilight: the grid follows the stage's shape (spec 0107)", () => {
+  it("is 64×36 at 16:9, as before", () => {
+    expect(gridFor(16 / 9)).toEqual({ cols: 64, rows: 36 });
+  });
+
+  it("turns for a portrait picture: 36 across, 64 down", () => {
+    expect(gridFor(9 / 16)).toEqual({ cols: 36, rows: 64 });
+  });
+
+  it("keeps the cells square, 36 along the shorter side", () => {
+    expect(gridFor(21 / 9)).toEqual({ cols: 84, rows: 36 });
+    expect(gridFor(1)).toEqual({ cols: 36, rows: 36 });
+  });
+
+  it("never goes past 96 cells along the longer side", () => {
+    expect(gridFor(4)).toEqual({ cols: 96, rows: 36 });
+    expect(gridFor(1 / 4)).toEqual({ cols: 36, rows: 96 });
+  });
+
+  it("places the canvas so the glow reaches as far on every side", () => {
+    const { cols, rows } = gridFor(9 / 16);
+    const place = ringPlacement(cols, rows);
+    // 16 cells beyond each edge; the cells are square, so the same distance in pixels.
+    expect(parseFloat(place.left)).toBeCloseTo((-SPREAD / 36) * 100);
+    expect(parseFloat(place.top)).toBeCloseTo((-SPREAD / 64) * 100);
   });
 });

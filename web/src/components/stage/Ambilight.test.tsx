@@ -5,6 +5,7 @@ import { Ambilight, SAMPLE_MS, SLOW_SAMPLE_MS } from "./Ambilight";
 
 /** jsdom has no canvas: a 2D context that counts what the ambilight asks of it. */
 let reads = 0;
+let lastRead: [number, number] = [0, 0];
 let readError: Error | null = null;
 function fakeContext(this: HTMLCanvasElement) {
   return {
@@ -15,10 +16,11 @@ function fakeContext(this: HTMLCanvasElement) {
     fillRect: () => {},
     drawImage: () => {},
     createLinearGradient: () => ({ addColorStop: () => {} }),
-    getImageData: () => {
+    getImageData: (_x: number, _y: number, w = COLS, h = ROWS) => {
       if (readError) throw readError;
       reads++;
-      return { data: new Uint8ClampedArray(COLS * ROWS * 4).fill(120) };
+      lastRead = [w, h];
+      return { data: new Uint8ClampedArray(w * h * 4).fill(120) };
     },
   };
 }
@@ -151,5 +153,17 @@ describe("ambilight (spec 0104)", () => {
 
     expect(reads).toBe(0);
     expect(container.querySelector("canvas")).toBeNull();
+  });
+
+  it("follows the stage's shape: a portrait stage is read 36 across and 64 down (spec 0107)", () => {
+    const { container } = render(
+      <Ambilight video={playingVideo()} prefs={{ on: true, brightness: 0.9 }} shape={9 / 16} />,
+    );
+    advance(SAMPLE_MS);
+
+    expect(lastRead).toEqual([36, 64]);
+    const light = container.querySelector("canvas")!;
+    expect([light.width, light.height]).toEqual([36 + 32, 64 + 32]);
+    expect(light.style.left).toBe(`${(-16 / 36) * 100}%`);
   });
 });

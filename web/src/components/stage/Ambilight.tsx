@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  COLS,
-  EASE,
-  LED_COUNT,
-  ROWS,
-  SPREAD,
-  easeColors,
-  edgeColors,
-  paintRing,
-  ringPlacement,
-} from "../../media/ambilight";
+import { WIDESCREEN } from "../../hooks/useVideoShape";
+import { EASE, SPREAD, easeColors, edgeColors, gridFor, paintRing, ringPlacement } from "../../media/ambilight";
 import type { AmbilightPrefs } from "../../media/preferences";
 import styles from "./Ambilight.module.css";
 
@@ -22,18 +13,20 @@ type Props = {
   /** The stage's video, or null when nothing is on the stage. */
   video: HTMLVideoElement | null;
   prefs: AmbilightPrefs;
+  /** The stage's shape, width ÷ height (spec 0107): the LEDs follow it. */
+  shape?: number;
 };
 
-const PLACE = ringPlacement();
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 /**
  * Ambilight (spec 0104): LEDs around the stage take the colours of the picture's edges. It
- * reads the video into a 64×36 frame about 12 times a second and paints a small canvas the
- * page only stretches. It stops while the tab is hidden, the video is paused or missing, or
+ * reads the video into a small frame (64×36 at 16:9; its grid follows the stage's shape, spec
+ * 0107) about 12 times a second and paints a small canvas the page only stretches. It stops while the tab is hidden, the video is paused or missing, or
  * it's switched off; a video the browser won't let it read just gets no light.
  */
-export function Ambilight({ video, prefs }: Props) {
+export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
+  const { cols, rows } = gridFor(shape);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
   const [unreadable, setUnreadable] = useState<HTMLVideoElement | null>(null);
@@ -54,31 +47,31 @@ export function Ambilight({ video, prefs }: Props) {
     const out = canvas.current?.getContext("2d");
     if (!shown || !video || !out) return;
     const sample = document.createElement("canvas");
-    sample.width = COLS;
-    sample.height = ROWS;
+    sample.width = cols;
+    sample.height = rows;
     const reader = sample.getContext("2d", { willReadFrequently: true });
     const scratchCanvas = document.createElement("canvas");
-    scratchCanvas.width = COLS + SPREAD * 2;
-    scratchCanvas.height = ROWS + SPREAD * 2;
+    scratchCanvas.width = cols + SPREAD * 2;
+    scratchCanvas.height = rows + SPREAD * 2;
     const scratch = scratchCanvas.getContext("2d");
     if (!reader || !scratch) return;
-    const colors = new Float32Array(LED_COUNT * 3);
+    const colors = new Float32Array((cols * 2 + rows * 2) * 3);
     let primed = false;
 
     const tick = () => {
       if (video.paused || video.readyState < 2) return;
       let pixels: Uint8ClampedArray;
       try {
-        reader.drawImage(video, 0, 0, COLS, ROWS);
-        pixels = reader.getImageData(0, 0, COLS, ROWS).data;
+        reader.drawImage(video, 0, 0, cols, rows);
+        pixels = reader.getImageData(0, 0, cols, rows).data;
       } catch {
         // The browser won't let this video be read: no light for it, and no more tries.
         setUnreadable(video);
         return;
       }
-      easeColors(colors, edgeColors(pixels), primed ? EASE : 1);
+      easeColors(colors, edgeColors(pixels, cols, rows), primed ? EASE : 1);
       primed = true;
-      paintRing(out, scratch, colors);
+      paintRing(out, scratch, colors, cols, rows);
     };
 
     // Only while the tab can be seen.
@@ -96,7 +89,7 @@ export function Ambilight({ video, prefs }: Props) {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", run);
     };
-  }, [shown, video]);
+  }, [shown, video, cols, rows]);
 
   // No stream, or one the browser won't let it read: no light at all. Switched off or
   // paused: the light fades out (and nothing is read), and fades back in.
@@ -105,9 +98,9 @@ export function Ambilight({ video, prefs }: Props) {
     <canvas
       ref={canvas}
       className={styles.light}
-      width={COLS + SPREAD * 2}
-      height={ROWS + SPREAD * 2}
-      style={{ ...PLACE, opacity: shown ? prefs.brightness : 0 }}
+      width={cols + SPREAD * 2}
+      height={rows + SPREAD * 2}
+      style={{ ...ringPlacement(cols, rows), opacity: shown ? prefs.brightness : 0 }}
       data-on={shown || undefined}
       aria-hidden="true"
     />

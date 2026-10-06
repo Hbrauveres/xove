@@ -25,7 +25,7 @@ Admins are configured on the server (a list of emails). Admins are always member
 - **Several at once:** up to 6 streams live (screens and cameras), nobody is pushed out.
 - **While live:** the small arrow on your button opens its menu: quality, mode, "Change window" (share something else without stopping) or another camera.
 - **Stop:** with the buttons or the browser's own "Stop sharing" bar.
-- **Watch:** theater mode. One person fills the stage, as big as the window allows, with ambilight around it (the picture's edge colours glowing beyond the frame; switch and brightness in your account menu). Under it: who you're watching and for how long, and the other live streams as small previews. Click one to watch it big. Only the big one's sound plays, unless you unmute a preview. The volume button (point at it for the slider) and the gear (quality) sit with your own buttons; fullscreen is top right.
+- **Watch:** theater mode. One person fills the stage, as big as the window allows and in their picture's own shape (no black bars), with ambilight around it (the picture's edge colours glowing beyond the frame; switch and brightness in your account menu). Under it: who you're watching, for how long and who else watches, and the other live streams as small previews, with how many of the 6 are live. Click one to watch it big. Only the big one's sound plays, unless you unmute a preview. The volume button (point at it for the slider) and the gear (quality) sit with your own buttons; fullscreen is top right.
 - **Wait your turn:** up to 20 people in the room. When it's full, you get a place in the queue and a popup when a seat frees.
 
 The limits live on the server, so every browser agrees on who is in and what's live.

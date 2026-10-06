@@ -1,35 +1,58 @@
 /* The other live streams (spec 0104): see specs/0104-room-theater/design.html. */
+/* The right never runs past the box: it leaves the left room, and past that the previews scroll (spec 0107). */
 .also {
-  display: grid;
-  justify-items: end;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.head {
+  flex: 0 1 auto;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
+  min-width: 0;
+  max-width: calc(100% - 280px);
 }
 
-.head b {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-faint);
-}
-
+/*
+ * The previews, scrolling sideways when they don't fit. A slim bar (spec 0107): no arrows,
+ * rounded, faint until the pointer is over the strip; it sits in the gap below, so nothing moves.
+ */
 .strip {
   display: flex;
   gap: 10px;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
+  min-width: 0;
+  margin: 0 0 -8px;
+  padding: 0 0 8px;
   list-style: none;
   overflow-x: auto;
+}
+
+.strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.strip::-webkit-scrollbar-button {
+  display: none;
+}
+
+.strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.strip::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.strip:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.strip::-webkit-scrollbar-thumb:hover {
+  background: var(--tally);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .strip {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+  }
 }
 
 .item {
@@ -49,8 +72,7 @@
 }
 
 .preview:focus-visible {
-  outline: 2px solid var(--tally);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .video {
@@ -72,7 +94,9 @@
   pointer-events: none;
 }
 
-.preview:hover .video::after {
+/* Hover and keyboard focus: drawn inside, so the scrolling strip never cuts it (spec 0107). */
+.preview:hover .video::after,
+.preview:focus-visible .video::after {
   box-shadow: inset 0 0 0 2px var(--tally);
 }
 
@@ -145,23 +169,36 @@
   }
 }
 
+/* How many of the 6 are live, and the places left (spec 0107): fixed at the right edge. */
 .free {
   flex: none;
   display: grid;
-  place-items: center;
+  place-content: center;
+  gap: 3px;
   width: 128px;
   aspect-ratio: 16 / 9;
+  margin: 0;
   padding: 6px;
   border: 1px dashed var(--line);
   border-radius: 8px;
-  color: var(--text-faint);
-  font-size: 0.6875rem;
   text-align: center;
+}
+
+.free b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.free span {
+  font-size: 0.6875rem;
+  color: var(--text-faint);
 }
 
 @media (max-width: 760px) {
   .also {
-    justify-items: start;
+    max-width: 100%;
   }
 }
 
