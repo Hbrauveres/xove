@@ -1,0 +1,13 @@
+/* Behind the stage, stretched past its frame; its middle maps exactly onto the stage. */
+.light {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .light {
+    transition: none;
+  }
+}
