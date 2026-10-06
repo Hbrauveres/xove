@@ -43,11 +43,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - RoomPage passes the watchers (from `people` and `watchingOf`: me included, never the sharer) and the others in the room through `Stage`.
   - · covers FR-8, FR-10, FR-11 · verify: `NowWatching.test.tsx`, `RoomPage.test.tsx#who's watching the stage`
   - Done: `NowWatching` with the 52 px inner-ring avatar, filled LIVE, watchers (4 avatars, "N watching", container queries) and the invitation; `whoIsHere()` in its own file; RoomPage computes watchers and others. 8 tests; the page tests now look for "The stage is yours.".
-- [ ] **T6** `AlsoLive`:
+- [x] **T6** `AlsoLive`:
   - no head; the previews in their own scroller, with the slim scrollbar;
   - the free box outside it, with "N of 6 live" / "M free · share yours", and gone when nothing is free;
   - the previews' sound and picking unchanged.
   - · covers FR-9, FR-10, FR-11 · verify: `AlsoLive.test.tsx`; `RoomPage.test.tsx` updated for the new copy
+  - Done: no head; the list scrolls with the slim bar; the box (`data-free`) sits outside it with "N of 6 live" and the free places, gone when full. 2 tests changed, 2 page checks added.
 
 ## Docs
 

@@ -1457,6 +1457,7 @@ describe("room: several people sharing", () => {
     await screen.findByRole("heading", { name: "Ana" });
 
     expect(within(screen.getByRole("list", { name: /other streams/i })).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByText("1 of 6 live")).toBeInTheDocument();
     expect(screen.getByText("5 free · share yours")).toBeInTheDocument();
   });
 
@@ -1586,6 +1587,7 @@ describe("room: theater mode (spec 0104)", () => {
     await connected();
 
     expect(screen.getByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
+    expect(screen.getByText("0 of 6 live")).toBeInTheDocument();
     expect(screen.getByText("6 free · share yours")).toBeInTheDocument();
     expect(screen.getByText(/share your screen or turn on your camera/i)).toBeInTheDocument();
     expect(document.querySelector("canvas")).toBeNull();

@@ -26,17 +26,14 @@ type Props = {
 const kindOf = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "screen");
 
 /**
- * The right of the info row (spec 0104): "Also live", how many streams of the 6, the other
- * live streams as small previews (a click puts one on the stage), and the places left. Each
+ * The right of the info row (specs 0104 and 0107): the other live streams as small previews (a
+ * click puts one on the stage), then a box with how many of the 6 are live and the places left.
+ * Past their room the previews scroll; the box stays put, and goes when nothing is free. Each
  * preview keeps its own sound (spec 0060): muted by default, a speaker to unmute, a slider.
  */
 export function AlsoLive({ others, liveCount, free, onPick, sound, onSoundChange, canSetVolume }: Props) {
   return (
     <section className={styles.also} aria-label="Also live">
-      <p className={styles.head}>
-        <span>Also live</span>
-        <b>{liveCount} of 6</b>
-      </p>
       <ul className={styles.strip} aria-label="Other streams">
         {others.map((s) => {
           const feed = s.screen ?? s.camera;
@@ -84,12 +81,13 @@ export function AlsoLive({ others, liveCount, free, onPick, sound, onSoundChange
             </li>
           );
         })}
-        {free > 0 && (
-          <li className={styles.free} aria-label={`${free} free places: share yours`}>
-            {free} free · share yours
-          </li>
-        )}
       </ul>
+      {free > 0 && (
+        <p className={styles.free} data-free>
+          <b>{liveCount} of 6 live</b>
+          <span>{free} free · share yours</span>
+        </p>
+      )}
     </section>
   );
 }
