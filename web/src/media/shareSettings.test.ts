@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CAMERA_QUALITIES,
   DEFAULT_CAMERA,
@@ -9,6 +9,7 @@ import {
   capOf,
   contentHintOf,
   effectiveQuality,
+  newCaptureController,
   screenCaptureRequest,
   screenPublishOptions,
   viewerQualities,
@@ -153,5 +154,21 @@ describe("camera presets", () => {
   it("caps a camera at its own layers: 720p is the top one", () => {
     expect(capOf("720p")).toBe(1);
     expect(capOf("480p")).toBe(0);
+  });
+});
+
+describe("staying on Xovê after the picker (spec 0101)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("has no controller where the browser has none", () => {
+    expect(newCaptureController()).toBeUndefined();
+  });
+
+  it("makes one where the browser has it", () => {
+    class CaptureController {
+      setFocusBehavior() {}
+    }
+    vi.stubGlobal("CaptureController", CaptureController);
+    expect(newCaptureController()).toBeInstanceOf(CaptureController);
   });
 });

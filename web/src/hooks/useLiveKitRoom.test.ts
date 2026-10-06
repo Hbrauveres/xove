@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { capOf } from "../media/shareSettings";
 import { aUser, installFakeApi } from "../test/fakeApi";
 import { FakeLocalCameraTrack, FakeLocalScreenTrack, FakeMediaStreamTrack, lastRoom } from "../test/fakeLiveKit";
@@ -135,6 +135,49 @@ describe("change window (spec 0098)", () => {
 
     expect(video.replaceTrack).not.toHaveBeenCalled();
     expect(video.stopped).toBe(false);
+    expect(hook.result.current.error).toBeNull();
+  });
+});
+
+describe("staying on Xovê after the picker (spec 0101)", () => {
+  const behaviours: string[] = [];
+  class FakeCaptureController {
+    setFocusBehavior(behaviour: string) {
+      behaviours.push(behaviour);
+    }
+  }
+  afterEach(() => {
+    behaviours.length = 0;
+    vi.unstubAllGlobals();
+  });
+
+  it("asks the browser to stay on Xovê when a screen is picked, and when it's changed", async () => {
+    vi.stubGlobal("CaptureController", FakeCaptureController);
+    const hook = await connected();
+    const local = await shareScreen(hook, true);
+
+    expect(local.getDisplayMedia).toHaveBeenLastCalledWith(
+      expect.objectContaining({ controller: expect.any(FakeCaptureController), windowAudio: "window" }),
+    );
+    expect(behaviours).toEqual(["no-focus-change"]);
+
+    await change(hook);
+    expect(behaviours).toEqual(["no-focus-change", "no-focus-change"]);
+  });
+
+  it("still shares when the browser refuses (a whole screen can't keep the focus)", async () => {
+    vi.stubGlobal(
+      "CaptureController",
+      class {
+        setFocusBehavior() {
+          throw new DOMException("Not a tab or window", "InvalidStateError");
+        }
+      },
+    );
+    const hook = await connected();
+    const local = await shareScreen(hook, true);
+
+    expect(local.screens).toHaveLength(1);
     expect(hook.result.current.error).toBeNull();
   });
 });
