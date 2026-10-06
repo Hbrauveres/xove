@@ -31,6 +31,13 @@ export function PeopleButton({ people, meId, sharing, watchingOf, seats }: Props
   const anchor = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const count = people.length;
+  // People sharing first (longest first), then me, then everyone else, as in the design.
+  const sharerIds = Object.keys(sharing);
+  const ordered = [
+    ...sharerIds.map((id) => people.find((p) => p.id === id)).filter((p): p is Friend => p !== undefined),
+    ...people.filter((p) => !sharing[p.id] && p.id === meId),
+    ...people.filter((p) => !sharing[p.id] && p.id !== meId),
+  ];
   const nameOf = (id: string) => (id === meId ? "you" : (people.find((p) => p.id === id)?.name ?? "someone"));
 
   const noteOf = (p: Friend) => {
@@ -113,7 +120,7 @@ export function PeopleButton({ people, meId, sharing, watchingOf, seats }: Props
         )}
         <DropdownSection scroll>
           <ul className={styles.people}>
-            {people.map((p) => {
+            {ordered.map((p) => {
               const shares = sharing[p.id];
               return (
                 <li key={p.id} className={styles.person}>

@@ -16,9 +16,10 @@ export function Avatar({ person, size = 32, onAir = false }: Props) {
       style={{
         width: size,
         height: size,
-        fontSize: size * 0.42,
-        background: `hsl(${person.hue} 32% 28%)`,
-        color: `hsl(${person.hue} 70% 82%)`,
+        fontSize: size * 0.4,
+        // As in the room's design (spec 0104): a clear colour per person, white initials.
+        background: `hsl(${person.hue} 42% 38%)`,
+        color: "#fff",
       }}
       aria-hidden="true"
     >

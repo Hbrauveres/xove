@@ -11,9 +11,18 @@
   padding: 0 var(--room-edge, 24px);
   color: var(--text-faint);
   font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* On a narrow screen this gives way first, so the links stay whole. */
+.made {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .links {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -22,4 +31,16 @@
 
 .coffee {
   color: var(--tally);
+}
+
+/* A phone: one line still, a little smaller and closer. */
+@media (max-width: 760px) {
+  .footer {
+    gap: 10px;
+    font-size: 0.6875rem;
+  }
+
+  .links {
+    gap: 10px;
+  }
 }

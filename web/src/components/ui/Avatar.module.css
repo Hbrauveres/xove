@@ -3,7 +3,7 @@
   place-items: center;
   flex-shrink: 0;
   border-radius: 50%;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 700;
   line-height: 1;
 }

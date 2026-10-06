@@ -64,7 +64,8 @@ export const identityOf = (userId: number) => `user-${userId}`;
 const KINDS: StreamKind[] = ["screen", "camera"];
 
 /** Same person, same colour, in every browser. */
-const hueOf = (id: string) => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+// Ids differ only at the end ("user-3", "user-7"): the golden angle spreads them around the wheel.
+const hueOf = (id: string) => Math.round(([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 7) * 137.508) % 360);
 
 const firstName = (name: string | null | undefined) => name?.trim().split(/\s+/)[0] || "Someone";
 

@@ -4,7 +4,7 @@ import styles from "./RoomFooter.module.css";
 export function RoomFooter() {
   return (
     <footer className={styles.footer}>
-      <span>xovê · Made by Hbrauveres</span>
+      <span className={styles.made}>xovê · Made by Hbrauveres</span>
       <span className={styles.links}>
         <span className={styles.coffee}>☕ Buy me a coffee</span>
         <span>GitHub</span>
