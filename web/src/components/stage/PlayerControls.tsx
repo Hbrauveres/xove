@@ -13,19 +13,24 @@ type Props = {
   onChange: (prefs: WatchPrefs) => void;
   /** False where the page can't set the volume (iPhones and iPads): only mute is shown. */
   canSetVolume: boolean;
+  /** False when the stream has no sound: the volume shows muted and is locked (spec 0098). */
+  hasSound?: boolean;
 };
 
 /** The viewer's bar over the player, like YouTube's: volume and quality. Only changes this browser. */
-export function PlayerControls({ sharerHeight, layers, cap, prefs, onChange, canSetVolume }: Props) {
+export function PlayerControls({ sharerHeight, layers, cap, prefs, onChange, canSetVolume, hasSound = true }: Props) {
   const qualities = viewerQualities(sharerHeight, layers, cap);
-  const silent = prefs.muted || prefs.volume === 0;
+  // Without sound, the viewer's own volume stays saved for the next stream that has some.
+  const silent = !hasSound || prefs.muted || prefs.volume === 0;
 
   return (
     <div className={styles.bar}>
       <button
         type="button"
         className={styles.icon}
-        aria-label={prefs.muted ? "Unmute" : "Mute"}
+        aria-label={!hasSound ? "No sound in this stream" : prefs.muted ? "Unmute" : "Mute"}
+        title={hasSound ? undefined : "This stream is shared without sound"}
+        disabled={!hasSound}
         onClick={() => onChange({ ...prefs, muted: !prefs.muted })}
       >
         <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
@@ -46,7 +51,8 @@ export function PlayerControls({ sharerHeight, layers, cap, prefs, onChange, can
           max={1}
           step={0.05}
           aria-label="Volume"
-          value={prefs.muted ? 0 : prefs.volume}
+          disabled={!hasSound}
+          value={!hasSound || prefs.muted ? 0 : prefs.volume}
           // Moving the slider means "I want to hear it": it also unmutes.
           onChange={(e) => onChange({ ...prefs, volume: Number(e.target.value), muted: false })}
         />

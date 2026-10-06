@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
-import type { ActivityEvent, ConnectionState, Friend, LiveFeed, Sharer, StreamKind } from "../types";
+import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, Sharer, StreamKind } from "../types";
 import type { LiveStream } from "../api/types";
 import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
@@ -34,6 +34,12 @@ export type RoomSession = {
   /** Opens the browser's picker (screen) or asks for the camera. */
   start: (kind: StreamKind) => void;
   stop: (kind: StreamKind) => void;
+  /** Opens the browser's picker again and swaps what my screen shares, without stopping it (spec 0098). */
+  changeScreen: () => void;
+  /** This browser's cameras, the one in use, and switching to another while live. */
+  cameras: CameraDevice[];
+  cameraId: string | null;
+  pickCamera: (deviceId: string) => void;
   /** I'm sharing my screen, but my browser gave no sound with it. */
   noSound: boolean;
   /** False when the API doesn't know I'm in the room (it restarted): enter again. Null until known. */
@@ -245,6 +251,18 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     [lk, api, pending, setPending],
   );
 
+  // "Change window": the same stream, another pick. Its sound may come or go.
+  const [isChanging, setChanging] = useState(false);
+  const changeScreen = useCallback(async () => {
+    setChanging(true);
+    try {
+      const changed = await lk.changeScreen(prefs.screen);
+      if (changed) setNoSound(!changed.hasSound);
+    } finally {
+      setChanging(false);
+    }
+  }, [lk, prefs]);
+
   const cancelPending = useCallback(() => {
     if (pending) lk.discardCapture(pending);
     setPending(null);
@@ -349,6 +367,10 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     cancelPending,
     start: (kind: StreamKind) => void start(kind),
     stop: (kind: StreamKind) => void stop(kind),
+    changeScreen: () => void changeScreen(),
+    cameras: lk.cameras,
+    cameraId: lk.cameraId,
+    pickCamera: (deviceId: string) => void lk.pickCamera(deviceId, prefs.camera),
     // Only while my screen is actually going out.
     noSound: noSound && myLive.screen && lk.publishing.screen,
     seated,
@@ -356,6 +378,6 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     activity,
     connection: lk.connection,
     error: api.error ?? lk.error,
-    busy: api.busy || isStarting,
+    busy: api.busy || isStarting || isChanging,
   };
 }

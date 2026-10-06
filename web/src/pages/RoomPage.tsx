@@ -2,9 +2,9 @@ import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivityFeed } from "../components/activity/ActivityFeed";
-import { ShareControls } from "../components/controls/ShareControls";
 import { WaitingRoom } from "../components/room/WaitingRoom";
 import { ShareSetup } from "../components/share/ShareSetup";
+import { canShareScreen } from "../media/shareSettings";
 import { AppHeader } from "../components/layout/AppHeader";
 import { Stage } from "../components/stage/Stage";
 import { ViewerList } from "../components/viewers/ViewerList";
@@ -74,17 +74,21 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
           <Stage
             sharers={session.sharers}
             connection={session.connection}
-            onStartSharing={() => session.start("screen")}
-            prefs={session.prefs}
-            onPrefsChange={session.setPrefs}
-          />
-          <ShareControls
-            mine={session.mine}
-            free={session.free}
-            onStart={session.start}
-            onStop={session.stop}
-            noSound={session.noSound}
-            busy={session.busy}
+            controls={{
+              mine: session.mine,
+              free: session.free,
+              prefs: session.prefs,
+              cameras: session.cameras,
+              camera: session.cameraId,
+              canShareScreen: canShareScreen(),
+              noSound: session.noSound,
+              busy: session.busy,
+              onStart: session.start,
+              onStop: session.stop,
+              onPrefsChange: session.setPrefs,
+              onChangeWindow: session.changeScreen,
+              onPickCamera: session.pickCamera,
+            }}
           />
           {session.error && (
             <p className={styles.error} role="alert">

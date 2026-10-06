@@ -23,9 +23,16 @@
   cursor: pointer;
 }
 
-.icon:hover,
+.icon:hover:not(:disabled),
 .icon:focus-visible {
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* A stream without sound: muted, and nothing to turn up. */
+.icon:disabled,
+.slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .slider {

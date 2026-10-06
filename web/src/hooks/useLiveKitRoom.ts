@@ -13,7 +13,7 @@ import {
 } from "livekit-client";
 import { ApiError, api } from "../api/client";
 import type { SharingConnection } from "../api/types";
-import type { SharePrefs } from "../media/preferences";
+import { loadCameraDevice, saveCameraDevice, type SharePrefs } from "../media/preferences";
 import {
   SHARE_QUALITIES,
   cameraCaptureOptions,
@@ -25,7 +25,7 @@ import {
   screenPublishOptions,
   type ShareMode,
 } from "../media/shareSettings";
-import type { ActivityEvent, ConnectionState, MediaTrack, RemoteVideo, StreamKind } from "../types";
+import type { ActivityEvent, CameraDevice, ConnectionState, MediaTrack, RemoteVideo, StreamKind } from "../types";
 
 /**
  * The browser's screen picker, asked directly because livekit-client drops `windowAudio`
@@ -108,6 +108,17 @@ export type LiveKitRoom = {
   connectionOf: (kind: StreamKind) => SharingConnection | null;
   /** This browser's connection to the room, once connected. */
   participantSid: () => string | undefined;
+  /**
+   * Opens the browser's picker again and swaps the new pick into the screen being sent:
+   * same stream for the API and viewers (spec 0098). Resolves whether it has sound, or
+   * null when nothing changed (the picker closed, or it failed).
+   */
+  changeScreen: (prefs: SharePrefs) => Promise<{ hasSound: boolean } | null>;
+  /** This browser's cameras, and the one being sent (or picked for next time). */
+  cameras: CameraDevice[];
+  cameraId: string | null;
+  /** Switches the camera being sent to another one, without stopping it; remembered for next time. */
+  pickCamera: (deviceId: string, prefs: SharePrefs) => Promise<void>;
 };
 
 const CONNECTION: Record<LkState, ConnectionState> = {
@@ -259,7 +270,7 @@ export function useLiveKitRoom(): LiveKitRoom {
         kind === "screen"
           ? // Always the best quality: the sharer can lower it, or raise it back, while sharing.
             await captureScreen(room, mode)
-          : await room.localParticipant.createTracks({ video: cameraCaptureOptions(), audio: false });
+          : await room.localParticipant.createTracks({ video: cameraCaptureOptions(loadCameraDevice()), audio: false });
       const video = tracks.find((t) => t.kind === Track.Kind.Video) as LocalVideoTrack | undefined;
       const audio = tracks.find((t) => t.kind === Track.Kind.Audio) as LocalAudioTrack | undefined;
       if (!video) {
@@ -307,6 +318,13 @@ export function useLiveKitRoom(): LiveKitRoom {
     [sync],
   );
 
+  // The camera unplugged or taken by another app: stop sending it. Again after each
+  // switch, since a switch gives the camera a new browser track.
+  const watchCameraEnd = useCallback(
+    (track: LocalVideoTrack) => track.mediaStreamTrack.addEventListener("ended", () => void stop("camera")),
+    [stop],
+  );
+
   const publishCapture = useCallback(
     async (capture: Capture, prefs: SharePrefs): Promise<StartedStream | null> => {
       const room = roomRef.current;
@@ -323,10 +341,7 @@ export function useLiveKitRoom(): LiveKitRoom {
         const video = await me.publishTrack(capture.video, { ...options, source: SOURCE[capture.kind] });
         if (capture.audio) await me.publishTrack(capture.audio, { ...options, source: Track.Source.ScreenShareAudio });
         capture.video.setPublishingQuality(capOf(prefs.quality));
-        if (capture.kind === "camera") {
-          // The camera unplugged or taken by another app: stop sending it.
-          capture.video.mediaStreamTrack.addEventListener("ended", () => void stop("camera"));
-        }
+        if (capture.kind === "camera") watchCameraEnd(capture.video);
         sync();
         if (!me.sid || !video.trackSid) {
           // The API needs both to end the stream when it stops.
@@ -342,7 +357,7 @@ export function useLiveKitRoom(): LiveKitRoom {
         return null;
       }
     },
-    [sync, stop, discardCapture],
+    [sync, stop, discardCapture, watchCameraEnd],
   );
 
   const applySettings = useCallback(async (kind: StreamKind, prefs: SharePrefs) => {
@@ -358,6 +373,137 @@ export function useLiveKitRoom(): LiveKitRoom {
       /* An older browser keeps the previous preference; the content hint still applies. */
     });
   }, []);
+
+  const changeScreen = useCallback(
+    async (prefs: SharePrefs): Promise<{ hasSound: boolean } | null> => {
+      const room = roomRef.current;
+      const me = room?.localParticipant;
+      const video = me?.getTrackPublication(Track.Source.ScreenShare)?.track as LocalVideoTrack | undefined;
+      if (!room || !me || !video) return null;
+      let stream: MediaStream;
+      try {
+        setError(null);
+        stream = await navigator.mediaDevices.getDisplayMedia(screenCaptureRequest());
+      } catch (e) {
+        // Closing the picker keeps the current share.
+        if (!(e instanceof DOMException && e.name === "NotAllowedError")) setError("Couldn't change what you share.");
+        return null;
+      }
+      const [screen] = stream.getVideoTracks();
+      const [sound] = stream.getAudioTracks();
+      const drop = () => stream.getTracks().forEach((t) => t.stop());
+      if (!screen) {
+        drop();
+        setError("Couldn't change what you share.");
+        return null;
+      }
+      // The share may have stopped while the picker was open (its own browser bar):
+      // then there's nothing to swap into, and the new pick must not keep capturing.
+      if (me.getTrackPublication(Track.Source.ScreenShare)?.track !== video) {
+        drop();
+        return null;
+      }
+      let swapped = false;
+      try {
+        screen.contentHint = contentHintOf(prefs.mode);
+        // Not provided by us: LiveKit stops the old capture and watches the new one's end.
+        await video.replaceTrack(screen, { userProvidedTrack: false });
+        swapped = true;
+        await applySettings("screen", prefs);
+        // The sound follows the new pick. Sound tracks aren't streams, so the API sees no change.
+        const before = me.getTrackPublication(Track.Source.ScreenShareAudio)?.track as LocalAudioTrack | undefined;
+        if (sound && before) {
+          await before.replaceTrack(sound, { userProvidedTrack: false });
+        } else if (sound) {
+          const audio = new LocalAudioTrack(sound, undefined, false);
+          audio.source = Track.Source.ScreenShareAudio;
+          await me.publishTrack(audio, { ...screenPublishOptions(prefs.mode), source: Track.Source.ScreenShareAudio });
+        } else if (before) {
+          await me.unpublishTrack(before, true);
+        }
+        sync();
+        return { hasSound: sound !== undefined };
+      } catch {
+        // Before the swap, nothing of the new pick is sent: stop all of it. After, the
+        // screen is LiveKit's; only a sound that didn't make it goes.
+        if (swapped) sound?.stop();
+        else drop();
+        setError("Couldn't change what you share.");
+        sync();
+        return null;
+      }
+    },
+    [applySettings, sync],
+  );
+
+  // The cameras, once the browser shows their names (after the camera is allowed).
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [cameraId, setCameraId] = useState<string | null>(loadCameraDevice);
+  const cameraLive = publishing.camera;
+  useEffect(() => {
+    const devices = navigator.mediaDevices;
+    if (!devices?.enumerateDevices) return;
+    let current = true;
+    const list = () =>
+      devices
+        .enumerateDevices()
+        .then((all) => {
+          if (!current) return;
+          const found = all.filter((d) => d.kind === "videoinput" && d.deviceId);
+          setCameras(found.map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Camera ${i + 1}` })));
+        })
+        .catch(() => {
+          /* No list: the menu just shows no cameras. */
+        });
+    void list();
+    devices.addEventListener?.("devicechange", list);
+    return () => {
+      current = false;
+      devices.removeEventListener?.("devicechange", list);
+    };
+  }, [cameraLive]);
+
+  // The camera being sent is the one in use, whatever was saved.
+  const sentCamera = (local.camera as LocalVideoTrack | undefined)?.mediaStreamTrack?.getSettings?.().deviceId;
+
+  const pickCamera = useCallback(
+    async (deviceId: string, prefs: SharePrefs) => {
+      const track = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as
+        | LocalVideoTrack
+        | undefined;
+      if (!track) {
+        saveCameraDevice(deviceId);
+        setCameraId(deviceId);
+        return;
+      }
+      const previous = track.mediaStreamTrack.getSettings().deviceId;
+      // The same published camera, on another device: no stop for viewers or the API.
+      // A new browser track needs the stream's mode again, and the watch for its end.
+      const restartOn = async (id: string) => {
+        await track.restartTrack({ ...cameraCaptureOptions(), deviceId: { exact: id } });
+        watchCameraEnd(track);
+        await applySettings("camera", prefs);
+      };
+      setError(null);
+      try {
+        await restartOn(deviceId);
+        saveCameraDevice(deviceId);
+        setCameraId(deviceId);
+      } catch {
+        // LiveKit stopped the old camera before asking for the new one: go back to it,
+        // or stop sending a camera that shows nothing.
+        setError("Couldn't switch to that camera.");
+        try {
+          if (!previous) throw new Error("no previous camera");
+          await restartOn(previous);
+        } catch {
+          await stop("camera");
+        }
+      }
+      sync();
+    },
+    [sync, watchCameraEnd, applySettings, stop],
+  );
 
   const connectionOf = useCallback((kind: StreamKind): SharingConnection | null => {
     const me = roomRef.current?.localParticipant;
@@ -382,5 +528,9 @@ export function useLiveKitRoom(): LiveKitRoom {
     stop,
     connectionOf,
     participantSid,
+    changeScreen,
+    cameras,
+    cameraId: sentCamera || cameraId,
+    pickCamera,
   };
 }

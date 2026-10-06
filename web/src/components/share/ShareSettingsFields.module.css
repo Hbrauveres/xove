@@ -1,11 +1,7 @@
 .fields {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-}
-
-.form {
   flex-direction: column;
+  gap: 8px 12px;
 }
 
 .field {
@@ -24,9 +20,4 @@
   border-radius: var(--radius-sm);
   padding: 6px 8px;
   font: inherit;
-}
-
-.bar .field select {
-  background: transparent;
-  padding: 4px 6px;
 }

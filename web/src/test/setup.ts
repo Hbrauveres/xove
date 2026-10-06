@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
-import { rooms } from "./fakeLiveKit";
+import { fakeCameras, rooms } from "./fakeLiveKit";
 
 // No WebRTC in jsdom: every test gets the fake LiveKit instead of the real package.
 vi.mock("livekit-client", () => import("./fakeLiveKit"));
@@ -20,6 +20,9 @@ Object.defineProperty(navigator, "mediaDevices", {
   configurable: true,
   value: {
     getDisplayMedia: (request?: unknown) => rooms[rooms.length - 1].localParticipant.getDisplayMedia(request),
+    enumerateDevices: async () => fakeCameras.map((c) => ({ ...c, kind: "videoinput", groupId: "" })),
+    addEventListener: () => {},
+    removeEventListener: () => {},
   },
 });
 Object.defineProperty(window, "matchMedia", {

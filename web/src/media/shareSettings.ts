@@ -57,6 +57,9 @@ export type ScreenCaptureRequest = DisplayMediaStreamOptions & {
   windowAudio: "exclude" | "window" | "system";
 };
 
+/** Phones and some browsers can't share a screen at all (spec 0098). */
+export const canShareScreen = () => typeof navigator.mediaDevices?.getDisplayMedia === "function";
+
 const isSafari = () => /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
 
 /**
@@ -123,9 +126,13 @@ export const DEFAULT_CAMERA: { quality: ShareQuality; mode: ShareMode } = { qual
  * What the browser asks the camera for: 720p at 30 fps (the mode's content hint is set
  * on the track when it's sent). The microphone is never asked for.
  */
-export function cameraCaptureOptions(): VideoCaptureOptions {
+export function cameraCaptureOptions(deviceId?: string | null): VideoCaptureOptions {
   const preset = CAMERA_QUALITIES[0];
-  return { resolution: { width: preset.width, height: preset.height, frameRate: preset.fps } };
+  return {
+    resolution: { width: preset.width, height: preset.height, frameRate: preset.fps },
+    // `ideal`: when the camera picked is gone, the browser uses another instead of failing.
+    ...(deviceId ? { deviceId: { ideal: deviceId } } : {}),
+  };
 }
 
 /** How a camera is sent: like a screen (VP9, VP8 fallback), with a 720p and a 480p layer. */

@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadWatchPrefs, saveWatchPrefs, type SharePrefs, type WatchPrefs } from "../../media/preferences";
+import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import { stagePick } from "../../media/stagePick";
-import type { ConnectionState, LiveFeed, Sharer, StreamKind } from "../../types";
-import { ShareSettingsFields } from "../share/ShareSettingsFields";
+import type { ConnectionState, LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
+import { StreamButtons, type StreamControls } from "./StreamButtons";
 import { MUTED, Thumbnails, type ThumbnailSound } from "./Thumbnails";
 import styles from "./Stage.module.css";
 
@@ -17,10 +17,8 @@ type Props = {
   /** Everyone with a live stream, the longest sharing first. */
   sharers: Sharer[];
   connection: ConnectionState;
-  onStartSharing: () => void;
-  /** My own quality and mode for each of my streams, changed from my player's bar. */
-  prefs: Record<StreamKind, SharePrefs>;
-  onPrefsChange: (kind: StreamKind, prefs: SharePrefs) => void;
+  /** My screen and camera: the round buttons over the bottom of the stage (spec 0098). */
+  controls: StreamControls;
 };
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
@@ -33,7 +31,7 @@ const canSetVolume = () =>
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** The 16:9 area where the big stream plays. */
-export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChange }: Props) {
+export function Stage({ sharers, connection, controls }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -66,8 +64,9 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
   // (or after a tap), and fade when it stops, like YouTube.
   const [chromeShown, setChromeShown] = useState(false);
   const idleTimer = useRef<number | undefined>(undefined);
-  // Nothing fades while a control has the keyboard focus.
-  const focusInside = () => frameRef.current?.contains(document.activeElement) ?? false;
+  // Nothing fades while a control has the keyboard focus, or a stream's menu is open.
+  const menuOpen = useRef(false);
+  const focusInside = () => menuOpen.current || (frameRef.current?.contains(document.activeElement) ?? false);
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
@@ -83,6 +82,13 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
     window.clearTimeout(idleTimer.current);
     setChromeShown(false);
   }, []);
+  const onMenuChange = useCallback(
+    (open: boolean) => {
+      menuOpen.current = open;
+      if (open) showChrome();
+    },
+    [showChrome],
+  );
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -124,39 +130,34 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
     return () => set("auto");
   }, [bigVideo, request]);
 
-  const goFullscreen = () => {
+  // The same button enters and leaves fullscreen; Esc (the browser's own way out) is followed too.
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const follow = () => setFullscreen(document.fullscreenElement != null && document.fullscreenElement === frameRef.current);
+    document.addEventListener("fullscreenchange", follow);
+    return () => document.removeEventListener("fullscreenchange", follow);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => {
+        /* Already left. */
+      });
+      return;
+    }
     frameRef.current?.requestFullscreen?.().catch(() => {
       /* Not allowed here (some phones and app views). The stage stays inline. */
     });
   };
 
   const body = () => {
-    if (!big || !main) return <EmptyStage onStartSharing={onStartSharing} />;
+    if (!big || !main) return <EmptyStage />;
 
     // My own stream as everyone sees it, without its sound (it would echo). Sharing
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
     const content = big.isMe ? (
       main.local ? (
-        <>
-          <ScreenVideo video={main.local} label={`Your ${what(main)}`} />
-          <div className={styles.player}>
-            <div className={styles.bar}>
-              {/* My quality and mode for each of my streams: the screen's first. */}
-              {(["screen", "camera"] as StreamKind[])
-                .filter((kind) => big[kind])
-                .map((kind) => (
-                  <ShareSettingsFields
-                    key={kind}
-                    kind={kind}
-                    name={kind === "camera" && big.screen ? "Camera" : undefined}
-                    prefs={prefs[kind]}
-                    onChange={(next) => onPrefsChange(kind, next)}
-                    look="bar"
-                  />
-                ))}
-            </div>
-          </div>
-        </>
+        // My quality and mode are in my buttons' menus (spec 0098).
+        <ScreenVideo video={main.local} label={`Your ${what(main)}`} />
       ) : (
         <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
       )
@@ -177,6 +178,8 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
             prefs={watch}
             onChange={changeWatch}
             canSetVolume={canSetVolume()}
+            // Only a screen can be shared without sound; a camera never has any to lock.
+            hasSound={!big.screen || Boolean(big.hasSound)}
           />
         </div>
       </>
@@ -203,7 +206,8 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
           startedAt={big.since}
           stats={null}
           isMeSharing={big.isMe}
-          onFullscreen={goFullscreen}
+          fullscreen={fullscreen}
+          onFullscreen={toggleFullscreen}
         />
       </>
     );
@@ -222,6 +226,11 @@ export function Stage({ sharers, connection, onStartSharing, prefs, onPrefsChang
         onFocus={showChrome}
       >
         {body()}
+
+        {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
+        <div className={styles.controls}>
+          <StreamButtons {...controls} onMenuChange={onMenuChange} />
+        </div>
 
         {connection === "reconnecting" && (
           <div className={styles.reconnecting} role="status">

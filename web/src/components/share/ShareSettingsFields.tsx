@@ -9,24 +9,23 @@ type Props = {
   prefs: SharePrefs;
   onChange: (prefs: SharePrefs) => void;
   disabled?: boolean;
-  /** "bar": compact, over the player. "form": in the setup window. */
-  look?: "bar" | "form";
-  /** Names the fields when two sets show together: "Camera" gives "Camera quality" and "Camera mode". */
-  name?: string;
 };
 
-const MODES: { id: ShareMode; label: string }[] = [
+export const MODES: { id: ShareMode; label: string }[] = [
   { id: "smooth", label: "Smooth (games, videos)" },
   { id: "sharp", label: "Sharp (text, code)" },
 ];
 
-/** The sharer's two choices: the best quality viewers can get, and motion or detail first. */
-export function ShareSettingsFields({ kind = "screen", prefs, onChange, disabled = false, look = "form", name }: Props) {
+/**
+ * The sharer's two choices in the setup window: the best quality viewers can get, and
+ * motion or detail first. While live, they're in the stream button's menu (spec 0098).
+ */
+export function ShareSettingsFields({ kind = "screen", prefs, onChange, disabled = false }: Props) {
   const qualities = kind === "camera" ? CAMERA_QUALITIES : SHARE_QUALITIES;
   return (
-    <div className={`${styles.fields} ${styles[look]}`}>
+    <div className={styles.fields}>
       <label className={styles.field}>
-        <span>{name ? `${name} quality` : "Send quality"}</span>
+        <span>Send quality</span>
         <select
           value={prefs.quality}
           disabled={disabled}
@@ -40,7 +39,7 @@ export function ShareSettingsFields({ kind = "screen", prefs, onChange, disabled
         </select>
       </label>
       <label className={styles.field}>
-        <span>{name ? `${name} mode` : "Mode"}</span>
+        <span>Mode</span>
         <select
           value={prefs.mode}
           disabled={disabled}

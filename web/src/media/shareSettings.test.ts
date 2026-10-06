@@ -130,6 +130,12 @@ describe("camera presets", () => {
 
   it("asks the camera for 720p at 30 fps", () => {
     expect(cameraCaptureOptions().resolution).toEqual({ width: 1280, height: 720, frameRate: 30 });
+    expect(cameraCaptureOptions().deviceId).toBeUndefined();
+  });
+
+  it("asks for the camera picked, falling back to another when it's gone", () => {
+    // `ideal`, not `exact`: an unplugged camera doesn't stop the camera from starting.
+    expect(cameraCaptureOptions("cam-2").deviceId).toEqual({ ideal: "cam-2" });
   });
 
   it.each(modes)("%s: VP9 with a VP8 fallback, a 720p and a 480p layer", (mode) => {

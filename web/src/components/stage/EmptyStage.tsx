@@ -1,11 +1,7 @@
-import { Button } from "../ui/Button";
 import styles from "./EmptyStage.module.css";
 
-type Props = {
-  onStartSharing: () => void;
-};
-
-export function EmptyStage({ onStartSharing }: Props) {
+/** Nobody is sharing: the round buttons over the stage start a share (spec 0098). */
+export function EmptyStage() {
   return (
     <div className={styles.empty}>
       <div className={styles.test} aria-hidden="true">
@@ -15,8 +11,7 @@ export function EmptyStage({ onStartSharing }: Props) {
       </div>
       <div className={styles.body}>
         <p className={styles.title}>Nobody is sharing right now</p>
-        <p className={styles.copy}>Share your screen and everyone here will see it.</p>
-        <Button onClick={onStartSharing}>Share my screen</Button>
+        <p className={styles.copy}>Share your screen or turn on your camera with the buttons below.</p>
       </div>
     </div>
   );
