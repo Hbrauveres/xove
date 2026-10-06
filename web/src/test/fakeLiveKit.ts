@@ -338,21 +338,26 @@ export class Room {
     const track = new FakeTrack();
     p.tracks.set(Track.Source.ScreenShare, track);
     p.publications.set(Track.Source.ScreenShare, this.publication(track, options.height ?? 1080, options.layers ?? 3));
-    if (options.withSound) {
-      const sound = new FakeTrack();
-      const publication = this.publication(sound);
-      // Turning the sound off or on downloads it or not, like LiveKit does.
-      publication.setSubscribed.mockImplementation((on: boolean) => {
-        publication.isSubscribed = on;
-        publication.track = on ? sound : undefined;
-        this.emit(on ? RoomEvent.TrackSubscribed : RoomEvent.TrackUnsubscribed, sound, publication, p);
-      });
-      p.tracks.set(Track.Source.ScreenShareAudio, sound);
-      p.publications.set(Track.Source.ScreenShareAudio, publication);
-      this.emit(RoomEvent.TrackSubscribed, sound, publication, p);
-    }
+    if (options.withSound) this.publishSound(identity);
     this.emit(RoomEvent.TrackSubscribed, track, {}, p);
     return track;
+  }
+
+  /** Someone's screen gets sound (they changed to a window or tab with sound). */
+  publishSound(identity: string) {
+    const p = this.remoteParticipants.get(identity) ?? this.join(identity, identity);
+    const sound = new FakeTrack();
+    const publication = this.publication(sound);
+    // Turning the sound off or on downloads it or not, like LiveKit does.
+    publication.setSubscribed.mockImplementation((on: boolean) => {
+      publication.isSubscribed = on;
+      publication.track = on ? sound : undefined;
+      this.emit(on ? RoomEvent.TrackSubscribed : RoomEvent.TrackUnsubscribed, sound, publication, p);
+    });
+    p.tracks.set(Track.Source.ScreenShareAudio, sound);
+    p.publications.set(Track.Source.ScreenShareAudio, publication);
+    this.emit(RoomEvent.TrackSubscribed, sound, publication, p);
+    return sound;
   }
 
   /** Someone turns on their camera: 720p with two layers unless said otherwise. */

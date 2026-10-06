@@ -1408,6 +1408,35 @@ describe("room: whose sound plays", () => {
     expect(within(thumbnails()).getByRole("button", { name: "Unmute Bruno" })).toBeInTheDocument();
   });
 
+  it("locks a screen without sound on mute, for the big player and a thumbnail, until it gets sound (spec 0098)", async () => {
+    localStorage.setItem("xove.watch.volume", "0.6");
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Ana Souza", 3, "screen", undefined, minutesAgo(10)),
+      someoneSharing("Bruno Lima", 7, "screen", undefined, minutesAgo(5)),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-3");
+      lastRoom().publishScreen("user-7");
+    });
+    await screen.findByLabelText("Ana's shared screen");
+
+    expect(within(stage()).getByRole("button", { name: "No sound in this stream" })).toBeDisabled();
+    expect(within(stage()).getByLabelText("Volume")).toBeDisabled();
+    expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
+
+    // Ana changes to a window with sound: her volume works again, at mine.
+    act(() => {
+      lastRoom().publishSound("user-3");
+    });
+    expect(await within(stage()).findByRole("button", { name: "Mute" })).toBeEnabled();
+    expect(within(stage()).getByLabelText("Volume")).toHaveValue("0.6");
+    expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
+    localStorage.clear();
+  });
+
   it("plays a thumbnail's sound too when it's unmuted, at its own volume", async () => {
     const { room, sound } = await anaAndBrunoWithSound();
     const user = userEvent.setup();

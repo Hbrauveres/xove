@@ -29,7 +29,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: my player shows only my video; `ShareSettingsFields` keeps only the setup window's look. The live-change tests now go through the menus.
 - [x] **T6** "Change window" and the camera list wired from the menus to the session · covers FR-8, FR-9 · verify: `RoomPage.test.tsx`
   - Done: wired in T4; 3 room tests here (swap on the same stream, sound and badge follow; closed picker; camera switch). Checked that they fail with the wiring removed.
-- [ ] **T7** A screen without sound: the viewer's volume (big player and thumbnail) shows muted and is disabled, and works again when the sharer's swap brings sound · covers FR-15 · verify: `PlayerControls.test.tsx`, `RoomPage.test.tsx`
+- [x] **T7** A screen without sound: the viewer's volume (big player and thumbnail) shows muted and is disabled, and works again when the sharer's swap brings sound · covers FR-15 · verify: `PlayerControls.test.tsx`, `RoomPage.test.tsx`
+  - Done: `PlayerControls` takes `hasSound` (locked, muted, the saved volume kept); thumbnails show a disabled "shares no sound" speaker. The fake gained `publishSound`. 2 tests.
 - [ ] **T8** Fullscreen toggles, following `fullscreenchange`; named "Fullscreen" or "Exit fullscreen" · covers FR-18 · verify: `Stage.test.tsx`
 - [ ] **T9** Thumbnails centred under the player (`safe center`), and the hover and focus ring drawn inside each thumbnail · covers FR-19, FR-20 · verify: `npm run build`; manual on staging (T11)
 

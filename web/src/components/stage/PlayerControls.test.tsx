@@ -6,13 +6,24 @@ import type { WatchPrefs } from "../../media/preferences";
 import { PlayerControls } from "./PlayerControls";
 
 /** The controls with their own state, as the stage uses them. */
-function Harness({ height, onChange, canSetVolume = true }: { height: number; onChange?: (p: WatchPrefs) => void; canSetVolume?: boolean }) {
+function Harness({
+  height,
+  onChange,
+  canSetVolume = true,
+  hasSound = true,
+}: {
+  height: number;
+  onChange?: (p: WatchPrefs) => void;
+  canSetVolume?: boolean;
+  hasSound?: boolean;
+}) {
   const [prefs, setPrefs] = useState<WatchPrefs>({ quality: "auto", volume: 0.6, muted: false });
   return (
     <PlayerControls
       sharerHeight={height}
       prefs={prefs}
       canSetVolume={canSetVolume}
+      hasSound={hasSound}
       onChange={(next) => {
         setPrefs(next);
         onChange?.(next);
@@ -89,5 +100,22 @@ describe("player controls: volume", () => {
 
     expect(screen.queryByLabelText("Volume")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mute" })).toBeInTheDocument();
+  });
+});
+
+describe("player controls: a stream without sound (spec 0098)", () => {
+  it("shows the volume muted and can't unmute it, without touching the viewer's volume", async () => {
+    const onChange = vi.fn();
+    render(<Harness height={1080} hasSound={false} onChange={onChange} />);
+
+    const speaker = screen.getByRole("button", { name: "No sound in this stream" });
+    expect(speaker).toBeDisabled();
+    expect(screen.getByLabelText("Volume")).toBeDisabled();
+    expect(screen.getByLabelText("Volume")).toHaveValue("0");
+
+    await userEvent.setup().click(speaker);
+    expect(onChange).not.toHaveBeenCalled();
+    // The quality still works.
+    expect(screen.getByLabelText("Quality")).toBeEnabled();
   });
 });

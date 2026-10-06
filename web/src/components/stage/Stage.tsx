@@ -165,6 +165,7 @@ export function Stage({ sharers, connection, controls }: Props) {
             prefs={watch}
             onChange={changeWatch}
             canSetVolume={canSetVolume()}
+            hasSound={Boolean(big.hasSound)}
           />
         </div>
       </>
