@@ -4,8 +4,8 @@
 
 .frame {
   position: relative;
-  /* Its own width decides where the buttons go (below), not the window's. */
-  container-type: inline-size;
+  /* Its own size decides where the buttons go and how tall a menu can be, not the window's. */
+  container-type: size;
   width: 100%;
   max-width: 100%;
   aspect-ratio: 16 / 9;
