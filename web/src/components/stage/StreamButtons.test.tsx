@@ -1,0 +1,197 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { SharePrefs } from "../../media/preferences";
+import type { StreamKind } from "../../types";
+import { FULL_ROOM, NO_SOUND, StreamButtons } from "./StreamButtons";
+
+const PREFS: Record<StreamKind, SharePrefs> = {
+  screen: { quality: "1080p", mode: "smooth" },
+  camera: { quality: "720p", mode: "smooth" },
+};
+const CAMERAS = [
+  { deviceId: "cam-1", label: "Logitech C920" },
+  { deviceId: "cam-2", label: "Integrated Webcam" },
+];
+
+function setup(props: Partial<Parameters<typeof StreamButtons>[0]> = {}) {
+  const handlers = {
+    onStart: vi.fn(),
+    onStop: vi.fn(),
+    onPrefsChange: vi.fn(),
+    onChangeWindow: vi.fn(),
+    onPickCamera: vi.fn(),
+    onMenuChange: vi.fn(),
+  };
+  const user = userEvent.setup();
+  render(
+    <StreamButtons
+      mine={{ screen: false, camera: false }}
+      free={6}
+      prefs={PREFS}
+      cameras={CAMERAS}
+      camera="cam-1"
+      canShareScreen
+      {...handlers}
+      {...props}
+    />,
+  );
+  return { user, ...handlers };
+}
+
+afterEach(() => vi.restoreAllMocks());
+
+describe("stream buttons: off and live", () => {
+  it("shows a screen and a camera button, off, each saying what a click does", () => {
+    setup();
+    const share = screen.getByRole("button", { name: "Share your screen" });
+    const camera = screen.getByRole("button", { name: "Turn on camera" });
+    expect(share).toHaveAttribute("aria-pressed", "false");
+    expect(camera).toHaveAttribute("aria-pressed", "false");
+    expect(share).toHaveAccessibleDescription("Share your screen");
+    expect(screen.queryByRole("button", { name: /options/i })).not.toBeInTheDocument();
+  });
+
+  it("lights a live stream's button, which stops it, and gives it an arrow", async () => {
+    const { user, onStart, onStop } = setup({ mine: { screen: true, camera: false } });
+
+    const stop = screen.getByRole("button", { name: "Stop sharing" });
+    expect(stop).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Screen options" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Camera options" })).not.toBeInTheDocument();
+
+    await user.click(stop);
+    await user.click(screen.getByRole("button", { name: "Turn on camera" }));
+    expect(onStop).toHaveBeenCalledWith("screen");
+    expect(onStart).toHaveBeenCalledWith("camera");
+  });
+
+  it("names the camera's stop", () => {
+    setup({ mine: { screen: false, camera: true } });
+    expect(screen.getByRole("button", { name: "Turn off camera" })).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("stream buttons: the menus", () => {
+  it("lists the screen's quality, mode, change window and stop", async () => {
+    const { user, onPrefsChange, onChangeWindow, onStop, onMenuChange } = setup({
+      mine: { screen: true, camera: false },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Screen options" }));
+    const menu = screen.getByRole("menu", { name: "Screen options" });
+    expect(onMenuChange).toHaveBeenLastCalledWith(true);
+    expect(
+      within(menu)
+        .getAllByRole("menuitemradio")
+        .map((i) => i.textContent),
+    ).toEqual(["1080p", "720p", "480p", "Smooth (games, videos)", "Sharp (text, code)"]);
+    expect(within(menu).getByRole("menuitemradio", { name: "1080p" })).toHaveAttribute("aria-checked", "true");
+
+    await user.click(within(menu).getByRole("menuitemradio", { name: "720p" }));
+    expect(onPrefsChange).toHaveBeenLastCalledWith("screen", { quality: "720p", mode: "smooth" });
+    await user.click(within(menu).getByRole("menuitemradio", { name: "Sharp (text, code)" }));
+    expect(onPrefsChange).toHaveBeenLastCalledWith("screen", { quality: "1080p", mode: "sharp" });
+
+    await user.click(within(menu).getByRole("menuitem", { name: "Change window" }));
+    expect(onChangeWindow).toHaveBeenCalled();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(onMenuChange).toHaveBeenLastCalledWith(false);
+
+    await user.click(screen.getByRole("button", { name: "Screen options" }));
+    await user.click(screen.getByRole("menuitem", { name: "Stop sharing" }));
+    expect(onStop).toHaveBeenCalledWith("screen");
+  });
+
+  it("lists the camera's quality up to 720p, its mode, the cameras and turn off", async () => {
+    const { user, onPickCamera, onStop } = setup({ mine: { screen: false, camera: true } });
+
+    await user.click(screen.getByRole("button", { name: "Camera options" }));
+    const menu = screen.getByRole("menu", { name: "Camera options" });
+    expect(
+      within(menu)
+        .getAllByRole("menuitemradio")
+        .map((i) => i.textContent),
+    ).toEqual(["720p", "480p", "Smooth (games, videos)", "Sharp (text, code)", "Logitech C920", "Integrated Webcam"]);
+    expect(within(menu).getByRole("menuitemradio", { name: "Logitech C920" })).toHaveAttribute("aria-checked", "true");
+
+    await user.click(within(menu).getByRole("menuitemradio", { name: "Integrated Webcam" }));
+    expect(onPickCamera).toHaveBeenCalledWith("cam-2");
+
+    await user.click(within(menu).getByRole("menuitem", { name: "Turn off camera" }));
+    expect(onStop).toHaveBeenCalledWith("camera");
+  });
+
+  it("closes on a click outside", async () => {
+    const { user } = setup({ mine: { screen: true, camera: false } });
+    await user.click(screen.getByRole("button", { name: "Screen options" }));
+
+    await user.click(document.body);
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});
+
+describe("stream buttons: when they can't be used", () => {
+  it("disables the off buttons of a full room, saying why, and keeps the live ones", async () => {
+    const { user, onStart, onStop } = setup({ mine: { screen: true, camera: false }, free: 0 });
+
+    const camera = screen.getByRole("button", { name: "Turn on camera" });
+    expect(camera).toHaveAttribute("aria-disabled", "true");
+    expect(camera).toHaveAccessibleDescription(FULL_ROOM);
+    await user.click(camera);
+    expect(onStart).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    expect(onStop).toHaveBeenCalledWith("screen");
+  });
+
+  it("waits while a request is on its way", async () => {
+    const { user, onStart } = setup({ busy: true });
+    await user.click(screen.getByRole("button", { name: "Share your screen" }));
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("marks a screen shared without sound, and says how to share it", async () => {
+    const { user } = setup({ mine: { screen: true, camera: false }, noSound: true });
+
+    expect(screen.getByRole("img", { name: "No sound" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription(
+      `Stop sharing. ${NO_SOUND}`,
+    );
+    await user.click(screen.getByRole("button", { name: "Screen options" }));
+    expect(within(screen.getByRole("menu")).getByText(NO_SOUND)).toBeInTheDocument();
+  });
+
+  it("has no screen button where the browser can't share a screen", () => {
+    setup({ canShareScreen: false });
+    expect(screen.queryByRole("button", { name: "Share your screen" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Turn on camera" })).toBeInTheDocument();
+  });
+});
+
+describe("stream buttons: keyboard", () => {
+  it("opens the menu on its first item, moves with the arrow keys and closes with Escape", async () => {
+    const { user, onPrefsChange } = setup({ mine: { screen: true, camera: false } });
+
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Stop sharing" })).toHaveFocus();
+    await user.tab();
+    const arrow = screen.getByRole("button", { name: "Screen options" });
+    expect(arrow).toHaveFocus();
+    expect(arrow).toHaveAttribute("aria-haspopup", "menu");
+
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("menuitemradio", { name: "1080p" })).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitemradio", { name: "720p" })).toHaveFocus();
+    await user.keyboard("{ArrowUp}{ArrowUp}");
+    expect(screen.getByRole("menuitem", { name: "Stop sharing" })).toHaveFocus();
+    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    expect(onPrefsChange).toHaveBeenLastCalledWith("screen", { quality: "720p", mode: "smooth" });
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(arrow).toHaveFocus();
+  });
+});

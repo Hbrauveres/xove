@@ -15,7 +15,7 @@ type Props = {
   name?: string;
 };
 
-const MODES: { id: ShareMode; label: string }[] = [
+export const MODES: { id: ShareMode; label: string }[] = [
   { id: "smooth", label: "Smooth (games, videos)" },
   { id: "sharp", label: "Sharp (text, code)" },
 ];
