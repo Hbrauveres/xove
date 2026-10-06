@@ -57,11 +57,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - account: the avatar with its connection dot; the menu's name, role and connection, the ambilight switch and brightness slider (saved), Admin for admins, and Sign out.
   - · covers FR-6a, FR-13, FR-14 · verify: `PeopleButton.test.tsx`, `AccountButton.test.tsx` (new)
   - Done: `PeopleButton` (seats bar as a progressbar, people notes, queue line; seats and queue left out when the API doesn't say) and `AccountButton`. The account panel is a dialog, not a menu: a menu's arrow keys would fight the brightness slider. 8 tests.
-- [ ] **T9** `NowWatching` and `AlsoLive`:
+- [x] **T9** `NowWatching` and `AlsoLive`:
   - now watching: the avatar with its ring, name, pulsing LIVE, what, and elapsed time; or "Nobody is sharing right now";
   - also live: "N of 6", the previews with their chip (a click picks), and the dashed free slot;
   - preview sound, from `Thumbnails`: muted by default and not downloaded, a round speaker crossed while muted, a click to unmute, and a horizontal slider sliding out on hover; no speaker without sound.
   - · covers FR-20, FR-21, FR-21a, FR-21b · verify: `NowWatching.test.tsx`, `AlsoLive.test.tsx` (new)
+  - Done: `NowWatching` and `AlsoLive` (with `PreviewSpeaker`; `previewSound.ts` holds the shared type). Whether a muted preview's sound is downloaded stays with the stage (wired in T10–T11). 11 tests.
 
 ## Wiring
 
