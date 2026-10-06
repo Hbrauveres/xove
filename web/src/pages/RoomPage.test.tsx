@@ -165,6 +165,27 @@ async function pickInMenu(user: User, option: string, kind: MenuKind = "Screen")
   await user.click((await openMenu(user, kind)).getByRole("menuitemradio", { name: option }));
 }
 
+/** The viewer's settings menu (spec 0101): opened from the gear when it isn't. */
+function watchSettings() {
+  if (!screen.queryByRole("menu", { name: "Settings" })) {
+    fireEvent.click(within(stage()).getByRole("button", { name: "Settings" }));
+  }
+  return within(screen.getByRole("menu", { name: "Settings" }));
+}
+
+const qualityValue = (item: HTMLElement) => (item.textContent === "Auto" ? "auto" : item.textContent);
+
+/** The qualities the viewer's settings offer, as values ("auto", "1080p", …). */
+const offeredQualities = () => watchSettings().getAllByRole("menuitemradio").map(qualityValue);
+
+/** The quality ticked in the viewer's settings. */
+const watchedQuality = () =>
+  qualityValue(watchSettings().getAllByRole("menuitemradio").find((i) => i.getAttribute("aria-checked") === "true")!);
+
+/** Picks a quality in the viewer's settings ("auto" for Auto). */
+const pickWatchQuality = (value: string) =>
+  fireEvent.click(watchSettings().getByRole("menuitemradio", { name: value === "auto" ? "Auto" : value }));
+
 /** The quality ticked in my stream's open menu. */
 const tickedQuality = (kind: MenuKind = "Screen") =>
   within(screen.getByRole("menu", { name: `${kind} options` }))
@@ -593,33 +614,30 @@ describe("room: the viewer's quality and volume", () => {
 
   it("asks the server for less when a lower quality is picked, and for the best again on Auto", async () => {
     await watchBruno();
-    const user = userEvent.setup();
     const publication = lastRoom().screenPublication("user-7")!;
 
-    await user.selectOptions(within(stage()).getByLabelText("Quality"), "480p");
+    pickWatchQuality("480p");
     expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
 
-    await user.selectOptions(within(stage()).getByLabelText("Quality"), "auto");
+    pickWatchQuality("auto");
     expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
   });
 
   it("only offers what the sharer sends", async () => {
     await watchBruno({ height: 720 });
-    const options = [...(within(stage()).getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
-    expect(options).toEqual(["auto", "720p", "480p"]);
+    expect(offeredQualities()).toEqual(["auto", "720p", "480p"]);
   });
 
   it("offers no lower quality when the sharer sends only one (Firefox, Safari)", async () => {
     await watchBruno({ height: 1080, layers: 1 });
-    const options = [...(within(stage()).getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
-    expect(options).toEqual(["auto", "1080p"]);
+    expect(offeredQualities()).toEqual(["auto", "1080p"]);
   });
 
   it("asks for Auto when the remembered quality isn't offered by this sharer", async () => {
     localStorage.setItem("xove.watch.quality", "1080p");
     await watchBruno({ height: 720 });
 
-    expect(within(stage()).getByLabelText("Quality")).toHaveValue("auto");
+    expect(watchedQuality()).toBe("auto");
     expect(lastRoom().screenPublication("user-7")!.setVideoQuality).toHaveBeenLastCalledWith(2);
   });
 
@@ -629,17 +647,20 @@ describe("room: the viewer's quality and volume", () => {
     const sound = lastRoom().remoteParticipants.get("user-7")!.tracks.get("screen_share_audio")!;
     const audio = () => sound.attached[0] as HTMLAudioElement;
 
-    fireEvent.change(screen.getByLabelText("Volume"), { target: { value: "0.3" } });
+    // The slider shows on the volume button (spec 0101).
+    await user.hover(within(stage()).getByRole("button", { name: "Mute" }));
+    fireEvent.change(screen.getByRole("slider", { name: "Volume" }), { target: { value: "0.3" } });
     expect(audio().volume).toBeCloseTo(0.3);
     await user.click(screen.getByRole("button", { name: "Mute" }));
     expect(audio().muted).toBe(true);
+    // Muted: no slider.
+    expect(screen.queryByRole("slider", { name: "Volume" })).not.toBeInTheDocument();
 
     view.unmount();
     await watchBruno({ withSound: true });
     expect(screen.getByRole("button", { name: "Unmute" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Volume")).toHaveValue("0");
     await user.click(screen.getByRole("button", { name: "Unmute" }));
-    expect(screen.getByLabelText("Volume")).toHaveValue("0.3");
+    expect(screen.getByRole("slider", { name: "Volume" })).toHaveValue("0.3");
   });
 
   it("asks for the remembered quality as soon as the screen arrives", async () => {
@@ -647,7 +668,7 @@ describe("room: the viewer's quality and volume", () => {
     await watchBruno();
 
     expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
-    expect(within(stage()).getByLabelText("Quality")).toHaveValue("720p");
+    expect(watchedQuality()).toBe("720p");
   });
 
   it("gives the sharer's own player no viewer's bar and no settings: those are in the button's menu", async () => {
@@ -656,6 +677,7 @@ describe("room: the viewer's quality and volume", () => {
     await startSharing(user);
 
     expect(within(stage()).queryByRole("button", { name: "Mute" })).not.toBeInTheDocument();
+    expect(within(stage()).queryByRole("button", { name: "Settings" })).not.toBeInTheDocument();
     expect(within(stage()).queryByLabelText("Send quality")).not.toBeInTheDocument();
     expect(within(stage()).queryByLabelText("Mode")).not.toBeInTheDocument();
     expect(within(stage()).queryByRole("combobox")).not.toBeInTheDocument();
@@ -676,7 +698,7 @@ describe("room: viewers follow the sharer's changes", () => {
     });
     await screen.findByLabelText("Bruno's shared screen");
     const publication = lastRoom().screenPublication("user-7")!;
-    const offered = () => [...(within(stage()).getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
+    const offered = offeredQualities;
     expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]);
 
     // Bruno lowers his quality; the API says so on the next poll.
@@ -712,7 +734,7 @@ describe("room: viewers follow the sharer's changes", () => {
       server.streams[0].settings = { quality: "720p", mode: "sharp" };
     });
 
-    await waitFor(() => expect(within(stage()).getByLabelText("Quality")).toHaveValue("480p"));
+    await waitFor(() => expect(watchedQuality()).toBe("480p"));
     expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
   });
 });
@@ -752,6 +774,29 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
     expect(within(stage()).getByRole("button", { name: "Turn on camera" })).toBeInTheDocument();
     expect(share.closest("[data-chrome]")).toBeNull();
     expect(screen.queryByRole("button", { name: /share my screen/i })).not.toBeInTheDocument();
+  });
+
+  it("are one centred row: volume, screen, camera, settings while watching; only mine otherwise (spec 0101)", async () => {
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const row = () =>
+      within(stage())
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label"))
+        .filter((name) => name !== "Fullscreen" && name !== "Exit fullscreen" && !name?.startsWith("Watch "));
+    expect(row()).toEqual(["Share your screen", "Turn on camera"]);
+
+    act(() => {
+      server.streams = [someoneSharing("Bruno Lima", 7)];
+    });
+    await screen.findByText("Bruno is sharing");
+    act(() => {
+      lastRoom().publishScreen("user-7", { withSound: true });
+    });
+    await screen.findByLabelText("Bruno's shared screen");
+
+    expect(row()).toEqual(["Mute", "Share your screen", "Turn on camera", "Settings"]);
   });
 
   it("fade with the player's bars over a stream", async () => {
@@ -841,7 +886,9 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     await startSharing(user);
     const started = myLiveStream(server);
     const video = local.screens[0].track;
-    expect(within(stage()).getByRole("img", { name: "No sound" })).toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription(
+      expect.stringMatching(/no sound is being shared/i),
+    );
 
     local.nextPickerAudio = true;
     await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
@@ -854,7 +901,9 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     expect(server.calls.filter((c) => c.path === "/api/streams" && c.method === "POST")).toHaveLength(1);
     expect(local.screens).toHaveLength(1);
     // The new pick has sound: it's sent, and the badge goes.
-    await waitFor(() => expect(within(stage()).queryByRole("img", { name: "No sound" })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(within(stage()).getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription("Stop sharing"),
+    );
     expect(local.screenAudio?.track.source).toBe("screen_share_audio");
   });
 
@@ -1374,8 +1423,8 @@ describe("room: the facecam", () => {
     expect(within(facecam()!).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
     expect(facecam()!.contains(within(stage()).getByLabelText("Bruno's camera"))).toBe(false);
     // The quality menu now picks the camera's quality: it offers 720p at most.
-    const offered = [...(within(stage()).getByLabelText("Quality") as HTMLSelectElement).options].map((o) => o.value);
-    expect(offered).toEqual(["auto", "720p", "480p"]);
+    expect(offeredQualities()).toEqual(["auto", "720p", "480p"]);
+    fireEvent.keyDown(screen.getByRole("menu", { name: "Settings" }), { key: "Escape" });
 
     await user.click(within(facecam()!).getByRole("button", { name: "Swap views" }));
     expect(within(facecam()!).getByLabelText("Bruno's camera")).toBeInTheDocument();
@@ -1468,16 +1517,16 @@ describe("room: whose sound plays", () => {
     });
     await screen.findByLabelText("Ana's shared screen");
 
-    expect(within(stage()).getByRole("button", { name: "No sound in this stream" })).toBeDisabled();
-    expect(within(stage()).getByLabelText("Volume")).toBeDisabled();
+    expect(within(stage()).getByRole("button", { name: "No sound in this stream" })).toHaveAttribute("aria-disabled", "true");
+    expect(within(stage()).queryByRole("slider", { name: "Volume" })).not.toBeInTheDocument();
     expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
 
     // Ana changes to a window with sound: her volume works again, at mine.
     act(() => {
       lastRoom().publishSound("user-3");
     });
-    expect(await within(stage()).findByRole("button", { name: "Mute" })).toBeEnabled();
-    expect(within(stage()).getByLabelText("Volume")).toHaveValue("0.6");
+    expect(await within(stage()).findByRole("button", { name: "Mute" })).not.toHaveAttribute("aria-disabled");
+    expect(within(stage()).getByRole("slider", { name: "Volume" })).toHaveValue("0.6");
     expect(within(thumbnails()).getByRole("button", { name: "Bruno shares no sound" })).toBeDisabled();
     localStorage.clear();
   });

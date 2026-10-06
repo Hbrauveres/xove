@@ -22,20 +22,6 @@
   display: flex;
 }
 
-.badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--surface-raised);
-  border: 2px solid var(--ground);
-  color: var(--warn);
-}
-
 @media (max-width: 520px) {
   .buttons {
     gap: 8px;

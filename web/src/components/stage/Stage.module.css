@@ -55,37 +55,11 @@
   }
 }
 
-/* The viewer's bar (volume, quality), over the bottom of the video. */
-.player {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  justify-content: flex-start;
-  z-index: 1;
-}
-
-/* Labels and bars over the video fade when the mouse stops, like YouTube. */
-.player {
-  transition: opacity 0.25s ease;
-}
-
-.frame[data-chrome="hidden"] .player {
-  opacity: 0;
-  pointer-events: none;
-}
-
 .frame[data-chrome="hidden"] {
   cursor: none;
 }
 
-.frame[data-chrome="hidden"]:focus-within .player {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* My screen and camera buttons (spec 0098): over the bottom centre, fading with the bars. */
+/* The round buttons (specs 0098 and 0101): over the bottom centre, fading with the labels. */
 .controls {
   position: absolute;
   inset: 0;
@@ -97,7 +71,7 @@
   opacity: 0;
 }
 
-.frame[data-chrome="hidden"] .controls button {
+.frame[data-chrome="hidden"] .controls :is(button, input) {
   pointer-events: none;
 }
 
@@ -105,18 +79,8 @@
   opacity: 1;
 }
 
-.frame[data-chrome="hidden"]:focus-within .controls button {
+.frame[data-chrome="hidden"]:focus-within .controls :is(button, input) {
   pointer-events: auto;
-}
-
-/*
- * The viewer's bar (about 300px, on the left) and the centred buttons meet below about
- * 800px of stage: there, the buttons sit above the bar instead of over it.
- */
-@container (max-width: 800px) {
-  .controls {
-    bottom: 52px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

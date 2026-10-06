@@ -5,11 +5,12 @@ import { stagePick } from "../../media/stagePick";
 import type { ConnectionState, LiveFeed, Sharer } from "../../types";
 import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
-import { PlayerControls } from "./PlayerControls";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
-import { StreamButtons, type StreamControls } from "./StreamButtons";
+import { PlayerButtons, type StreamControls } from "./PlayerButtons";
+import { VolumeButton } from "./VolumeButton";
+import { WatchSettings } from "./WatchSettings";
 import { MUTED, Thumbnails, type ThumbnailSound } from "./Thumbnails";
 import styles from "./Stage.module.css";
 
@@ -64,9 +65,9 @@ export function Stage({ sharers, connection, controls }: Props) {
   // (or after a tap), and fade when it stops, like YouTube.
   const [chromeShown, setChromeShown] = useState(false);
   const idleTimer = useRef<number | undefined>(undefined);
-  // Nothing fades while a control has the keyboard focus, or a stream's menu is open.
-  const menuOpen = useRef(false);
-  const focusInside = () => menuOpen.current || (frameRef.current?.contains(document.activeElement) ?? false);
+  // Nothing fades while a control has the keyboard focus, or a menu or the volume slider is open.
+  const held = useRef(new Set<string>());
+  const focusInside = () => held.current.size > 0 || (frameRef.current?.contains(document.activeElement) ?? false);
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
@@ -82,13 +83,20 @@ export function Stage({ sharers, connection, controls }: Props) {
     window.clearTimeout(idleTimer.current);
     setChromeShown(false);
   }, []);
-  const onMenuChange = useCallback(
-    (open: boolean) => {
-      menuOpen.current = open;
-      if (open) showChrome();
+  const hold = useCallback(
+    (what: string, open: boolean) => {
+      if (open) {
+        held.current.add(what);
+        showChrome();
+      } else {
+        held.current.delete(what);
+      }
     },
     [showChrome],
   );
+  const onMenuChange = useCallback((open: boolean) => hold("menu", open), [hold]);
+  const onVolumeOpen = useCallback((open: boolean) => hold("volume", open), [hold]);
+  const onSettingsOpen = useCallback((open: boolean) => hold("settings", open), [hold]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -133,7 +141,8 @@ export function Stage({ sharers, connection, controls }: Props) {
   // The same button enters and leaves fullscreen; Esc (the browser's own way out) is followed too.
   const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
-    const follow = () => setFullscreen(document.fullscreenElement != null && document.fullscreenElement === frameRef.current);
+    const follow = () =>
+      setFullscreen(document.fullscreenElement != null && document.fullscreenElement === frameRef.current);
     document.addEventListener("fullscreenchange", follow);
     return () => document.removeEventListener("fullscreenchange", follow);
   }, []);
@@ -170,18 +179,6 @@ export function Stage({ sharers, connection, controls }: Props) {
           volume={watch.volume}
           muted={watch.muted}
         />
-        <div className={styles.player}>
-          <PlayerControls
-            sharerHeight={main.remote.height ?? 0}
-            layers={main.remote.layers}
-            cap={cap}
-            prefs={watch}
-            onChange={changeWatch}
-            canSetVolume={canSetVolume()}
-            // Only a screen can be shared without sound; a camera never has any to lock.
-            hasSound={!big.screen || Boolean(big.hasSound)}
-          />
-        </div>
       </>
     ) : (
       <StageNotice spinner title={`Loading ${big.person.name}'s ${main.kind}…`} text="The video starts in a moment." />
@@ -229,7 +226,36 @@ export function Stage({ sharers, connection, controls }: Props) {
 
         {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
         <div className={styles.controls}>
-          <StreamButtons {...controls} onMenuChange={onMenuChange} />
+          <PlayerButtons
+            {...controls}
+            onMenuChange={onMenuChange}
+            // Watching someone else: their volume first and the quality last (spec 0101).
+            before={
+              remote &&
+              big && (
+                <VolumeButton
+                  prefs={watch}
+                  onChange={changeWatch}
+                  canSetVolume={canSetVolume()}
+                  // Only a screen can be shared without sound; a camera never has any to lock.
+                  hasSound={!big.screen || Boolean(big.hasSound)}
+                  onOpenChange={onVolumeOpen}
+                />
+              )
+            }
+            after={
+              remote && (
+                <WatchSettings
+                  sharerHeight={remote.height ?? 0}
+                  layers={remote.layers}
+                  cap={cap}
+                  prefs={watch}
+                  onChange={changeWatch}
+                  onOpenChange={onSettingsOpen}
+                />
+              )
+            }
+          />
         </div>
 
         {connection === "reconnecting" && (

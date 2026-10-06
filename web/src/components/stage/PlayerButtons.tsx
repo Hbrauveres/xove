@@ -1,11 +1,10 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { SharePrefs } from "../../media/preferences";
-import { CAMERA_QUALITIES, SHARE_QUALITIES } from "../../media/shareSettings";
+import { CAMERA_QUALITIES, MODES, SHARE_QUALITIES } from "../../media/shareSettings";
 import type { CameraDevice, StreamKind } from "../../types";
-import { MODES } from "../share/ShareSettingsFields";
 import { MenuGroup, MenuItem, MenuNote, MenuRadio, MenuSeparator, PlayerMenu } from "./PlayerMenu";
 import round from "./RoundButton.module.css";
-import styles from "./StreamButtons.module.css";
+import styles from "./PlayerButtons.module.css";
 
 export const FULL_ROOM = "6 streams are live, the most at once. You can start yours when one stops.";
 export const NO_SOUND =
@@ -34,10 +33,13 @@ type Props = {
   onPickCamera: (deviceId: string) => void;
   /** A menu opened or closed: the player keeps its controls shown while one is open. */
   onMenuChange?: (open: boolean) => void;
+  /** What the viewer watches with, around my buttons (spec 0101): the volume before, the settings after. */
+  before?: ReactNode;
+  after?: ReactNode;
 };
 
-/** What the stage passes on to the buttons: everything but the menu's state. */
-export type StreamControls = Omit<Props, "onMenuChange">;
+/** What the room passes on to my buttons: the stage adds the menu's state and the viewer's part. */
+export type StreamControls = Omit<Props, "onMenuChange" | "before" | "after">;
 
 const LABEL: Record<StreamKind, { start: string; stop: string; options: string }> = {
   screen: {
@@ -53,11 +55,12 @@ const LABEL: Record<StreamKind, { start: string; stop: string; options: string }
 };
 
 /**
- * My screen and camera, as round buttons over the bottom of the stage, like Discord's
- * (spec 0098). A click starts or stops; while live, the arrow opens that stream's menu.
+ * The player's centred row of round buttons (specs 0098 and 0101): the volume, my screen
+ * and camera, the settings. A click on mine starts or stops; while live, the arrow opens
+ * that stream's menu.
  */
-export function StreamButtons(props: Props) {
-  const { mine, canShareScreen, onMenuChange } = props;
+export function PlayerButtons(props: Props) {
+  const { mine, canShareScreen, onMenuChange, before, after } = props;
   const [picked, setPicked] = useState<StreamKind | null>(null);
   // A stream that stops closes its menu, for good: it doesn't reopen when the stream
   // comes back (set while rendering, React's way to follow a changed prop).
@@ -74,9 +77,11 @@ export function StreamButtons(props: Props) {
   return (
     <div className={styles.row}>
       <div className={styles.buttons}>
+        {before}
         {kinds.map((kind) => (
           <StreamButton key={kind} kind={kind} {...props} open={open === kind} onOpen={(o) => show(o ? kind : null)} />
         ))}
+        {after}
       </div>
     </div>
   );
@@ -163,15 +168,6 @@ function StreamButton({
               <path d="M3 7.5 6 4.5l3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
-        )}
-
-        {silent && (
-          <span className={styles.badge} role="img" aria-label="No sound">
-            <svg viewBox="0 0 20 20" width="11" height="11" aria-hidden="true">
-              <path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor" />
-              <path d="M13 8l4 4M17 8l-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </span>
         )}
 
         <span id={tipId} role="tooltip" className={round.tip}>

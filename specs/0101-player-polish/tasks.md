@@ -19,7 +19,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Wiring
 
-- [ ] **T5** The row: `StreamButtons` becomes `PlayerButtons` with the volume and settings slots, in the order volume, screen, camera, settings. The stage fills them only while someone else's stream is big, and keeps the controls shown while the slider or a menu is open. `PlayerControls` and the old bar are deleted, with the container query; the no-sound badge goes. Room tests move to the new buttons · covers FR-4, FR-7, FR-8, FR-10 · verify: `PlayerButtons.test.tsx`, `RoomPage.test.tsx`
+- [x] **T5** The row: `StreamButtons` becomes `PlayerButtons` with the volume and settings slots, in the order volume, screen, camera, settings. The stage fills them only while someone else's stream is big, and keeps the controls shown while the slider or a menu is open. `PlayerControls` and the old bar are deleted, with the container query; the no-sound badge goes. Room tests move to the new buttons · covers FR-4, FR-7, FR-8, FR-10 · verify: `PlayerButtons.test.tsx`, `RoomPage.test.tsx`
+  - Done: `PlayerButtons` with `before`/`after` slots; the stage fills them while watching someone else and holds the controls while a menu, the slider or the settings are open; `PlayerControls`, the `.player` styles and the container query deleted; no badge. `MODES` moved to `shareSettings.ts`. Room tests use the new buttons; 2 new tests (row order).
 - [ ] **T6** Fullscreen: `useFullscreenElement()`; the room draws the setup window and the error line inside the fullscreen element while there is one · covers FR-2 · verify: `RoomPage.test.tsx`
 - [ ] **T7** The setup window's texts: "from the button's menu", and today's sound hint · covers FR-3 · verify: `RoomPage.test.tsx`
 

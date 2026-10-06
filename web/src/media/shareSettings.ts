@@ -39,6 +39,12 @@ export const DEFAULT_SHARE: { quality: ShareQuality; mode: ShareMode } = { quali
 
 const presetOf = (quality: ShareQuality) => SHARE_QUALITIES.find((q) => q.id === quality) ?? SHARE_QUALITIES[0];
 
+/** The modes and how the sharer sees them, in the setup window and the stream menus. */
+export const MODES: { id: ShareMode; label: string }[] = [
+  { id: "smooth", label: "Smooth (games, videos)" },
+  { id: "sharp", label: "Sharp (text, code)" },
+];
+
 /** The content hint for a mode: how the browser encodes the screen. */
 export const contentHintOf = (mode: ShareMode) => (mode === "smooth" ? "motion" : "detail");
 

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SharePrefs } from "../../media/preferences";
 import type { StreamKind } from "../../types";
-import { FULL_ROOM, NO_SOUND, StreamButtons } from "./StreamButtons";
+import { FULL_ROOM, NO_SOUND, PlayerButtons } from "./PlayerButtons";
 
 const PREFS: Record<StreamKind, SharePrefs> = {
   screen: { quality: "1080p", mode: "smooth" },
@@ -14,7 +14,7 @@ const CAMERAS = [
   { deviceId: "cam-2", label: "Integrated Webcam" },
 ];
 
-function setup(props: Partial<Parameters<typeof StreamButtons>[0]> = {}) {
+function setup(props: Partial<Parameters<typeof PlayerButtons>[0]> = {}) {
   const handlers = {
     onStart: vi.fn(),
     onStop: vi.fn(),
@@ -25,7 +25,7 @@ function setup(props: Partial<Parameters<typeof StreamButtons>[0]> = {}) {
   };
   const user = userEvent.setup();
   const view = render(
-    <StreamButtons
+    <PlayerButtons
       mine={{ screen: false, camera: false }}
       free={6}
       prefs={PREFS}
@@ -36,9 +36,9 @@ function setup(props: Partial<Parameters<typeof StreamButtons>[0]> = {}) {
       {...props}
     />,
   );
-  const rerender = (next: Partial<Parameters<typeof StreamButtons>[0]>) =>
+  const rerender = (next: Partial<Parameters<typeof PlayerButtons>[0]>) =>
     view.rerender(
-      <StreamButtons
+      <PlayerButtons
         mine={{ screen: false, camera: false }}
         free={6}
         prefs={PREFS}
@@ -83,6 +83,21 @@ describe("stream buttons: off and live", () => {
   it("names the camera's stop", () => {
     setup({ mine: { screen: false, camera: true } });
     expect(screen.getByRole("button", { name: "Turn off camera" })).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("player buttons: the row (spec 0101)", () => {
+  it("puts the volume before my buttons and the settings after them", () => {
+    setup({
+      before: <button type="button">Volume</button>,
+      after: <button type="button">Settings</button>,
+    });
+    expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([
+      "Volume",
+      "Share your screen",
+      "Turn on camera",
+      "Settings",
+    ]);
   });
 });
 
@@ -214,7 +229,8 @@ describe("stream buttons: when they can't be used", () => {
   it("marks a screen shared without sound, and says how to share it", async () => {
     const { user } = setup({ mine: { screen: true, camera: false }, noSound: true });
 
-    expect(screen.getByRole("img", { name: "No sound" })).toBeInTheDocument();
+    // No badge on the button (spec 0101): the tooltip and the menu say it.
+    expect(screen.queryByRole("img", { name: "No sound" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription(
       `Stop sharing. ${NO_SOUND}`,
     );
