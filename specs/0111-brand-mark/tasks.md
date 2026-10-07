@@ -16,8 +16,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - The corner positions the animation moves to.
   - · covers FR-1, FR-2 · verify: `mark.test.ts` (new): the shapes' sizes and spacing, the red corner, the icon's spacing
   - Done: `brand/mark.ts` (`wordMark`, `iconMark`, `ICON_SPACING`, the closed positions); loads in Node too. 8 tests.
-- [ ] **T2** `XoveMark` and `XoveIcon`: inline SVG from `mark.ts`, with `role="img"`, `aria-label="Xovê"`, `currentColor` and the accent red.
+- [x] **T2** `XoveMark` and `XoveIcon`: inline SVG from `mark.ts`, with `role="img"`, `aria-label="Xovê"`, `currentColor` and the accent red.
   - · covers FR-1, FR-2, FR-3 · verify: `XoveMark.test.tsx` (new)
+  - Done: `components/brand/XoveMark`, `XoveIcon` and shared `parts`; corners in `data-side` groups and letters in one group, ready for the animation. 3 tests.
 - [ ] **T3** `useMarkAnimation`, used by `XoveMark` (`tabIndex=0`):
   - the steps: slide, settle, double blink, back;
   - a hover or focus starts it, and one already playing isn't restarted;
