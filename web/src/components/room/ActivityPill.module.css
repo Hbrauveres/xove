@@ -13,7 +13,7 @@
   padding: 0 12px 0 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  background: rgba(16, 20, 27, 0.72);
+  background: rgba(20, 20, 21, 0.72);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: var(--text);
@@ -38,7 +38,7 @@
 /* The connection, when it drops, takes the pill: yellow, with a spinner. */
 .warn {
   border-color: color-mix(in srgb, var(--warn) 55%, transparent);
-  background: color-mix(in srgb, var(--warn) 14%, rgba(16, 20, 27, 0.85));
+  background: color-mix(in srgb, var(--warn) 14%, rgba(20, 20, 21, 0.85));
   color: var(--warn);
 }
 

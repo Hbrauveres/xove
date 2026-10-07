@@ -17,7 +17,7 @@ const global = Object.entries(sheets).find(([p]) => p.endsWith("styles/global.cs
 const tokens = new Map([...global.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]));
 const token = (name: string) => tokens.get(name);
 
-describe("the palette: the cozy dark blue, red accent (specs 0111 and 0113)", () => {
+describe("the palette: black, neutral greys, red accent (specs 0111 and 0113)", () => {
   it("reads every stylesheet", () => {
     expect(all.length).toBeGreaterThan(20);
     expect(global).toContain(":root");
@@ -36,31 +36,31 @@ describe("the palette: the cozy dark blue, red accent (specs 0111 and 0113)", ()
     }
   });
 
-  it("is the board's dark blue (spec 0113), with the raised surface and faint grey nudged to pass", () => {
-    expect(token("ground")).toBe("#0b0e13");
-    expect(token("surface")).toBe("#10141b");
-    expect(token("surface-raised")).toBe("#181f2a");
-    expect(token("line")).toBe("#222b38");
-    expect(token("text")).toBe("#e7ebf1");
-    expect(token("text-muted")).toBe("#8b96a8");
-    expect(token("text-faint")).toBe("#667083");
+  it("is black, neutral greys and red (spec 0113), with the raised surface nudged to pass", () => {
+    expect(token("ground")).toBe("#0c0c0d");
+    expect(token("surface")).toBe("#161617");
+    expect(token("surface-raised")).toBe("#1b1b1d");
+    expect(token("line")).toBe("#2c2c2f");
+    expect(token("text")).toBe("#ebebec");
+    expect(token("text-muted")).toBe("#9a9a9f");
+    expect(token("text-faint")).toBe("#66666b");
   });
 
-  it("has none of spec 0111's neutral greys or neutral glass left", () => {
-    const neutral = [
-      "#0c0c0d", "#161617", "#1e1e20", "#2c2c2f", "#ebebec", "#9a9a9f", "#66666b",
-      "#cacacd", "#b3b3b8", "#a4a4a9", "#d0d0d3", "#070708", "#131314",
+  it("has none of the blue-tinted greys or glass left", () => {
+    const blue = [
+      "#0b0e13", "#10141b", "#181f2a", "#1c2430", "#222b38", "#e7ebf1", "#8b96a8", "#667083", "#5d6778",
+      "#0d1117", "#151b24", "#273140", "#c3ccd8", "#aab4c4", "#9aa5b6", "#c9d1dc", "#05070a",
     ];
-    const glass = /rgba\(\s*(10,\s*10,\s*11|20,\s*20,\s*21|12,\s*12,\s*13|7,\s*7,\s*8)\s*,/;
+    const glass = /rgba\(\s*(8,\s*10,\s*14|16,\s*20,\s*27|9,\s*12,\s*17|5,\s*7,\s*10)\s*,/;
     for (const [path, css] of all) {
-      for (const hex of neutral) expect(css.toLowerCase(), `${path} ${hex}`).not.toContain(hex);
+      for (const hex of blue) expect(css.toLowerCase(), `${path} ${hex}`).not.toContain(hex);
       expect(css, path).not.toMatch(glass);
     }
   });
 
-  it("uses the blue-tinted glass (spec 0113)", () => {
+  it("uses the neutral glass", () => {
     const css = all.map(([, c]) => c).join("\n");
-    for (const glass of ["rgba(8, 10, 14,", "rgba(16, 20, 27,", "rgba(9, 12, 17,", "rgba(5, 7, 10,"]) expect(css).toContain(glass);
+    for (const glass of ["rgba(10, 10, 11,", "rgba(20, 20, 21,", "rgba(12, 12, 13,", "rgba(7, 7, 8,"]) expect(css).toContain(glass);
   });
 
   it("keeps every text colour readable on every surface (4.5:1; faint labels 3:1)", () => {

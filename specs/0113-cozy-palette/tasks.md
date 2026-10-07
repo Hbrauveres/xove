@@ -1,4 +1,4 @@
-# The cozy dark-blue palette, and a bare, larger favicon — tasks
+# The black palette, the animation on the left, and a bare, larger favicon — tasks
 
 - Plan: [plan.md](plan.md)
 
@@ -87,3 +87,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 | AC-3 | T5, T7 (manual) |
 
 Nothing uncovered.
+
+## Change: black (2026-10-07)
+
+- [x] **T8** Henrique committed to black after comparing palettes. Spec, plan and design updated. Tokens are 0111's black with raised `#1b1b1d`; the glass and dropdown greys are neutral again; the icon files' ground and light-mode ink are `#0c0c0d`; favicon and PNGs regenerated; docs and decision 39 rewritten.
+  - · covers FR-1, FR-2, FR-4, FR-6a, FR-6b · verify: `palette.test.ts` (black tokens, no blue, neutral glass, contrast computed), `brand.test.ts` (black ground in the files); the room rendered in black
+

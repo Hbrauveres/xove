@@ -193,7 +193,7 @@ To check a share on staging, open `chrome://webrtc-internals` in the viewer's or
 
 ## The look
 
-Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-palette/spec.md), with the reference in [0113's design](../specs/0113-cozy-palette/design.html).
+Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-palette/spec.md), with the reference in [0113's design](../specs/0113-cozy-palette/design.html) (its black palette).
 
 - **The mark:** [XOVE] in a slim viewfinder, the O a record button (a white ring and a red dot), and the top-right corner red, standing in for the ^ of Xovê.
   - Its geometry lives in one place, `web/src/brand/mark.ts`.
@@ -207,11 +207,11 @@ Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-pal
   - **Small** (32 px) and **tiny** (16 px): heavier strokes, filling more of the square. Tiny runs edge to edge.
   - The outer edges are the same in all three.
 - **Icons:** `web/public/` holds the favicon, the phone icons and `site.webmanifest`. `index.html` links them.
-  - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn dark blue when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
-  - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the dark blue ground, since phones fill transparency with black.
+  - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn black when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
+  - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the black ground, since phones fill transparency with black anyway.
   - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
-- **The palette** (`styles/global.css`): the cozy dark blue from the mark's board.
-  - **Neutrals:** ground `#0b0e13`, panels `#10141b`, raised `#181f2a`, lines `#222b38`, text `#e7ebf1`, muted `#8b96a8`, faint `#667083`.
+- **The palette** (`styles/global.css`): black, neutral greys and red, chosen over a dark blue and five greys compared on the real pages.
+  - **Neutrals:** ground `#0c0c0d`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
   - **Accent:** red, `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`.
   - **Unchanged:** green and yellow stay for status, the avatars keep a colour per person, and the empty stage's colour bars keep theirs.
   - `styles/palette.test.ts` checks the tokens, rejects the old palettes, and computes every text colour's contrast on every surface: 4.5:1, and 3:1 for faint labels.

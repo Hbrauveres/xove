@@ -30,7 +30,7 @@ header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.0
 header p { margin: 8px 0 0; color: var(--muted); max-width: 70ch; }
 
 .concept { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); overflow: hidden; }
-.stage { display: grid; place-items: center; padding: 64px 24px; background: #0b0e13; color: #e7ebf1; }
+.stage { display: grid; place-items: center; padding: 64px 24px; background: var(--g0); color: var(--t0); }
 .stage svg { height: auto; }
 .hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 48px; width: 100%; }
 .hero .big svg { width: 168px; }
@@ -42,9 +42,9 @@ header p { margin: 8px 0 0; color: var(--muted); max-width: 70ch; }
 .below p { margin: 0; color: var(--muted); font-size: .9rem; max-width: 60ch; }
 .uses { display: grid; gap: 14px; align-content: start; min-width: 0; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
-.tile { display: grid; place-items: center; background: #0b0e13; color: #e7ebf1; }
+.tile { display: grid; place-items: center; background: var(--g0); color: var(--t0); }
 .tile svg { width: 100%; height: 100%; }
-.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 52px; padding: 0 16px; border-radius: 10px; background: #0b0e13; color: #e7ebf1; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 52px; padding: 0 16px; border-radius: 10px; background: var(--g0); color: var(--t0); }
 .bar svg { height: 22px; width: auto; }
 .bar .pill { width: 38%; height: 26px; border-radius: 999px; border: 1px solid #2a3340; }
 .paper { display: flex; align-items: center; height: 52px; padding: 0 16px; border-radius: 10px; background: var(--paper); color: var(--paper-ink); }
@@ -78,12 +78,16 @@ svg .accf { fill: var(--tally); }
 .phones { display: flex; flex-wrap: wrap; align-items: end; gap: 22px; }
 .phones figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
 .phones .app { border-radius: 22%; overflow: hidden; display: block; }
+.palswitch { display: inline-flex; gap: 6px; margin-top: 12px; }
+.palswitch a { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; font-size: .85rem; }
+.palswitch a[aria-current="true"] { border-color: var(--tally); color: var(--ink); }
 </style>
 
 <main>
   <header>
     <h1>Xovê, the mark</h1>
     <p>[XOVE] in a slim viewfinder with a red corner and the record O. <b>Point at the big wordmark</b> (or tab to it): the left corners stay put while the word slides left behind them until the X is gone, and the right corners close in to the O; then the corners settle into the icon, where the icon sits in the logo's own left place; the dot does a quick, surprised double blink; then it all moves back.</p>
+    <nav class="palswitch" aria-label="Palette"><a href="#black" data-pal="black">Black</a><a href="#graphite" data-pal="graphite">Graphite</a><a href="#blue" data-pal="blue">Blue</a></nav>
   </header>
   <section class="concept">
     <div class="stage"><div class="hero"><div class="w" data-anim tabindex="0" style="cursor:pointer"></div></div></div>
@@ -92,14 +96,14 @@ svg .accf { fill: var(--tally); }
 
   <section class="concept extra">
     <div class="below single">
-      <div><div class="tag">Palette (spec 0113)</div><h2>The cozy dark blue</h2><p>The board's own colours become the app's: a dark blue ground, blue-tinted panels and greys, red as the one accent.</p></div>
+      <div><div class="tag">Palette (spec 0113)</div><h2 id="palname">The palette</h2><p>The colours the app would use. Switch between black, graphite and blue at the top.</p></div>
       <div class="swatches" data-swatches></div>
     </div>
   </section>
 
   <section class="concept extra">
     <div class="below single">
-      <div><div class="tag">Favicon (spec 0113)</div><h2>Only the symbol, filling the tab</h2><p>No tile. White on a dark browser, dark blue on a light one; the red is the same in both. Small sizes fill their square and use heavier strokes and a bigger dot, so the symbol reads from afar.</p></div>
+      <div><div class="tag">Favicon (spec 0113)</div><h2>Only the symbol, filling the tab</h2><p>No tile. White on a dark browser, the dark ground colour on a light one; the red is the same in both. Small sizes fill their square and use heavier strokes and a bigger dot, so the symbol reads from afar.</p></div>
       <div class="tabs" data-tabs></div>
     </div>
   </section>
@@ -113,7 +117,7 @@ svg .accf { fill: var(--tally); }
 
   <section class="concept extra">
     <div class="below single">
-      <div><div class="tag">Phone icon (spec 0113)</div><h2>Dark blue, a bigger symbol</h2><p>Phones fill transparency with black, so the home-screen icon keeps the dark blue ground, with the symbol at about 70% of it, so it has room to breathe.</p></div>
+      <div><div class="tag">Phone icon (spec 0113)</div><h2>The dark ground, a bigger symbol</h2><p>Phones fill transparency with black, so the home-screen icon keeps the dark ground, with the symbol at about 70% of it, so it has room to breathe.</p></div>
       <div class="phones" data-phones></div>
     </div>
   </section>
@@ -124,6 +128,25 @@ svg .accf { fill: var(--tally); }
 
 
 <script>
+// The board's palette: black (spec 0111, raised and faint nudged to pass), graphite, or blue (spec 0113).
+const PALS = {
+  black: { ground: "#0c0c0d", panel: "#161617", raised: "#1b1b1d", line: "#2c2c2f", text: "#ebebec", muted: "#9a9a9f", faint: "#66666b" },
+  graphite: { ground: "#121214", panel: "#19191c", raised: "#1f1f23", line: "#2c2c31", text: "#ececef", muted: "#9c9ca6", faint: "#70707a" },
+  blue: { ground: "#0b0e13", panel: "#10141b", raised: "#181f2a", line: "#222b38", text: "#e7ebf1", muted: "#8b96a8", faint: "#667083" },
+};
+const PAL_NAME = PALS[location.hash.slice(1)] ? location.hash.slice(1) : "black";
+const B = PALS[PAL_NAME];
+{
+  const r = document.documentElement.style;
+  r.setProperty("--g0", B.ground); r.setProperty("--t0", B.text);
+  if (!matchMedia("(prefers-color-scheme: light)").matches || document.documentElement.dataset.theme === "dark") {
+    r.setProperty("--ground", B.ground); r.setProperty("--panel", B.panel); r.setProperty("--line", B.line);
+    r.setProperty("--ink", B.text); r.setProperty("--muted", B.muted); r.setProperty("--faint", B.faint);
+  }
+  document.querySelectorAll("[data-pal]").forEach((a) => a.setAttribute("aria-current", a.dataset.pal === PAL_NAME));
+  addEventListener("hashchange", () => location.reload());
+}
+
 // The grid: x-height 100, stroke 14, letters on the baseline y = 100. Strokes run past the
 // lines and each letter is clipped to its band, so every terminal is a flat cut.
 const S = 14, H = 100, R = (H - S) / 2;
@@ -383,8 +406,8 @@ document.querySelectorAll("[data-anim]").forEach((el) => {
 
 // Spec 0113: the palette, the bare favicon and the phone icon.
 const PALETTE = [
-  ["Ground", "#0b0e13"], ["Panel", "#10141b"], ["Raised", "#181f2a"], ["Line", "#222b38"],
-  ["Text", "#e7ebf1"], ["Muted", "#8b96a8"], ["Faint", "#667083"], ["Accent", "#ef4b4b"], ["Accent ink", "#3a0808"],
+  ["Ground", B.ground], ["Panel", B.panel], ["Raised", B.raised], ["Line", B.line],
+  ["Text", B.text], ["Muted", B.muted], ["Faint", B.faint], ["Accent", "#ef4b4b"], ["Accent ink", "#3a0808"],
 ];
 document.querySelector("[data-swatches]").innerHTML = PALETTE.map(([n, c]) => `<div class="sw"><i style="background:${c}"></i><b>${n}</b><span>${c}</span></div>`).join("");
 
@@ -395,10 +418,10 @@ const tab = (bg, tabBg, ink, text, label) => `<div class="tabbar" style="backgro
   <div class="tab" style="color:${text};opacity:.6">${bare(ink, 16)} Xovê · admin</div>
   <span class="cap">${label}</span></div>`;
 document.querySelector("[data-tabs]").innerHTML =
-  tab("#1f2228", "#35383f", "#e7ebf1", "#e7ebf1", "dark browser") +
-  tab("#dee1e6", "#ffffff", "#0b0e13", "#1f1f1f", "light browser") +
-  `<div class="row">${[64, 32, 16].map((n) => `<div style="display:grid;gap:4px;justify-items:center;background:#0b0e13;padding:6px;border-radius:8px">${bare("#e7ebf1", n)}<span class="cap">${n}</span></div>`).join("")}
-   ${[64, 32, 16].map((n) => `<div style="display:grid;gap:4px;justify-items:center;background:#f3f1ec;padding:6px;border-radius:8px">${bare("#0b0e13", n)}<span class="cap">${n}</span></div>`).join("")}</div>`;
+  tab("#1f2228", "#35383f", B.text, B.text, "dark browser") +
+  tab("#dee1e6", "#ffffff", B.ground, "#1f1f1f", "light browser") +
+  `<div class="row">${[64, 32, 16].map((n) => `<div style="display:grid;gap:4px;justify-items:center;background:${B.ground};padding:6px;border-radius:8px">${bare(B.text, n)}<span class="cap">${n}</span></div>`).join("")}
+   ${[64, 32, 16].map((n) => `<div style="display:grid;gap:4px;justify-items:center;background:#f3f1ec;padding:6px;border-radius:8px">${bare(B.ground, n)}<span class="cap">${n}</span></div>`).join("")}</div>`;
 
 // The phone icon: dark blue ground, the symbol at about 85%, like the tiles above.
 const phone = (size) => `<div class="app" style="width:${size}px;height:${size}px;background:#0b0e13;color:#e7ebf1">${mark("redL").replace(/viewBox="[^"]*"/, 'viewBox="-16 -26 172 172"').replace("<svg ", `<svg width="${size}" height="${size}" `)}</div>`;
@@ -431,7 +454,7 @@ function symbolAt(px, { ink = "currentColor", ground = null } = {}) {
 // Redraw every small icon on the board with its size's version.
 document.querySelectorAll(".uses .tile").forEach((t) => {
   const px = parseInt(t.style.width);
-  t.innerHTML = symbolAt(px, { ink: "#e7ebf1" });
+  t.innerHTML = symbolAt(px, { ink: B.text });
 });
 document.querySelectorAll("[data-tabs] .tab svg").forEach((svgEl) => {
   const ink = svgEl.style.color;
@@ -442,13 +465,13 @@ document.querySelectorAll("[data-tabs] .row > div").forEach((d) => {
   svgEl.outerHTML = symbolAt(px, { ink: svgEl.style.color });
 });
 document.querySelector("[data-phones]").innerHTML = [180, 120, 60]
-  .map((n) => `<figure><div class="app" style="width:${n}px;height:${n}px">${symbolAt(n, { ink: "#e7ebf1", ground: "#0b0e13" })}</div><figcaption class="cap">${n}</figcaption></figure>`)
+  .map((n) => `<figure><div class="app" style="width:${n}px;height:${n}px">${symbolAt(n, { ink: B.text, ground: B.ground })}</div><figcaption class="cap">${n}</figcaption></figure>`)
   .join("");
 
 // Rasterise the 16 px symbol, then blow it up 6× without smoothing.
 (async () => {
   const box = document.querySelector("[data-pixels]");
-  for (const [ink, bg] of [["#e7ebf1", "#35383f"], ["#0b0e13", "#ffffff"]]) {
+  for (const [ink, bg] of [[B.text, "#35383f"], [B.ground, "#ffffff"]]) {
     const svg = symbolAt(16, { ink }).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ').replaceAll("var(--tally)", "#ef4b4b");
     const img = new Image();
     img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
