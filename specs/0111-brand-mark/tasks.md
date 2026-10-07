@@ -29,12 +29,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 - [x] **T4** The mark replaces "xovê." in `RoomHeader`, `HomePage`, `RequestAccessPage` and `AdminPage` (where "admin" stays beside it). The old `.logo` / `.dot` styles go.
   - · covers FR-3 · verify: `RoomPage.test.tsx`, `AdminPage.test.tsx`, `RequestAccessPage.test.tsx`, `HomePage.test.tsx` (new): the image "Xovê" is shown and "xovê." is gone
   - Done: the mark at 32 px (room header), 40 (home), 36 (request access) and 30 beside "admin"; the old `.dot` styles gone. 4 page checks.
-- [ ] **T5** The icons:
+- [x] **T5** The icons:
   - `scripts/brand-icons.mjs` writes `public/favicon.svg` from `mark.ts`;
   - the 180, 192 and 512 px PNGs are rendered from it and committed;
   - `site.webmanifest`;
   - `index.html` links the icon, the apple-touch-icon, the manifest and `theme-color`.
   - · covers FR-4 · verify: `brand.test.ts` (new): the links, the files, the manifest's icons, `favicon.svg` matching `mark.ts`
+  - Done: `brand/iconSvg.ts` (the symbol on a dark tile); `scripts/brand-icons.mjs` writes the favicon (and prints the square SVG for the PNGs); 3 PNGs, the manifest and the `index.html` links. 4 tests.
 
 ## The palette
 
