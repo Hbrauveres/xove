@@ -13,7 +13,9 @@ const sheets: Record<string, string> = Object.fromEntries(
 const all = Object.entries(sheets);
 const global = Object.entries(sheets).find(([p]) => p.endsWith("styles/global.css"))?.[1] ?? "";
 
-const token = (name: string) => new RegExp(`--${name}:\\s*([^;]+);`).exec(global)?.[1].trim();
+/** global.css's custom properties, as name → value. */
+const tokens = new Map([...global.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]));
+const token = (name: string) => tokens.get(name);
 
 describe("the palette: red, white, black and grey (spec 0111)", () => {
   it("reads every stylesheet", () => {

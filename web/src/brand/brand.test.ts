@@ -6,7 +6,11 @@ import { iconSvg } from "./iconSvg";
 
 /** Everything in public/, by name. */
 const shipped = Object.keys(import.meta.glob("../../public/*")).map((p) => p.split("/").pop());
-const href = (rel: string) => new RegExp(`<link[^>]*rel="${rel}"[^>]*href="([^"]+)"`).exec(html)?.[1];
+/** The page's <link> tags, as rel → href. */
+const links = new Map(
+  [...html.matchAll(/<link\b[^>]*>/g)].map(([tag]) => [/rel="([^"]+)"/.exec(tag)?.[1], /href="([^"]+)"/.exec(tag)?.[1]]),
+);
+const href = (rel: string) => links.get(rel);
 
 describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   it("links the favicon, the home-screen icon and the manifest from the page", () => {
