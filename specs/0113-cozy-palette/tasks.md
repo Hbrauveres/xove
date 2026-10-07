@@ -48,13 +48,15 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Check, docs and review
 
-- [ ] **T5** Render pass in headless Chrome (room, dropdowns, home, admin): the pages look like the board, and nothing reads worse than the computed ratios.
+- [x] **T5** Render pass in headless Chrome (room, dropdowns, home, admin): the pages look like the board, and nothing reads worse than the computed ratios.
   - · covers FR-1, FR-4, AC-3 (preview) · verify: screenshots; notes in the PR
-- [ ] **T6** Docs:
+  - Done: the room, the account dropdown, home and admin are rendered in the dark blue. The logo's animation, caught mid-slide and closed, shows the left corners still and the symbol on the left. The ratios are the ones the test computes.
+- [x] **T6** Docs:
   - `docs/architecture.md` ("The look"): the palette, the animation's direction, the symbol's sizes, the mode-aware favicon;
   - `docs/decisions.md`: decision 39;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new behaviour
+  - Done: "The look" updated, decision 39, web 347.
 - [ ] **T7** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #113`.
   - Henrique on staging (AC-1a, AC-2, AC-3):
     - the palette;

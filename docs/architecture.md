@@ -193,23 +193,28 @@ To check a share on staging, open `chrome://webrtc-internals` in the viewer's or
 
 ## The look
 
-Spec [0111](../specs/0111-brand-mark/spec.md), with the reference in [its design](../specs/0111-brand-mark/design.html).
+Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-palette/spec.md), with the reference in [0113's design](../specs/0113-cozy-palette/design.html).
 
 - **The mark:** [XOVE] in a slim viewfinder, the O a record button (a white ring and a red dot), and the top-right corner red, standing in for the ^ of Xovê.
   - Its geometry lives in one place, `web/src/brand/mark.ts`.
   - `components/brand/XoveMark` draws the wordmark as inline SVG in every page's header, named "Xovê" for screen readers. `XoveIcon` draws the symbol.
 - **The hover animation:** pointing at the wordmark (or focusing it) plays it once.
-  - The corners slide in to the O and settle into the icon, and the dot double-blinks.
+  - The left corners stay. The word slides left under them until the X is gone, while the right corners close in to the O. Then the corners settle into the icon, the dot double-blinks, and it all plays back.
   - The timeline is a pure function (`brand/markTimeline.ts`); `useMarkAnimation` applies it to the SVG without re-rendering.
   - Nothing plays with reduced motion.
-- **Icons:** `web/public/` holds the favicon (`favicon.svg`), the phone icons (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) and `site.webmanifest`. `index.html` links them.
-  - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`. A test fails if it drifts.
-  - The PNGs are rendered once from `--square` and committed.
-- **The palette** (`styles/global.css`):
-  - **Accent:** red, `--accent` `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`, at 4.7:1.
-  - **Neutrals:** a black ground and neutral greys.
+- **The symbol by size:** `iconMark("large" | "small" | "tiny")`.
+  - **Large** (64 px and up): slim, at about 70% of its square.
+  - **Small** (32 px) and **tiny** (16 px): heavier strokes, filling more of the square. Tiny runs edge to edge.
+  - The outer edges are the same in all three.
+- **Icons:** `web/public/` holds the favicon, the phone icons and `site.webmanifest`. `index.html` links them.
+  - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn dark blue when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
+  - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the dark blue ground, since phones fill transparency with black.
+  - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
+- **The palette** (`styles/global.css`): the cozy dark blue from the mark's board.
+  - **Neutrals:** ground `#0b0e13`, panels `#10141b`, raised `#181f2a`, lines `#222b38`, text `#e7ebf1`, muted `#8b96a8`, faint `#667083`.
+  - **Accent:** red, `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`.
   - **Unchanged:** green and yellow stay for status, the avatars keep a colour per person, and the empty stage's colour bars keep theirs.
-  - `styles/palette.test.ts` fails on any old amber or blue-tinted grey.
+  - `styles/palette.test.ts` checks the tokens, rejects the old palettes, and computes every text colour's contrast on every surface: 4.5:1, and 3:1 for faint labels.
 
 ## Data model
 
