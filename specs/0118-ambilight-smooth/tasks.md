@@ -19,7 +19,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The component
 
-- [ ] **T2** `Ambilight.tsx` draws with the helpers:
+- [x] **T2** `Ambilight.tsx` draws with the helpers:
   - edge and glow canvases;
   - the mask built once per grid;
   - per update, the nine draws at `easeFor`, then the blur copy and `destination-in` with the mask;
@@ -29,6 +29,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   The old helpers (`edgeColors`, `easeColors`, `paintRing`, `FALLOFF`, `LED_COUNT`) go.
   - · covers FR-1–FR-5 · verify: `Ambilight.test.tsx` (one update per frame, slow with reduced motion, none when hidden, paused or off, no `getImageData`, the blur and the mask), `RoomPage.test.tsx` still green; `cd web && npm test && npm run build`
+  - Done:
+    - `Ambilight.tsx` draws the nine edge pieces at `easeFor(dt, 120 ms)`, blurs once and cuts with the mask (built once per grid);
+    - it runs on `requestAnimationFrame` (capped at 60 a second, so faster screens keep the easing above its floor), or every 500 ms with reduced motion;
+    - no pixel reads; old helpers and tests removed;
+    - 10 component tests;
+    - the real room rendered in headless Chrome: corners lit, smooth fade.
 
 ## Docs and review
 
