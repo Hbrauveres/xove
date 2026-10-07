@@ -8,13 +8,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** Pure helpers in `media/ambilight.ts`, tests first:
+- [x] **T1** Pure helpers in `media/ambilight.ts`, tests first:
   - `glowLayout(cols, rows)`: 2 px per cell, the 16-cell reach, a 3-cell margin, the stage rect and the placement;
   - `edgeDraws`: the nine rectangles, tiling the canvas, with corners from the picture's corners;
   - `falloff`;
   - `fadeMask`: zero at the reach and beyond, 255 under the stage, smooth outward, the same diagonally and straight, with a fixed grain;
   - `easeFor(dt, tau)`: time-based, with a floor of 0.12.
   - · covers FR-1, FR-2, FR-3, FR-4a · verify: `ambilight.test.ts`
+  - Done: `glowLayout`, `edgeDraws`, `falloff`, `fadeMask` (seeded grain) and `easeFor` in `media/ambilight.ts`. 8 tests. The old helpers stay until T2.
 
 ## The component
 

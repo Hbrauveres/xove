@@ -105,3 +105,115 @@ export function paintRing(
   out.drawImage(scratch.canvas, 0, 0);
   out.filter = "none";
 }
+
+// ---- Spec 0118: the light drawn by the graphics pipeline, with no pixel reads. ----
+// The picture's edges are drawn stretched outward onto a small canvas, eased by drawing over
+// the last update at partial opacity, blurred once and cut by a fade mask made once. The page
+// stretches it. These helpers hold the geometry; `Ambilight.tsx` does the drawing.
+
+/** Canvas pixels per cell. */
+export const CELL_PX = 2;
+/** Empty cells past the reach, so the fade ends inside the canvas and nothing is cut. */
+export const MARGIN = 3;
+/** How thick a strip of the picture's edge is stretched outward, in source pixels. */
+const STRIP = 6;
+/** The smallest easing step: drawing at less than this, 8-bit colours settle short of the target. */
+const EASE_FLOOR = 0.12;
+
+export type GlowLayout = {
+  width: number;
+  height: number;
+  /** The stage inside the canvas, in canvas pixels. */
+  stage: { x: number; y: number; w: number; h: number };
+  /** Where the canvas sits round the stage, so its middle covers the stage exactly. */
+  placement: { left: string; width: string; top: string; height: string };
+};
+
+export function glowLayout(cols: number, rows: number): GlowLayout {
+  const off = SPREAD + MARGIN;
+  return {
+    width: (cols + off * 2) * CELL_PX,
+    height: (rows + off * 2) * CELL_PX,
+    stage: { x: off * CELL_PX, y: off * CELL_PX, w: cols * CELL_PX, h: rows * CELL_PX },
+    placement: {
+      left: `${(-off / cols) * 100}%`,
+      width: `${((cols + off * 2) / cols) * 100}%`,
+      top: `${(-off / rows) * 100}%`,
+      height: `${((rows + off * 2) / rows) * 100}%`,
+    },
+  };
+}
+
+type Rect = [number, number, number, number];
+export type EdgeDraw = { at: string; src: Rect; dst: Rect };
+
+/**
+ * The nine draws that put a `w`×`h` picture on the canvas: the whole picture under the stage
+ * (so no dark rim shows at its rounded edge), each edge strip stretched outward, and each
+ * corner patch stretched into its corner. Together they cover every canvas pixel once.
+ */
+export function edgeDraws(l: GlowLayout, w: number, h: number): EdgeDraw[] {
+  const { x, y, w: sw, h: sh } = l.stage;
+  const x1 = x + sw, y1 = y + sh, R = l.width - x1, B = l.height - y1;
+  const e = STRIP;
+  return [
+    { at: "stage", src: [0, 0, w, h], dst: [x, y, sw, sh] },
+    { at: "top", src: [0, 0, w, e], dst: [x, 0, sw, y] },
+    { at: "bottom", src: [0, h - e, w, e], dst: [x, y1, sw, B] },
+    { at: "left", src: [0, 0, e, h], dst: [0, y, x, sh] },
+    { at: "right", src: [w - e, 0, e, h], dst: [x1, y, R, sh] },
+    { at: "top-left", src: [0, 0, e, e], dst: [0, 0, x, y] },
+    { at: "top-right", src: [w - e, 0, e, e], dst: [x1, 0, R, y] },
+    { at: "bottom-left", src: [0, h - e, e, e], dst: [0, y1, x, B] },
+    { at: "bottom-right", src: [w - e, h - e, e, e], dst: [x1, y1, R, B] },
+  ];
+}
+
+/** The light's strength at `s` of the reach: strong at the frame, a long tail, exactly zero at 1, with no kink. */
+export function falloff(s: number): number {
+  if (s <= 0) return 1;
+  if (s >= 1) return 0;
+  return Math.exp(-3.4 * s) * (1 - s * s * s);
+}
+
+/** A fixed pseudo-random sequence (mulberry32), so the grain is the same every time. */
+function grainOf(seed: number) {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * The fade mask's alpha, one byte per canvas pixel: 255 under the stage, the falloff by
+ * distance from the frame (the corners measured from the corner, so the light wraps round),
+ * zero from the reach on, plus a fixed grain of ±0.8 so the darkest shades don't band.
+ */
+export function fadeMask(l: GlowLayout): Uint8ClampedArray {
+  const { width, height, stage } = l;
+  const reach = SPREAD * CELL_PX;
+  const grain = grainOf(118);
+  const out = new Uint8ClampedArray(width * height);
+  for (let py = 0; py < height; py++) {
+    const cy = py + 0.5;
+    const dy = Math.max(stage.y - cy, 0, cy - (stage.y + stage.h));
+    for (let px = 0; px < width; px++) {
+      const cx = px + 0.5;
+      const dx = Math.max(stage.x - cx, 0, cx - (stage.x + stage.w));
+      const s = Math.hypot(dx, dy) / reach;
+      const g = (grain() - 0.5) * 1.6;
+      out[py * width + px] = s >= 1 ? 0 : s <= 0 ? 255 : Math.round(falloff(s) * 255 + g);
+    }
+  }
+  return out;
+}
+
+/** How far an update eases towards the new picture after `dt` ms, for a time constant `tau` ms. */
+export function easeFor(dt: number, tau: number): number {
+  if (tau <= 0) return 1;
+  return Math.min(1, Math.max(EASE_FLOOR, 1 - Math.exp(-dt / tau)));
+}
