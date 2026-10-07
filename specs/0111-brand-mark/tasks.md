@@ -51,11 +51,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - the LIVE badge's text uses the accent ink.
   - · covers FR-5, FR-6, FR-7, FR-8 · verify: `palette.test.ts` (new); `cd web && npm test && npm run build`
   - Done: tokens in `global.css` (`--accent*`, neutral greys); `--tally*` renamed in every stylesheet; the blue-tinted literals and glass made neutral; the button hover a lighter red; LIVE in the accent's ink. The test reads the stylesheets from disk (the test runner stubs CSS imports). 6 tests.
-- [ ] **T7** Contrast pass: in a headless Chrome render of the room, the home page and the admin page, nothing reads worse than before:
+- [x] **T7** Contrast pass: in a headless Chrome render of the room, the home page and the admin page, nothing reads worse than before:
   - text on surfaces;
   - red text on the ground;
   - ink on red fills.
   - · covers FR-7 · verify: screenshots compared with the old palette; ratios noted in the PR
+  - Done: room, dropdowns, home and admin rendered in headless Chrome. The greys read the same or better: text 16.4:1 (was 15.8), muted 7.0 (6.3), faint 3.4 (3.3). The red is darker than the amber was, so text in red is 5.4:1 (was 9.5) and ink on red 4.7:1 (was 9.3). Both still pass accessibility's 4.5:1, and the LIVE badge goes from 3.6 to 4.7.
 
 ## Docs
 
