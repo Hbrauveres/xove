@@ -22,6 +22,15 @@ const members: MemberView[] = [
 ];
 
 describe("admin page", () => {
+  it("shows the drawn mark with 'admin' beside it (spec 0111)", async () => {
+    installFakeApi({ me: admin, requests: [], members });
+    renderApp("/admin");
+
+    expect(await screen.findByRole("img", { name: "Xovê" })).toBeInTheDocument();
+    expect(screen.getByText("admin")).toBeInTheDocument();
+    expect(screen.queryByText(/xovê/)).not.toBeInTheDocument();
+  });
+
   it("lists pending requests with their message", async () => {
     installFakeApi({ me: admin, requests: [request], members });
     renderApp("/admin");

@@ -15,15 +15,12 @@
   margin-bottom: 24px;
 }
 
+/* The mark (spec 0111), with "admin" beside it. */
 .brand {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
-}
-
-.dot {
-  color: var(--tally);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
 }
 
 .section {

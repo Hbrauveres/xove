@@ -26,8 +26,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - it moves refs, without re-rendering.
   - · covers FR-4a · verify: `useMarkAnimation.test.tsx` (new, fake timers and `requestAnimationFrame`)
   - Done: the timeline as a pure function (`brand/markTimeline.ts`, 6 tests, including one that no frame jumps); `useMarkAnimation` applies it to the corner groups, the letters' clip and the dot (4 tests). The second blink's spring now flows into the settle (the draft jumped there).
-- [ ] **T4** The mark replaces "xovê." in `RoomHeader`, `HomePage`, `RequestAccessPage` and `AdminPage` (where "admin" stays beside it). The old `.logo` / `.dot` styles go.
+- [x] **T4** The mark replaces "xovê." in `RoomHeader`, `HomePage`, `RequestAccessPage` and `AdminPage` (where "admin" stays beside it). The old `.logo` / `.dot` styles go.
   - · covers FR-3 · verify: `RoomPage.test.tsx`, `AdminPage.test.tsx`, `RequestAccessPage.test.tsx`, `HomePage.test.tsx` (new): the image "Xovê" is shown and "xovê." is gone
+  - Done: the mark at 32 px (room header), 40 (home), 36 (request access) and 30 beside "admin"; the old `.dot` styles gone. 4 page checks.
 - [ ] **T5** The icons:
   - `scripts/brand-icons.mjs` writes `public/favicon.svg` from `mark.ts`;
   - the 180, 192 and 512 px PNGs are rendered from it and committed;

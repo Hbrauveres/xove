@@ -13,15 +13,8 @@
 
 .logo {
   justify-self: start;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.75rem;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.dot {
-  color: var(--tally);
+  display: flex;
+  color: var(--text);
 }
 
 .middle {

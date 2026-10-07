@@ -15,16 +15,11 @@
   gap: 14px;
 }
 
+/* The mark (spec 0111). */
 .brand {
+  display: flex;
   margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
-}
-
-.dot {
-  color: var(--tally);
+  color: var(--text);
 }
 
 .title {
