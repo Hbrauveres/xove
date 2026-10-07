@@ -17,7 +17,7 @@
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: #c9d1dc;
+  color: #d0d0d3;
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 500;
@@ -36,7 +36,7 @@
   height: 22px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);
-  color: #c3ccd8;
+  color: #cacacd;
 }
 
 .icon[data-stream] {
@@ -51,7 +51,7 @@
 .time {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
-  color: #9aa5b6;
+  color: #a4a4a9;
   white-space: nowrap;
 }
 

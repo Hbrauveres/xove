@@ -3,6 +3,8 @@
 - Spec: [spec.md](spec.md) (approved 2026-10-07)
 - Status: Approved (2026-10-07)
 
+> **Changed the same day:** Henrique committed to black instead of the dark blue (see spec, Decisions). The tokens become 0111's black with raised `#1b1b1d`; the glass and dropdown greys stay 0111's neutral values; the icon files' ground and light-mode ink are `#0c0c0d`. Everything else in this plan stands.
+
 ## Approach
 
 **Palette (FR-1 to FR-4)** — a change of tokens, as in spec 0111, the other way.

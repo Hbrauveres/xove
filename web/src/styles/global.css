@@ -5,16 +5,16 @@
 :root {
   color-scheme: dark;
 
-  /* The cozy dark blue (spec 0113), the mark's board: a dark blue ground, blue-tinted
-     panels and greys. The raised surface and the faint grey are nudged within their hue so
-     every text colour reads on every surface. */
-  --ground: #0b0e13;
-  --surface: #10141b;
-  --surface-raised: #181f2a;
-  --line: #222b38;
-  --text: #e7ebf1;
-  --text-muted: #8b96a8;
-  --text-faint: #667083;
+  /* Black, neutral greys (specs 0111 and 0113): the record light reads best on black, and the
+     stream keeps the colour. The raised surface is a touch darker than 0111's so red and
+     faint text pass on it too. */
+  --ground: #0c0c0d;
+  --surface: #161617;
+  --surface-raised: #1b1b1d;
+  --line: #2c2c2f;
+  --text: #ebebec;
+  --text-muted: #9a9a9f;
+  --text-faint: #66666b;
 
   /* The one accent is red, the record light (spec 0111): the same red as LIVE. Text on a
      red fill is a deep red, which reads at 4.7:1. */
