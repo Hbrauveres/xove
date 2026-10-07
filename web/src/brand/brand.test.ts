@@ -37,6 +37,27 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   });
 
   it("keeps the favicon in step with the mark's geometry", () => {
-    expect(favicon).toBe(iconSvg({ rounded: true }));
+    expect(favicon).toBe(iconSvg("favicon"));
+  });
+
+  it("makes the favicon only the symbol, at its 16 px weight, edge to edge (spec 0113)", () => {
+    expect(favicon).not.toMatch(/<rect/);
+    expect(favicon).toMatch(/stroke-width="16"/);
+    // Square, and the symbol's height fills it.
+    const [, , w, h] = /viewBox="([^"]+)"/.exec(favicon)![1].split(" ").map(Number);
+    expect(w).toBe(h);
+  });
+
+  it("follows the browser's mode: white strokes on dark, dark blue on light, the red fixed (spec 0113)", () => {
+    expect(favicon).toMatch(/\.ink\s*\{\s*stroke:\s*#e7ebf1/);
+    expect(favicon).toMatch(/@media \(prefers-color-scheme: light\)\s*\{\s*\.ink\s*\{\s*stroke:\s*#0b0e13/);
+    expect(favicon).toMatch(/stroke="#ef4b4b"/);
+    expect(favicon).toMatch(/fill="#ef4b4b"/);
+  });
+
+  it("puts the phone icon's larger, slim symbol on the dark blue ground (spec 0113)", () => {
+    const phone = iconSvg("phone");
+    expect(phone).toMatch(/<rect[^>]*fill="#0b0e13"/);
+    expect(phone).toMatch(/stroke-width="10"/);
   });
 });

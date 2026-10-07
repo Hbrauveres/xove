@@ -31,18 +31,20 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The symbol by size
 
-- [ ] **T3** `iconMark(optical)` in `mark.ts`:
+- [x] **T3** `iconMark(optical)` in `mark.ts`:
   - `large` (stroke 10, about 70%);
   - `small` (stroke 12, about 84%);
   - `tiny` (stroke 16, longer arms, dot r 31, edge to edge).
   - The outer edges stay fixed in all three.
   - `XoveIcon` uses `large`.
   - · covers FR-6 · verify: `mark.test.ts` (each crop and stroke; the outer edges the same in all three)
-- [ ] **T4** The icon files:
+  - Done: `OPTICAL` and `iconMark(optical)`; 3 tests. Committed with T4: the favicon test can't pass between the two.
+- [x] **T4** The icon files:
   - `iconSvg` writes the bare tiny symbol, with a `<style>` making its strokes white and `#0b0e13` under light mode, and the red fixed;
   - `--phone` gives the large symbol on `#0b0e13`;
   - `favicon.svg` regenerated; the three PNGs re-rendered and committed.
   - · covers FR-5, FR-6, FR-6a, FR-6b · verify: `brand.test.ts` (no background shape, tight square, the light-mode rule, the red fixed, equals `iconSvg()`); the PNGs checked by eye
+  - Done: `iconSvg("favicon" | "phone")`; the script's `--phone`; favicon regenerated; PNGs re-rendered. Rendered in a dark and a light page: the strokes switch, the red stays. 3 tests new.
 
 ## Check, docs and review
 
