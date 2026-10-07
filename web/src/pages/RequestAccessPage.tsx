@@ -5,6 +5,7 @@ import type { Me } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/ui/Button";
 import { PersonAvatar } from "../components/ui/PersonAvatar";
+import { XoveMark } from "../components/brand/XoveMark";
 import styles from "./RequestAccessPage.module.css";
 
 const MAX_MESSAGE = 500;
@@ -36,7 +37,7 @@ export function RequestAccessPage() {
     <main className={styles.wrap}>
       <section className={styles.card}>
         <p className={styles.brand}>
-          xovê<span className={styles.dot}>.</span>
+          <XoveMark height={36} />
         </p>
 
         {me.status === "PENDING" ? <Waiting /> : <AskForAccess me={me} onSent={refresh} />}

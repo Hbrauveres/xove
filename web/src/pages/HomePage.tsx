@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router";
 import { GOOGLE_LOGIN_URL } from "../api/client";
+import { XoveMark } from "../components/brand/XoveMark";
 import styles from "./HomePage.module.css";
 
 const ERRORS: Record<string, string> = {
@@ -16,7 +17,7 @@ export function HomePage() {
     <main className={styles.wrap}>
       <section className={styles.card} aria-labelledby="home-title">
         <p className={styles.brand}>
-          xovê<span className={styles.dot}>.</span>
+          <XoveMark height={40} />
         </p>
         <h1 id="home-title" className={styles.title}>
           One screen.

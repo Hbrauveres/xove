@@ -10,5 +10,5 @@
   place-items: center;
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--tally);
+  color: var(--accent);
 }

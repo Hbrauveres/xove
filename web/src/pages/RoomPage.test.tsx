@@ -1566,7 +1566,9 @@ describe("room: theater mode (spec 0104)", () => {
     await connected();
 
     const header = screen.getByRole("banner");
-    expect(within(header).getByText("xovê")).toBeInTheDocument();
+    // The drawn mark (spec 0111), not the old typed "xovê.".
+    expect(within(header).getByRole("img", { name: "Xovê" })).toBeInTheDocument();
+    expect(within(header).queryByText(/xovê/)).not.toBeInTheDocument();
     expect(within(header).getByRole("button", { name: /^Activity/ })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "1 person here" })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: /: account, connected$/ })).toBeInTheDocument();

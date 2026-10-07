@@ -18,6 +18,14 @@ describe("request access page", () => {
     expect(post?.body).toEqual({ message: "it's me, Bruno" });
   });
 
+  it("shows the drawn mark (spec 0111)", async () => {
+    installFakeApi({ me: aUser() });
+    renderApp("/request-access");
+
+    expect(await screen.findByRole("img", { name: "Xovê" })).toBeInTheDocument();
+    expect(screen.queryByText(/xovê/)).not.toBeInTheDocument();
+  });
+
   it("shows who is signed in", async () => {
     installFakeApi({ me: aUser({ email: "bruno@example.com" }) });
     renderApp("/request-access");

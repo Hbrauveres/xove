@@ -15,15 +15,12 @@
   margin-bottom: 24px;
 }
 
+/* The mark (spec 0111), with "admin" beside it. */
 .brand {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
-}
-
-.dot {
-  color: var(--tally);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
 }
 
 .section {
@@ -139,7 +136,7 @@
 .message {
   margin: 0;
   padding-left: 12px;
-  border-left: 2px solid var(--tally);
+  border-left: 2px solid var(--accent);
   color: var(--text);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
@@ -156,8 +153,8 @@
   font-size: var(--text-xs);
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--tally);
-  color: var(--tally-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 

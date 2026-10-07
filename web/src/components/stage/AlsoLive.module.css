@@ -45,7 +45,7 @@
 }
 
 .strip::-webkit-scrollbar-thumb:hover {
-  background: var(--tally);
+  background: var(--accent);
 }
 
 @supports not selector(::-webkit-scrollbar) {
@@ -97,7 +97,7 @@
 /* Hover and keyboard focus: drawn inside, so the scrolling strip never cuts it (spec 0107). */
 .preview:hover .video::after,
 .preview:focus-visible .video::after {
-  box-shadow: inset 0 0 0 2px var(--tally);
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .loading {
@@ -118,7 +118,7 @@
   gap: 5px;
   padding: 2px 7px 2px 3px;
   border-radius: 999px;
-  background: rgba(8, 10, 14, 0.72);
+  background: rgba(10, 10, 11, 0.72);
   color: var(--text);
   font-size: 0.6875rem;
 }
@@ -133,7 +133,7 @@
   gap: 4px;
   padding: 2px;
   border-radius: 999px;
-  background: rgba(8, 10, 14, 0.72);
+  background: rgba(10, 10, 11, 0.72);
   backdrop-filter: blur(6px);
 }
 
@@ -158,7 +158,7 @@
 .slider {
   width: 64px;
   margin: 0 6px 0 0;
-  accent-color: var(--tally);
+  accent-color: var(--accent);
   animation: slide-out 0.18s ease;
 }
 

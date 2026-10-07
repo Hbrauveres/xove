@@ -13,7 +13,7 @@
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: #10141b;
+  background: #131314;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   color: var(--text);
   pointer-events: auto;
@@ -49,8 +49,8 @@
 
 .item:hover,
 .item:focus-visible {
-  background: var(--tally);
-  color: var(--tally-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
   outline: none;
 }
 
@@ -64,18 +64,18 @@
 }
 
 .item[aria-checked="true"]::after {
-  border-color: var(--tally);
-  background: radial-gradient(circle, var(--tally) 0 3px, transparent 4px);
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent) 0 3px, transparent 4px);
 }
 
 .item:hover::after,
 .item:focus-visible::after {
-  border-color: var(--tally-ink);
+  border-color: var(--accent-ink);
 }
 
 .item[aria-checked="true"]:hover::after,
 .item[aria-checked="true"]:focus-visible::after {
-  background: radial-gradient(circle, var(--tally-ink) 0 3px, transparent 4px);
+  background: radial-gradient(circle, var(--accent-ink) 0 3px, transparent 4px);
 }
 
 .item[aria-disabled="true"] {

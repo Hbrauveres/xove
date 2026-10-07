@@ -5,7 +5,7 @@
   padding-block: 48px;
   padding-inline: var(--gutter);
   background:
-    radial-gradient(60% 50% at 50% 0%, var(--tally-soft), transparent 70%),
+    radial-gradient(60% 50% at 50% 0%, var(--accent-soft), transparent 70%),
     var(--ground);
 }
 
@@ -17,16 +17,11 @@
   gap: 16px;
 }
 
+/* The mark (spec 0111). */
 .brand {
+  display: flex;
   margin: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
-}
-
-.dot {
-  color: var(--tally);
+  color: var(--text);
 }
 
 .title {
@@ -67,7 +62,7 @@
 }
 
 .google:hover {
-  box-shadow: 0 0 0 3px var(--tally-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .google:active {
