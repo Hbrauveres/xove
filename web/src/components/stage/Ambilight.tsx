@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WIDESCREEN } from "../../hooks/useVideoShape";
-import { CELL_PX, easeFor, edgeDraws, fadeMask, glowLayout, gridFor } from "../../media/ambilight";
+import { CELL_PX, easeFor, edgeDraws, fadeMask, glowLayout, gridFor, type EdgeDraw } from "../../media/ambilight";
 import type { AmbilightPrefs } from "../../media/preferences";
 import styles from "./Ambilight.module.css";
 
-/** At most 60 updates a second, in step with the screen: faster screens skip frames, so each update's easing stays above its 8-bit floor. */
-export const MIN_FRAME_MS = 1000 / 60 - 1;
-/** With reduced motion, the light changes slowly instead. */
+/**
+ * About 60 updates a second, on the screen's frames: a faster screen skips frames evenly, so
+ * each update's easing stays above its 8-bit floor and the rate is 60 on any refresh rate.
+ */
+export const UPDATE_MS = 1000 / 60;
+/** A frame this early still counts as on time (frames never land exactly). */
+const ON_TIME_MS = 2;
+/** With reduced motion, the light changes slowly instead: twice a second, a gentle step each time. */
 export const SLOW_SAMPLE_MS = 500;
+export const SLOW_EASE = 0.3;
 /** The easing's time constant: after this long the light has gone about two thirds of the way. */
 export const EASE_MS = 120;
 
@@ -32,6 +38,8 @@ const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce
 export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
   const { cols, rows } = gridFor(shape);
   const layout = useMemo(() => glowLayout(cols, rows), [cols, rows]);
+  // The fade mask's alpha, computed once per grid.
+  const maskAlpha = useMemo(() => fadeMask(layout), [layout]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -61,19 +69,27 @@ export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
     maskCanvas.height = height;
     const maskCtx = maskCanvas.getContext("2d");
     if (!edge || !maskCtx) return;
-    const alpha = fadeMask(layout);
     const img = maskCtx.createImageData(width, height);
-    for (let i = 0; i < alpha.length; i++) img.data[i * 4 + 3] = alpha[i];
+    for (let i = 0; i < maskAlpha.length; i++) img.data[i * 4 + 3] = maskAlpha[i];
     maskCtx.putImageData(img, 0, 0);
 
+    const slow = reducedMotion();
     let primed = false;
     let last = 0;
+    // The nine draws, kept until the picture's size changes.
+    let draws: EdgeDraw[] = [];
+    let drawsFor = "";
     const draw = (now: number) => {
       if (video.paused || video.readyState < 2 || !video.videoWidth) return;
-      edge.globalAlpha = primed ? easeFor(last ? now - last : 1000 / 60, EASE_MS) : 1;
+      edge.globalAlpha = !primed ? 1 : slow ? SLOW_EASE : easeFor(last ? now - last : UPDATE_MS, EASE_MS);
       primed = true;
       last = now;
-      for (const { src, dst } of edgeDraws(layout, video.videoWidth, video.videoHeight)) {
+      const size = `${video.videoWidth}x${video.videoHeight}`;
+      if (size !== drawsFor) {
+        draws = edgeDraws(layout, video.videoWidth, video.videoHeight);
+        drawsFor = size;
+      }
+      for (const { src, dst } of draws) {
         edge.drawImage(video, src[0], src[1], src[2], src[3], dst[0], dst[1], dst[2], dst[3]);
       }
       out.globalCompositeOperation = "copy";
@@ -93,14 +109,20 @@ export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
       window.clearInterval(timer);
       raf = timer = undefined;
     };
+    let due = 0;
     const frame = (now: number) => {
-      if (!last || now - last >= MIN_FRAME_MS) draw(now);
+      if (now >= due - ON_TIME_MS) {
+        draw(now);
+        // Keep the cadence; after a long gap (a hidden tab), start again from now.
+        due = due + UPDATE_MS < now - UPDATE_MS ? now + UPDATE_MS : due + UPDATE_MS;
+      }
       raf = requestAnimationFrame(frame);
     };
     const run = () => {
       stop();
       if (document.hidden) return;
-      if (reducedMotion()) {
+      due = 0;
+      if (slow) {
         draw(performance.now());
         timer = window.setInterval(() => draw(performance.now()), SLOW_SAMPLE_MS);
       } else {
@@ -113,7 +135,7 @@ export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
       stop();
       document.removeEventListener("visibilitychange", run);
     };
-  }, [shown, video, layout]);
+  }, [shown, video, layout, maskAlpha]);
 
   // No stream: no light at all. Switched off or paused: the light fades out (and nothing is
   // drawn), and fades back in.

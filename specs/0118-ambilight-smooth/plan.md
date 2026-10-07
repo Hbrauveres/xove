@@ -26,13 +26,13 @@ Two small canvases per stream are sized from the grid that follows the stage's s
    - a fixed grain of ±0.8 on the alpha, the same every update, so the dark shades don't line up as bands (FR-3).
 3. **The page stretches it,** as today. Neighbouring colours blend through the bilinear stretch and the blur (FR-3, along the edges).
 
-**Timing (FR-4a).** Updates run on `requestAnimationFrame`, in step with the screen's refresh (up to 60 a second). The easing is a time constant of 120 ms: each update moves `1 − exp(−dt / 120 ms)` of the way, so it feels the same whatever the refresh rate. In the lab, longer easing made flashes linger, and the canvas's 8-bit colours settle early below about 0.12 a frame.
+**Timing (FR-4a).** Updates run on `requestAnimationFrame`, in step with the screen's refresh, at 60 a second on any screen: faster screens skip frames evenly, so each update's easing stays above its 8-bit floor. The easing is a time constant of 120 ms: each update moves `1 − exp(−dt / 120 ms)` of the way, so it feels the same whatever the refresh rate. In the lab, longer easing made flashes linger, and the canvas's 8-bit colours settle early below about 0.12 a frame.
 
-With reduced motion it updates every 500 ms, as today. It still stops while the tab is hidden, the video is paused or missing, or it's switched off. The page fades it in and out with the brightness, as today.
+With reduced motion it updates every 500 ms with a gentle fixed step (0.3), as today. It still stops while the tab is hidden, the video is paused or missing, or it's switched off. The page fades it in and out with the brightness, as today.
 
 **Unreadable streams (FR-4b).** Nothing reads pixels back, so a stream the page can't read no longer throws, and it gets its light too. The "unreadable, no light" path goes.
 
-**Cost (FR-5).** About a dozen draw calls per update, on canvases of about 200×150 pixels. The cost is the same at 1080p, 2K or 4K, since the page only stretches the canvas. In the lab it was about 0.4 ms on a slow headless browser drawing in software, against 2.2 ms for the heavy version. With a graphics card it's less.
+**Cost (FR-5).** About a dozen draw calls per update (the nine draws cached per picture size; the mask's alpha computed once per grid), on canvases of about 200×150 pixels. The cost is the same at 1080p, 2K or 4K, since the page only stretches the canvas. In the lab it was about 0.4 ms on a slow headless browser drawing in software, against 2.2 ms for the heavy version. With a graphics card it's less.
 
 **What stays:**
 - the grid that follows the stage's shape (`gridFor`);
@@ -72,8 +72,8 @@ None.
 | --- | --- | --- |
 | AC-1 | `ambilight.test.ts#fadeMask`: alpha is 0 everywhere in the margin and along the canvas's border; 255 under the stage; and it falls to 0 exactly at the reach | unit |
 | AC-2 | `ambilight.test.ts#edgeDraws`: the nine destinations tile the whole canvas with no gaps (corners included), and each corner takes its source from that corner of the picture. `#fadeMask`: the alpha diagonally out from a corner equals the alpha straight out from a side at the same distance, so there's no dent | unit |
-| AC-3 | `ambilight.test.ts#fadeMask`: along any ray outward the alpha never rises and never drops more than a few levels per pixel (smooth fade). `Ambilight.test.tsx`: each update draws the edge canvas into the glow through a blur, which blends neighbouring colours | unit / web UI |
-| AC-4 | `Ambilight.test.tsx`, with fake timers and `requestAnimationFrame`: one update per frame while playing; every 500 ms with reduced motion; none while hidden, paused or off; `getImageData` never called. `#easeFor`: 120 ms gives the same easing per second at 60 and 144 Hz, never below the floor | web UI / unit |
+| AC-3 | `ambilight.test.ts#fadeMask`: along any ray outward the alpha never rises (beyond the grain's one level) and never drops more than about 30 levels per pixel, the falloff's steepest step at the frame, which the page's stretch and the blur smooth further. `Ambilight.test.tsx`: each update draws the edge canvas into the glow through a blur, which blends neighbouring colours | unit / web UI |
+| AC-4 | `Ambilight.test.tsx`, with fake timers and `requestAnimationFrame`: one update per frame while playing; every 500 ms with reduced motion; none while hidden, paused or off; `getImageData` never called. `#easeFor`: the same easing per second at 30 and 60 updates, never below the floor; the component draws with it, waits for the picture's size, and stops when unmounted | web UI / unit |
 | AC-5 | Staging, maximum brightness on the 2K monitor: no edge, lit corners, no bands, smooth, flashes that don't linger; the performance panel's update well under a millisecond | manual |
 
 ## Rollout

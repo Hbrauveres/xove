@@ -1,7 +1,7 @@
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { glowLayout } from "../../media/ambilight";
-import { Ambilight, SLOW_SAMPLE_MS } from "./Ambilight";
+import { easeFor, glowLayout } from "../../media/ambilight";
+import { Ambilight, EASE_MS, SLOW_EASE, SLOW_SAMPLE_MS } from "./Ambilight";
 
 /**
  * jsdom has no canvas: a 2D context that records what the ambilight asks of it. `pictureDraws`
@@ -12,10 +12,18 @@ let pixelReads = 0;
 let blurs: string[] = [];
 let composites: string[] = [];
 let masks = 0;
+let alphas: number[] = [];
 function fakeContext(this: HTMLCanvasElement) {
   return {
     canvas: this,
-    globalAlpha: 1,
+    _alpha: 1,
+    set globalAlpha(a: number) {
+      this._alpha = a;
+      alphas.push(a);
+    },
+    get globalAlpha() {
+      return this._alpha;
+    },
     _filter: "none",
     set filter(f: string) {
       this._filter = f;
@@ -57,6 +65,7 @@ const updates = () => pictureDraws / 9;
 let hidden = false;
 beforeEach(() => {
   pictureDraws = pixelReads = masks = 0;
+  alphas = [];
   blurs = [];
   composites = [];
   hidden = false;
@@ -169,7 +178,35 @@ describe("ambilight drawn by the graphics pipeline (specs 0104 and 0118)", () =>
     render(<Ambilight video={playingVideo()} prefs={{ on: true, brightness: 0.9 }} />);
     advance(1000);
     expect(SLOW_SAMPLE_MS).toBeGreaterThanOrEqual(400);
+    expect(updates()).toBeGreaterThanOrEqual(2);
     expect(updates()).toBeLessThanOrEqual(3);
+    // A gentle step each time, not a jump to the new picture.
+    expect(alphas.slice(1)).toEqual(alphas.slice(1).map(() => SLOW_EASE));
+  });
+
+  it("jumps to the picture the first time, then eases by the time between updates", () => {
+    render(<Ambilight video={playingVideo()} prefs={{ on: true, brightness: 0.9 }} />);
+    advance(200);
+    expect(alphas[0]).toBe(1);
+    const expected = easeFor(1000 / 60, EASE_MS);
+    for (const a of alphas.slice(2)) expect(a).toBeCloseTo(expected, 1);
+  });
+
+  it("waits for the picture's size before drawing anything", () => {
+    const video = playingVideo();
+    Object.defineProperty(video, "videoWidth", { configurable: true, get: () => 0 });
+    render(<Ambilight video={video} prefs={{ on: true, brightness: 0.9 }} />);
+    advance(500);
+    expect(updates()).toBe(0);
+  });
+
+  it("stops drawing once it's gone", () => {
+    const { unmount } = render(<Ambilight video={playingVideo()} prefs={{ on: true, brightness: 0.9 }} />);
+    advance(200);
+    unmount();
+    const before = updates();
+    advance(1000);
+    expect(updates()).toBe(before);
   });
 
   it("sizes and places its canvas from the stage's shape, the margin included (specs 0107 and 0118)", () => {

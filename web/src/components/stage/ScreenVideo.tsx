@@ -10,7 +10,7 @@ type Props = {
   /** 0 to 1. */
   volume?: number;
   muted?: boolean;
-  /** Hands out the <video> element, for the ambilight to read (spec 0104); null when it goes. */
+  /** Hands out the <video> element, for the ambilight to draw from (spec 0104); null when it goes. */
   onVideo?: (el: HTMLVideoElement | null) => void;
 };
 

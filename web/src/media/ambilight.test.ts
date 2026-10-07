@@ -97,6 +97,11 @@ describe("ambilight drawn by the graphics pipeline (spec 0118)", () => {
     expect(falloff(0.95)).toBeGreaterThan(0);
   });
 
+  it("eases the same per second whatever the update rate, above the floor", () => {
+    const left = (hz: number) => (1 - easeFor(1000 / hz, 120)) ** hz;
+    expect(left(60)).toBeCloseTo(left(30), 6);
+  });
+
   it("eases by time, not by frame, never below the 8-bit floor", () => {
     expect(easeFor(1000 / 60, 120)).toBeCloseTo(1 - Math.exp(-1000 / 60 / 120), 5);
     expect(easeFor(1000 / 30, 120)).toBeCloseTo(1 - Math.exp(-1000 / 30 / 120), 5);
