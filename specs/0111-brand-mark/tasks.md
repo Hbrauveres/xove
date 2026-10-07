@@ -19,12 +19,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 - [x] **T2** `XoveMark` and `XoveIcon`: inline SVG from `mark.ts`, with `role="img"`, `aria-label="Xovê"`, `currentColor` and the accent red.
   - · covers FR-1, FR-2, FR-3 · verify: `XoveMark.test.tsx` (new)
   - Done: `components/brand/XoveMark`, `XoveIcon` and shared `parts`; corners in `data-side` groups and letters in one group, ready for the animation. 3 tests.
-- [ ] **T3** `useMarkAnimation`, used by `XoveMark` (`tabIndex=0`):
+- [x] **T3** `useMarkAnimation`, used by `XoveMark` (`tabIndex=0`):
   - the steps: slide, settle, double blink, back;
   - a hover or focus starts it, and one already playing isn't restarted;
   - nothing plays with reduced motion;
   - it moves refs, without re-rendering.
   - · covers FR-4a · verify: `useMarkAnimation.test.tsx` (new, fake timers and `requestAnimationFrame`)
+  - Done: the timeline as a pure function (`brand/markTimeline.ts`, 6 tests, including one that no frame jumps); `useMarkAnimation` applies it to the corner groups, the letters' clip and the dot (4 tests). The second blink's spring now flows into the settle (the draft jumped there).
 - [ ] **T4** The mark replaces "xovê." in `RoomHeader`, `HomePage`, `RequestAccessPage` and `AdminPage` (where "admin" stays beside it). The old `.logo` / `.dot` styles go.
   - · covers FR-3 · verify: `RoomPage.test.tsx`, `AdminPage.test.tsx`, `RequestAccessPage.test.tsx`, `HomePage.test.tsx` (new): the image "Xovê" is shown and "xovê." is gone
 - [ ] **T5** The icons:
