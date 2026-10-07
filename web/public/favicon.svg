@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-3.5 0 146 146">
-<style>.ink { stroke: #ebebec; } @media (prefers-color-scheme: light) { .ink { stroke: #0c0c0d; } }</style>
+<style>.ink { stroke: #ebebec; } @media (prefers-color-scheme: light) { .ink { stroke: #000000; } }</style>
 <polyline points="40,8 8,8 8,40" fill="none" class="ink" stroke-width="16" stroke-linejoin="miter"/><polyline points="40,138 8,138 8,106" fill="none" class="ink" stroke-width="16" stroke-linejoin="miter"/><polyline points="99,138 131,138 131,106" fill="none" class="ink" stroke-width="16" stroke-linejoin="miter"/><polyline points="99,8 131,8 131,40" fill="none" stroke="#ef4b4b" stroke-width="16" stroke-linejoin="miter"/>
 <circle cx="70" cy="73" r="42" fill="none" class="ink" stroke-width="16"/>
 <circle cx="70" cy="73" r="31" fill="#ef4b4b"/>

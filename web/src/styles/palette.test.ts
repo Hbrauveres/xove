@@ -36,8 +36,8 @@ describe("the palette: black, neutral greys, red accent (specs 0111 and 0113)", 
     }
   });
 
-  it("is black, neutral greys and red (spec 0113), with the raised surface nudged to pass", () => {
-    expect(token("ground")).toBe("#0c0c0d");
+  it("is pure black, neutral greys and red (spec 0113), with the raised surface nudged to pass", () => {
+    expect(token("ground")).toBe("#000000");
     expect(token("surface")).toBe("#161617");
     expect(token("surface-raised")).toBe("#1b1b1d");
     expect(token("line")).toBe("#2c2c2f");
