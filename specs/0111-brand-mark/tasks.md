@@ -8,13 +8,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The mark
 
-- [ ] **T1** `brand/mark.ts`: the mark's geometry, ported from the design.
+- [x] **T1** `brand/mark.ts`: the mark's geometry, ported from the design.
   - The letters: cap height 100, stroke 10, the X with square ends.
   - The O: ring and dot.
   - The viewfinder: the corners, with the red one at the top right.
   - The icon: the O with its own corner spacing.
   - The corner positions the animation moves to.
   - · covers FR-1, FR-2 · verify: `mark.test.ts` (new): the shapes' sizes and spacing, the red corner, the icon's spacing
+  - Done: `brand/mark.ts` (`wordMark`, `iconMark`, `ICON_SPACING`, the closed positions); loads in Node too. 8 tests.
 - [ ] **T2** `XoveMark` and `XoveIcon`: inline SVG from `mark.ts`, with `role="img"`, `aria-label="Xovê"`, `currentColor` and the accent red.
   - · covers FR-1, FR-2, FR-3 · verify: `XoveMark.test.tsx` (new)
 - [ ] **T3** `useMarkAnimation`, used by `XoveMark` (`tabIndex=0`):
