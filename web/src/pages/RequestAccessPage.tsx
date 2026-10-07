@@ -5,8 +5,8 @@ import type { Me } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../components/ui/Button";
 import { PersonAvatar } from "../components/ui/PersonAvatar";
-import styles from "./RequestAccessPage.module.css";
 import { XoveMark } from "../components/brand/XoveMark";
+import styles from "./RequestAccessPage.module.css";
 
 const MAX_MESSAGE = 500;
 const POLL_MS = 20_000;

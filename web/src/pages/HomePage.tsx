@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router";
 import { GOOGLE_LOGIN_URL } from "../api/client";
-import styles from "./HomePage.module.css";
 import { XoveMark } from "../components/brand/XoveMark";
+import styles from "./HomePage.module.css";
 
 const ERRORS: Record<string, string> = {
   "login-failed": "Google sign-in didn't complete. Try again.",

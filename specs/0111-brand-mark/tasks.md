@@ -65,16 +65,21 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `docs/decisions.md`: decision 38;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new behaviour
-  - Done: architecture "The look" (mark, animation, icons, palette), decision 38, web 338.
+  - Done: architecture "The look" (mark, animation, icons, palette), decision 38, web 339.
 
 ## Review
 
-- [ ] **T9** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #111` and `Closes #110`.
+- [x] **T9** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #111` and `Closes #110`.
   - Henrique on staging (AC-4, AC-1a):
     - every page, dropdown, button and badge in the new palette;
     - the mark at header size, and its animation;
     - the icon in the tab and on a phone's home screen.
   - · verify: no gaps left; manual ACs written in the PR
+  - Done: review fixes:
+    - the palette test checks the avatars' colour formula, and finds `src/` from its own folder;
+    - the manifest is fetched with credentials, for staging's gate;
+    - comment, import order and the plan's dot size.
+  - FR-7's wording ("at least today's contrast") vs the red's 5.4 and 4.7:1 is raised in the PR for Henrique.
 
 ## Coverage
 

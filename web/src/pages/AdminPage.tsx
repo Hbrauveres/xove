@@ -5,8 +5,8 @@ import type { AccessRequestView, MemberView } from "../api/types";
 import { Button } from "../components/ui/Button";
 import { PersonAvatar } from "../components/ui/PersonAvatar";
 import { timeAgo } from "../hooks/useElapsed";
-import styles from "./AdminPage.module.css";
 import { XoveMark } from "../components/brand/XoveMark";
+import styles from "./AdminPage.module.css";
 
 type Data = { requests: AccessRequestView[]; members: MemberView[] };
 

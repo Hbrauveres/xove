@@ -9,7 +9,7 @@
 - cap height 100 and stroke 10;
 - letter widths X 88, O 100, V 90, E 68, with gaps of 20;
 - the viewfinder's corners: 24 long, padded 28 from the letters;
-- the O: a ring as thick as the letters, with the dot at 0.64 of its radius;
+- the O: a ring as thick as the letters, with the dot at r 29.4, as in the design;
 - the X: square ends whose outer corners touch the cap line;
 - the icon: the O with its corners 15 and 14 away across and 18 away up and down.
 

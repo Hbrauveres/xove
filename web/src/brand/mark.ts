@@ -2,7 +2,7 @@
  * Xovê's mark (spec 0111): [XOVE] in a viewfinder, the O a record button, the top-right
  * corner red. Pure geometry on one grid (cap height 100, stroke 10), ported from
  * specs/0111-brand-mark/design.html, so the components and the favicon draw the same shapes.
- * No TypeScript-only syntax: scripts/brand-icons.mjs runs it with Node's type stripping.
+ * Erasable syntax only (types, `as const`): scripts/brand-icons.mjs runs it with Node's type stripping.
  */
 
 export const CAP = 100;

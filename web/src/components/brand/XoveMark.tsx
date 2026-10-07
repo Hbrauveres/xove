@@ -14,7 +14,7 @@ const { x, y, width, height } = MARK.viewBox;
  */
 export function XoveMark({ height: h }: { height: number }) {
   // Ids for the clips: a letter's flat tips (the V), and the letters as a whole.
-  const id = useId().replace(/:/g, "");
+  const id = useId();
   const svg = useRef<SVGSVGElement>(null);
   const play = useMarkAnimation(svg, MARK);
   return (

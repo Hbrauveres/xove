@@ -3,8 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /** Every stylesheet in the app, by path, read from disk (the test runner stubs CSS imports). */
-// Tests run from web/.
-const src = `${process.cwd()}/src/`;
+// src/, from this file's own folder, wherever the tests are started.
+const src = `${__dirname}/../`;
 const sheets: Record<string, string> = Object.fromEntries(
   readdirSync(src, { recursive: true, encoding: "utf8" })
     .filter((p) => p.endsWith(".css"))
@@ -49,6 +49,11 @@ describe("the palette: red, white, black and grey (spec 0111)", () => {
   it("keeps the status colours: green for connected, yellow for reconnecting", () => {
     expect(token("ok")).toBe("#3fbf7f");
     expect(token("warn")).toBe("#e0b341");
+  });
+
+  it("keeps a colour per person on the avatars", () => {
+    const avatar = readFileSync(`${src}components/ui/Avatar.tsx`, "utf8");
+    expect(avatar).toContain("background: `hsl(${person.hue} 42% 38%)`");
   });
 
   it("writes LIVE in the accent's ink, so it reads on the red", () => {
