@@ -31,12 +31,12 @@
 }
 
 .primary {
-  background: var(--tally);
-  color: var(--tally-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .primary:hover:not(:disabled) {
-  background: #f7bb5f;
+  background: #f36a6a;
 }
 
 .danger {

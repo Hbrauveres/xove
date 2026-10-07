@@ -30,7 +30,7 @@
 }
 
 .coffee {
-  color: var(--tally);
+  color: var(--accent);
 }
 
 /* A phone: one line still, a little smaller and closer. */

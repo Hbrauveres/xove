@@ -8,7 +8,7 @@
   display: flex;
   height: 48px;
   border-radius: 999px;
-  background: rgba(8, 10, 14, 0.72);
+  background: rgba(10, 10, 11, 0.72);
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   color: var(--text);
@@ -16,7 +16,7 @@
 
 /* One ring around the whole pill, its arrow included, whichever part has the focus. */
 .pill:has(:focus-visible) {
-  outline: 2px solid var(--tally);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -52,8 +52,8 @@
 
 /* Live: the pill lights up. */
 .live {
-  background: var(--tally);
-  color: var(--tally-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .live .main:hover,
@@ -85,7 +85,7 @@
   max-width: 260px;
   padding: 6px 9px;
   border-radius: var(--radius-sm);
-  background: #05070a;
+  background: #070708;
   color: var(--text);
   font-size: var(--text-xs);
   text-align: center;

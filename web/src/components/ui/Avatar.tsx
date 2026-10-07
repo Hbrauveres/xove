@@ -4,7 +4,7 @@ import styles from "./Avatar.module.css";
 type Props = {
   person: Friend;
   size?: number;
-  /** Amber ring when this person is on air. */
+  /** A red ring when this person is on air. */
   onAir?: boolean;
   /** Where the ring goes: around the avatar, or inside its edge, so it lines up with what's beside it (spec 0107). */
   ring?: "outside" | "inside";

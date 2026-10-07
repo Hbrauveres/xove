@@ -39,7 +39,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The palette
 
-- [ ] **T6** The test first, then the change:
+- [x] **T6** The test first, then the change:
   - `palette.test.ts` reads every stylesheet;
   - `global.css`:
     - `--accent` `#ef4b4b`, `--accent-ink` `#3a0808` and `--accent-soft`;
@@ -50,6 +50,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - the primary button's hover becomes a lighter red;
   - the LIVE badge's text uses the accent ink.
   - · covers FR-5, FR-6, FR-7, FR-8 · verify: `palette.test.ts` (new); `cd web && npm test && npm run build`
+  - Done: tokens in `global.css` (`--accent*`, neutral greys); `--tally*` renamed in every stylesheet; the blue-tinted literals and glass made neutral; the button hover a lighter red; LIVE in the accent's ink. The test reads the stylesheets from disk (the test runner stubs CSS imports). 6 tests.
 - [ ] **T7** Contrast pass: in a headless Chrome render of the room, the home page and the admin page, nothing reads worse than before:
   - text on surfaces;
   - red text on the ground;

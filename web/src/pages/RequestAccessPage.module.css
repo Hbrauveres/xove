@@ -63,7 +63,7 @@
 }
 
 .textarea:focus-visible {
-  outline: 2px solid var(--tally);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -95,8 +95,8 @@
   padding: 10px 14px;
   align-self: flex-start;
   border-radius: 999px;
-  background: var(--tally-soft);
-  color: var(--tally);
+  background: var(--accent-soft);
+  color: var(--accent);
   font-weight: 600;
   font-size: var(--text-sm);
 }

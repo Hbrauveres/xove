@@ -5,7 +5,7 @@
   padding-block: 48px;
   padding-inline: var(--gutter);
   background:
-    radial-gradient(60% 50% at 50% 0%, var(--tally-soft), transparent 70%),
+    radial-gradient(60% 50% at 50% 0%, var(--accent-soft), transparent 70%),
     var(--ground);
 }
 
@@ -62,7 +62,7 @@
 }
 
 .google:hover {
-  box-shadow: 0 0 0 3px var(--tally-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .google:active {

@@ -136,7 +136,7 @@
 .message {
   margin: 0;
   padding-left: 12px;
-  border-left: 2px solid var(--tally);
+  border-left: 2px solid var(--accent);
   color: var(--text);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
@@ -153,8 +153,8 @@
   font-size: var(--text-xs);
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--tally);
-  color: var(--tally-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
