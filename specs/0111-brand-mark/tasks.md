@@ -60,11 +60,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs
 
-- [ ] **T8** Docs:
+- [x] **T8** Docs:
   - `docs/architecture.md`: the mark, the icons and how to regenerate them, the palette tokens;
   - `docs/decisions.md`: decision 38;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new behaviour
+  - Done: architecture "The look" (mark, animation, icons, palette), decision 38, web 338.
 
 ## Review
 

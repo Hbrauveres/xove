@@ -191,6 +191,26 @@ To check a share on staging, open `chrome://webrtc-internals` in the viewer's or
 
 **Where LiveKit runs** ([spec 0044](../specs/0044-livekit-in-infra/spec.md)). One LiveKit server per environment, both defined once in the `infra` repo (`livekit/compose.yaml`) and fed by that environment's generated settings: staging at `rtc-stage.xove.app` with media on 7881/tcp and 7882/udp, production at `rtc.xove.app` with 7883/tcp and 7884/udp. Each has its own key pair, shared only with its own API, so nothing signed for one environment is accepted by the other. This app only needs `LIVEKIT_URL`, the key pair and `LIVEKIT_ROOM`.
 
+## The look
+
+Spec [0111](../specs/0111-brand-mark/spec.md), with the reference in [its design](../specs/0111-brand-mark/design.html).
+
+- **The mark:** [XOVE] in a slim viewfinder, the O a record button (a white ring and a red dot), and the top-right corner red, standing in for the ^ of Xovê.
+  - Its geometry lives in one place, `web/src/brand/mark.ts`.
+  - `components/brand/XoveMark` draws the wordmark as inline SVG in every page's header, named "Xovê" for screen readers. `XoveIcon` draws the symbol.
+- **The hover animation:** pointing at the wordmark (or focusing it) plays it once.
+  - The corners slide in to the O and settle into the icon, and the dot double-blinks.
+  - The timeline is a pure function (`brand/markTimeline.ts`); `useMarkAnimation` applies it to the SVG without re-rendering.
+  - Nothing plays with reduced motion.
+- **Icons:** `web/public/` holds the favicon (`favicon.svg`), the phone icons (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) and `site.webmanifest`. `index.html` links them.
+  - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`. A test fails if it drifts.
+  - The PNGs are rendered once from `--square` and committed.
+- **The palette** (`styles/global.css`):
+  - **Accent:** red, `--accent` `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`, at 4.7:1.
+  - **Neutrals:** a black ground and neutral greys.
+  - **Unchanged:** green and yellow stay for status, the avatars keep a colour per person, and the empty stage's colour bars keep theirs.
+  - `styles/palette.test.ts` fails on any old amber or blue-tinted grey.
+
 ## Data model
 
 | Table | Columns |
