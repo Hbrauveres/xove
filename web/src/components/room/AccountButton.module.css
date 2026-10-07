@@ -62,7 +62,7 @@
 
 .who small {
   display: block;
-  color: #b3b3b8;
+  color: #aab4c4;
   font-weight: 500;
 }
 
@@ -71,7 +71,7 @@
   align-items: center;
   gap: 8px;
   padding: 2px 10px 8px;
-  color: #cacacd;
+  color: #c3ccd8;
   font-size: var(--text-sm);
   font-weight: 500;
 }

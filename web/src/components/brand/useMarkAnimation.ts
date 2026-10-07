@@ -5,8 +5,9 @@ import { TOTAL_MS, frameAt, type Frame } from "../../brand/markTimeline";
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 /**
- * Plays the wordmark's animation (spec 0111, FR-4a) on its SVG: moves the corner groups,
- * the clip that erases the letters, and the dot, frame by frame, without re-rendering.
+ * Plays the wordmark's animation (specs 0111 and 0113) on its SVG: the letters slide left
+ * under a clip while the right corners close in (the left ones stay), then the corners settle
+ * and the dot blinks. Frame by frame, without re-rendering.
  * Once per hover: a call while it plays is ignored. Nothing plays with reduced motion.
  */
 export function useMarkAnimation(svg: RefObject<SVGSVGElement | null>, mark: WordMark) {
@@ -18,8 +19,9 @@ export function useMarkAnimation(svg: RefObject<SVGSVGElement | null>, mark: Wor
     (f: Frame) => {
       const el = svg.current;
       if (!el) return;
-      const { dx, dy } = mark.closed;
+      const { dx, dy, textShift } = mark.closed;
       const lx = dx.left * f.slide, rx = dx.right * f.slide;
+      el.querySelector("[data-letters]")?.setAttribute("transform", `translate(${+(textShift * f.slide).toFixed(2)},0)`);
       const ty = dy.top * f.settle, by = dy.bottom * f.settle;
       const move = (at: string, x: number, y: number) =>
         el.querySelector(`[data-side="${at}"]`)?.setAttribute("transform", `translate(${+x.toFixed(2)},${+y.toFixed(2)})`);

@@ -1,0 +1,89 @@
+# The cozy dark-blue palette, and a bare, larger favicon — tasks
+
+- Plan: [plan.md](plan.md)
+
+Each task is small enough for one commit, leaves the build green, and says which requirements it serves and how it's verified. Tick a task only when its verification passes.
+
+Nothing to do outside the repo before starting. Henrique's part: merging the PR, the checks on staging (T7), and the release tag. [design.html](design.html) is the reference for the colours, the animation and the symbol at each size.
+
+## The palette
+
+- [x] **T1** The test first, then the change:
+  - `palette.test.ts` checks:
+    - the board's tokens, with the nudged raised `#181f2a` and faint `#667083`;
+    - that no 0111 neutral grey or glass is left;
+    - that accent, status and avatar colours are unchanged;
+    - each text token's contrast on ground, surface and raised, computed from the tokens (4.5:1, faint 3:1).
+  - `global.css` gets the tokens; the glass, the dropdown greys and the two dark literals go back to the blue family.
+  - `theme-color` and the manifest become `#0b0e13`.
+  - · covers FR-1, FR-2, FR-3, FR-4 · verify: `palette.test.ts`, `brand.test.ts`; `cd web && npm test && npm run build`
+  - Done: the board's tokens in `global.css`; 13 stylesheets back to the blue glass and greys; `theme-color` and the manifest `#0b0e13`. The test computes every text colour's contrast on ground, surface and raised. 3 tests new, 2 changed.
+
+## The animation
+
+- [x] **T2** `mark.ts`'s closed positions:
+  - the left corners stay;
+  - a `textShift` brings the O to `ICON_SPACING.left` from the left frame line;
+  - the right corners close to the O.
+  - `XoveMark` gets the letters in an inner group under the clip; `useMarkAnimation` slides that group, keeps the clip's left edge, and moves only the right corners.
+  - · covers FR-7, FR-3 · verify: `mark.test.ts`, `useMarkAnimation.test.tsx` (left corners always `translate(0,…)`, letters move left), `markTimeline.test.ts` unchanged
+  - Done: `closed.textShift` and the new `dx`; the letters slide in an inner group under the fixed clip. 1 test rewritten, the animation tests now follow the letters.
+
+## The symbol by size
+
+- [x] **T3** `iconMark(optical)` in `mark.ts`:
+  - `large` (stroke 10, about 70%);
+  - `small` (stroke 12, about 84%);
+  - `tiny` (stroke 16, longer arms, dot r 31, edge to edge).
+  - The outer edges stay fixed in all three.
+  - `XoveIcon` uses `large`.
+  - · covers FR-6 · verify: `mark.test.ts` (each crop and stroke; the outer edges the same in all three)
+  - Done: `OPTICAL` and `iconMark(optical)`; 3 tests. Committed with T4: the favicon test can't pass between the two.
+- [x] **T4** The icon files:
+  - `iconSvg` writes the bare tiny symbol, with a `<style>` making its strokes white and `#0b0e13` under light mode, and the red fixed;
+  - `--phone` gives the large symbol on `#0b0e13`;
+  - `favicon.svg` regenerated; the three PNGs re-rendered and committed.
+  - · covers FR-5, FR-6, FR-6a, FR-6b · verify: `brand.test.ts` (no background shape, tight square, the light-mode rule, the red fixed, equals `iconSvg()`); the PNGs checked by eye
+  - Done: `iconSvg("favicon" | "phone")`; the script's `--phone`; favicon regenerated; PNGs re-rendered. Rendered in a dark and a light page: the strokes switch, the red stays. 3 tests new.
+
+## Check, docs and review
+
+- [x] **T5** Render pass in headless Chrome (room, dropdowns, home, admin): the pages look like the board, and nothing reads worse than the computed ratios.
+  - · covers FR-1, FR-4, AC-3 (preview) · verify: screenshots; notes in the PR
+  - Done: the room, the account dropdown, home and admin are rendered in the dark blue. The logo's animation, caught mid-slide and closed, shows the left corners still and the symbol on the left. The ratios are the ones the test computes.
+- [x] **T6** Docs:
+  - `docs/architecture.md` ("The look"): the palette, the animation's direction, the symbol's sizes, the mode-aware favicon;
+  - `docs/decisions.md`: decision 39;
+  - `CLAUDE.md`: the web test count.
+  - · verify: the pages describe the new behaviour
+  - Done: "The look" updated, decision 39, web 349.
+- [x] **T7** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #113`.
+  - Henrique on staging (AC-1a, AC-2, AC-3):
+    - the palette;
+    - the animation;
+    - the favicon in a dark and a light browser;
+    - the phone icon.
+  - · verify: no gaps left; manual ACs written in the PR
+  - Done: review fixes:
+    - the phone PNGs checked by test (size, and the dark blue ground read from the file);
+    - the blue glass asserted present;
+    - the favicon's full height asserted;
+    - stale comments updated, indentation fixed.
+  - Noted in the PR: one favicon file at the 16 px weight serves 16 and 32 px, as planned, so `OPTICAL.small` is the reference for 32 px in the design and is unused in the app.
+
+## Coverage
+
+| FR / AC | Task |
+| --- | --- |
+| FR-1, FR-2 | T1, T5 |
+| FR-3 | T1, T2 |
+| FR-4 | T1, T5 |
+| FR-5, FR-6a, FR-6b | T4 |
+| FR-6 | T3, T4 |
+| FR-7 | T2 |
+| AC-1 | T1 |
+| AC-1a | T2, T7 (manual) |
+| AC-2 | T4, T7 (manual) |
+| AC-3 | T5, T7 (manual) |
+
+Nothing uncovered.

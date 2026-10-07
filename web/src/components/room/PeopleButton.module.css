@@ -45,7 +45,7 @@
   justify-content: space-between;
   font-size: var(--text-xs);
   font-weight: 500;
-  color: #cacacd;
+  color: #c3ccd8;
 }
 
 .line b {
@@ -97,7 +97,7 @@
 }
 
 .you {
-  color: #a4a4a9;
+  color: #9aa5b6;
   font-weight: 500;
 }
 
@@ -106,7 +106,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: #b3b3b8;
+  color: #aab4c4;
   font-size: var(--text-xs);
   font-weight: 500;
 }
@@ -128,7 +128,7 @@
 
 .foot {
   padding: 10px 16px 12px;
-  color: #b3b3b8;
+  color: #aab4c4;
   font-size: var(--text-xs);
   font-weight: 500;
 }

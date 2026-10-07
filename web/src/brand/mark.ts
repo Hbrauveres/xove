@@ -31,7 +31,7 @@ export type Box = { x: number; y: number; width: number; height: number };
 
 const stroke = (...points: Point[]): Stroke => ({ points, cap: "butt", join: "miter" });
 
-function corners(left: number, right: number, top: number, bottom: number, arm: number): Corner[] {
+function corners(left: number, right: number, top: number, bottom: number, arm: number, width = STROKE): Corner[] {
   const c = (at: Corner["at"], x: number, y: number, dx: number, dy: number): Corner => ({
     at,
     points: [
@@ -40,7 +40,7 @@ function corners(left: number, right: number, top: number, bottom: number, arm: 
       [x, y + dy * arm],
     ],
     red: at === "top-right",
-    width: STROKE,
+    width,
   });
   return [c("top-left", left, top, 1, 1), c("bottom-left", left, bottom, 1, -1), c("bottom-right", right, bottom, -1, -1), c("top-right", right, top, -1, 1)];
 }
@@ -74,8 +74,8 @@ function letterE(x0: number): Letter {
   };
 }
 
-const ring = (cx: number, cy: number) => ({ cx, cy, r: 50 - STROKE / 2, width: STROKE });
-const dot = (cx: number, cy: number) => ({ cx, cy, r: DOT_R });
+const ring = (cx: number, cy: number, width = STROKE) => ({ cx, cy, r: 50 - width / 2, width });
+const dot = (cx: number, cy: number, r = DOT_R) => ({ cx, cy, r });
 
 export function wordMark() {
   const left = STROKE / 2, top = -PAD, bottom = CAP + PAD;
@@ -98,25 +98,53 @@ export function wordMark() {
     letters: [xLetter, oLetter, vLetter, eLetter],
     ring: ring(oLeft + 50, CAP / 2),
     dot: dot(oLeft + 50, CAP / 2),
-    /** Where each side moves when the animation closes on the O: the icon's spacing (FR-4a). */
+    /**
+     * Where things move when the animation closes on the O (spec 0113): the left corners stay,
+     * the letters slide left until the O sits where the icon has it, and the right corners
+     * close in to the O. Then the corners settle to the icon's spacing up and down.
+     */
     closed: {
-      dx: { left: oLeft - ICON_SPACING.left - left, right: oLeft + WIDTH.O + ICON_SPACING.right - right },
+      textShift: left + ICON_SPACING.left - oLeft,
+      dx: { left: 0, right: left + ICON_SPACING.left + WIDTH.O + ICON_SPACING.right - right },
       dy: { top: -ICON_SPACING.top - top, bottom: CAP + ICON_SPACING.bottom - bottom },
     },
   };
 }
 
-export function iconMark() {
-  const left = STROKE / 2, top = 0;
-  const oLeft = left + ICON_SPACING.left, oTop = top + ICON_SPACING.top;
-  const right = oLeft + 100 + ICON_SPACING.right, bottom = oTop + 100 + ICON_SPACING.bottom;
-  const viewBox: Box = { x: 0, y: top - STROKE / 2, width: right + STROKE / 2, height: bottom - top + STROKE };
+/**
+ * The symbol drawn for its size (spec 0113). Large (64 px and up) is the slim mark with room
+ * around it; small (32 px) and tiny (16 px, the tab) get heavier strokes, longer corners and
+ * fill more of their square, so they read from afar. The outer edges stay put: heavier
+ * strokes grow inward. `fill` is how much of the square's height the symbol takes.
+ */
+export const OPTICAL = {
+  large: { stroke: 10, arm: ICON_ARM, dot: DOT_R, fill: 0.7 },
+  small: { stroke: 12, arm: 28, dot: DOT_R, fill: 0.84 },
+  tiny: { stroke: 16, arm: 32, dot: 31, fill: 1 },
+} as const;
+export type Optical = keyof typeof OPTICAL;
+
+export function iconMark(optical: Optical = "large") {
+  const o = OPTICAL[optical];
+  const h = o.stroke / 2;
+  // The large icon's box, outer edges included: the O 100 across, its spacing around it.
+  const outerLeft = 0, oLeft = STROKE / 2 + ICON_SPACING.left, oTop = STROKE / 2 + ICON_SPACING.top;
+  const outerRight = oLeft + 100 + ICON_SPACING.right + STROKE / 2;
+  const outerTop = 0, outerBottom = oTop + 100 + ICON_SPACING.bottom + STROKE / 2;
+  const left = outerLeft + h, right = outerRight - h, top = outerTop + h, bottom = outerBottom - h;
+  const size = (outerBottom - outerTop) / o.fill;
+  const viewBox: Box = {
+    x: (outerLeft + outerRight) / 2 - size / 2,
+    y: (outerTop + outerBottom) / 2 - size / 2,
+    width: size,
+    height: size,
+  };
   return {
     viewBox,
     frame: { left, right, top, bottom },
-    corners: corners(left, right, top, bottom, ICON_ARM),
-    ring: ring(oLeft + 50, oTop + 50),
-    dot: dot(oLeft + 50, oTop + 50),
+    corners: corners(left, right, top, bottom, o.arm, o.stroke),
+    ring: ring(oLeft + 50, oTop + 50, o.stroke),
+    dot: dot(oLeft + 50, oTop + 50, o.dot),
   };
 }
 
