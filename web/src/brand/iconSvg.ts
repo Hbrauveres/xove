@@ -1,6 +1,6 @@
 import { iconMark, pointsAttr, type Optical } from "./mark.ts";
 
-/** The icon files' colours, which can't read the page's tokens: ground, white, dark blue ink and red. */
+/** The icon files' colours, which can't read the page's tokens: the dark blue ground (also the ink on a light browser), white and red. */
 const GROUND = "#0b0e13", WHITE = "#e7ebf1", RED = "#ef4b4b";
 
 /**

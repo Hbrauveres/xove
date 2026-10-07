@@ -10,7 +10,8 @@ const { x, y, width, height } = MARK.viewBox;
  * Xovê's wordmark (spec 0111): [XOVE] in a viewfinder, the O a record button and the
  * top-right corner red. Drawn, not typed, so it looks the same everywhere. The text colour
  * paints it; the red comes from the accent. Pointing at it (or focusing it) plays its
- * animation once: the corners close on the O, the dot blinks twice, it opens again.
+ * animation once: the word slides left under the still left corners while the right ones
+ * close in, the corners settle into the icon, the dot blinks twice, and it all plays back.
  */
 export function XoveMark({ height: h }: { height: number }) {
   // Ids for the clips: a letter's flat tips (the V), and the letters as a whole.
@@ -52,17 +53,17 @@ export function XoveMark({ height: h }: { height: number }) {
       {/* The clip stays put; the letters slide under it (spec 0113). */}
       <g clipPath={`url(#${id}-wipe)`}>
         <g data-letters>
-        {MARK.letters.map((l) =>
-          l.letter === "O" ? (
-            <RecordO key="O" ring={MARK.ring} dot={MARK.dot} />
-          ) : (
-            <g key={l.letter} clipPath={l.clip ? `url(#${id}-${l.letter})` : undefined}>
-              {l.strokes.map((s, i) => (
-                <MarkStroke key={i} s={s} />
-              ))}
-            </g>
-          ),
-        )}
+          {MARK.letters.map((l) =>
+            l.letter === "O" ? (
+              <RecordO key="O" ring={MARK.ring} dot={MARK.dot} />
+            ) : (
+              <g key={l.letter} clipPath={l.clip ? `url(#${id}-${l.letter})` : undefined}>
+                {l.strokes.map((s, i) => (
+                  <MarkStroke key={i} s={s} />
+                ))}
+              </g>
+            ),
+          )}
         </g>
       </g>
     </svg>

@@ -56,14 +56,20 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `docs/decisions.md`: decision 39;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new behaviour
-  - Done: "The look" updated, decision 39, web 347.
-- [ ] **T7** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #113`.
+  - Done: "The look" updated, decision 39, web 349.
+- [x] **T7** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #113`.
   - Henrique on staging (AC-1a, AC-2, AC-3):
     - the palette;
     - the animation;
     - the favicon in a dark and a light browser;
     - the phone icon.
   - · verify: no gaps left; manual ACs written in the PR
+  - Done: review fixes:
+    - the phone PNGs checked by test (size, and the dark blue ground read from the file);
+    - the blue glass asserted present;
+    - the favicon's full height asserted;
+    - stale comments updated, indentation fixed.
+  - Noted in the PR: one favicon file at the 16 px weight serves 16 and 32 px, as planned, so `OPTICAL.small` is the reference for 32 px in the design and is unused in the app.
 
 ## Coverage
 

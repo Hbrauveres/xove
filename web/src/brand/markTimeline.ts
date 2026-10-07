@@ -1,6 +1,7 @@
 /**
  * The wordmark's hover animation (spec 0111, FR-4a), as a function of time:
- * 1. the corners slide in horizontally, erasing the letters, and meet around the O;
+ * 1. the left corners stay; the letters slide left under them until the X is gone, while the
+ *    right corners close in to the O (spec 0113);
  * 2. the top and bottom corners settle where the icon has them;
  * 3. the dot blinks twice, like a surprised eye: shut fast, open a little slower, and the
  *    second time it springs slightly wide before settling;

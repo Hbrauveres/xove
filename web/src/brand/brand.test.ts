@@ -1,3 +1,6 @@
+/// <reference types="node" />
+import { readFileSync } from "node:fs";
+import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import html from "../../index.html?raw";
 import favicon from "../../public/favicon.svg?raw";
@@ -43,9 +46,10 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   it("makes the favicon only the symbol, at its 16 px weight, edge to edge (spec 0113)", () => {
     expect(favicon).not.toMatch(/<rect/);
     expect(favicon).toMatch(/stroke-width="16"/);
-    // Square, and the symbol's height fills it.
+    // Square, and the symbol's full height (146, strokes included) fills it.
     const [, , w, h] = /viewBox="([^"]+)"/.exec(favicon)![1].split(" ").map(Number);
     expect(w).toBe(h);
+    expect(h).toBe(146);
   });
 
   it("follows the browser's mode: white strokes on dark, dark blue on light, the red fixed (spec 0113)", () => {
@@ -59,5 +63,31 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
     const phone = iconSvg("phone");
     expect(phone).toMatch(/<rect[^>]*fill="#0b0e13"/);
     expect(phone).toMatch(/stroke-width="10"/);
+  });
+});
+
+describe("the phone icon files (spec 0113, FR-6b)", () => {
+  /** A PNG's size and its top-left pixel (8-bit RGB, as rendered), read without image tools. */
+  const pngAt = (name: string) => {
+    const buf = readFileSync(`${__dirname}/../../public/${name}`);
+    const width = buf.readUInt32BE(16), height = buf.readUInt32BE(20);
+    const chunks: Buffer[] = [];
+    for (let at = 8; at < buf.length; ) {
+      const len = buf.readUInt32BE(at), type = buf.toString("ascii", at + 4, at + 8);
+      if (type === "IDAT") chunks.push(buf.subarray(at + 8, at + 8 + len));
+      at += 12 + len;
+    }
+    // The first pixel of the first row is stored as is, whatever the row's filter.
+    const raw = inflateSync(Buffer.concat(chunks));
+    return { width, height, colorType: buf[25], first: [raw[1], raw[2], raw[3]] };
+  };
+
+  it("ships the three sizes, on the dark blue ground", () => {
+    for (const [name, size] of [["apple-touch-icon.png", 180], ["icon-192.png", 192], ["icon-512.png", 512]] as const) {
+      const png = pngAt(name);
+      expect([png.width, png.height], name).toEqual([size, size]);
+      expect(png.colorType, name).toBe(2);
+      expect(png.first, name).toEqual([0x0b, 0x0e, 0x13]);
+    }
   });
 });

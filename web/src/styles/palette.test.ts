@@ -58,6 +58,11 @@ describe("the palette: the cozy dark blue, red accent (specs 0111 and 0113)", ()
     }
   });
 
+  it("uses the blue-tinted glass (spec 0113)", () => {
+    const css = all.map(([, c]) => c).join("\n");
+    for (const glass of ["rgba(8, 10, 14,", "rgba(16, 20, 27,", "rgba(9, 12, 17,", "rgba(5, 7, 10,"]) expect(css).toContain(glass);
+  });
+
   it("keeps every text colour readable on every surface (4.5:1; faint labels 3:1)", () => {
     const lum = (hex: string) => {
       const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
