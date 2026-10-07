@@ -38,11 +38,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T3** Docs:
+- [x] **T3** Docs:
   - `docs/architecture.md` (ambilight): how it's drawn now;
   - `docs/decisions.md`: decision 40;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new behaviour
+  - Done: the ambilight section of `docs/architecture.md` rewritten, decision 40, the web count updated.
 - [ ] **T4** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #118`.
   - Henrique on staging (AC-5): maximum brightness on the 2K monitor, and the performance panel.
   - · verify: no gaps left; the manual AC written in the PR
