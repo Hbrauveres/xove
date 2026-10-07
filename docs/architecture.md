@@ -211,7 +211,7 @@ Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-pal
   - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the black ground, since phones fill transparency with black anyway.
   - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
 - **The palette** (`styles/global.css`): black, neutral greys and red, chosen over a dark blue and five greys compared on the real pages.
-  - **Neutrals:** ground `#0c0c0d`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
+  - **Neutrals:** ground pure black `#000000`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
   - **Accent:** red, `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`.
   - **Unchanged:** green and yellow stay for status, the avatars keep a colour per person, and the empty stage's colour bars keep theirs.
   - `styles/palette.test.ts` checks the tokens, rejects the old palettes, and computes every text colour's contrast on every surface: 4.5:1, and 3:1 for faint labels.

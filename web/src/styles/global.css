@@ -5,10 +5,10 @@
 :root {
   color-scheme: dark;
 
-  /* Black, neutral greys (specs 0111 and 0113): the record light reads best on black, and the
-     stream keeps the colour. The raised surface is a touch darker than 0111's so red and
+  /* Pure black, neutral greys (specs 0111 and 0113): the record light reads best on black, and
+     the stream keeps the colour. Panels sit just above the black so they still stand apart. The raised surface is a touch darker than 0111's so red and
      faint text pass on it too. */
-  --ground: #0c0c0d;
+  --ground: #000000;
   --surface: #161617;
   --surface-raised: #1b1b1d;
   --line: #2c2c2f;

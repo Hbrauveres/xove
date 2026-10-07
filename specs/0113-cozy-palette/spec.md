@@ -20,7 +20,7 @@ Everyone who opens Xovê: every page, and the browser tab.
 **The palette**
 
 - **FR-1** The app's palette is black, neutral greys and red:
-  - ground `#0c0c0d`;
+  - ground pure black, `#000000`;
   - panels and surfaces `#161617`, and raised surfaces (inputs, hovered rows, the round buttons) `#1b1b1d`;
   - lines `#2c2c2f`;
   - text `#ebebec`, muted text `#9a9a9f`, faint text `#66666b`;
@@ -36,10 +36,10 @@ Everyone who opens Xovê: every page, and the browser tab.
 
   | | Ground | Panel | Raised |
   | --- | --- | --- | --- |
-  | Text `#ebebec` | 16.4 | 15.2 | 14.4 |
-  | Muted `#9a9a9f` | 7.0 | 6.5 | 6.1 |
-  | Faint `#66666b` | 3.4 | 3.2 | 3.0 |
-  | Red `#ef4b4b` | 5.4 | 5.0 | 4.7 |
+  | Text `#ebebec` | 17.6 | 15.2 | 14.4 |
+  | Muted `#9a9a9f` | 7.5 | 6.5 | 6.1 |
+  | Faint `#66666b` | 3.7 | 3.2 | 3.0 |
+  | Red `#ef4b4b` | 5.8 | 5.0 | 4.7 |
 
 **The animation**
 
@@ -55,8 +55,8 @@ Everyone who opens Xovê: every page, and the browser tab.
 - **FR-6** The symbol is drawn for its size, as in the design:
   - **Small (32 px and under, so the favicon):** at 32 px it fills about 84% of its square with slightly heavier strokes; at 16 px (the tab) it runs edge to edge, like other sites' tab icons, with strokes heavy enough to survive the pixel grid and a bigger dot.
   - **Large (64 px and up):** the slim strokes, with room to breathe around it (about 70% of the square).
-- **FR-6a** The favicon follows the browser's mode: white on a dark browser, the black ground colour (`#0c0c0d`) on a light one. The red is the same in both.
-- **FR-6b** The phone home-screen icons keep a background, since phones fill transparency with black: the black ground (`#0c0c0d`), with the large version of the symbol at about 70% of the square.
+- **FR-6a** The favicon follows the browser's mode: white on a dark browser, black (`#000000`) on a light one. The red is the same in both.
+- **FR-6b** The phone home-screen icons keep a background, since phones fill transparency with black: the black ground (`#000000`), with the large version of the symbol at about 70% of the square.
 
 ## Acceptance criteria
 
@@ -78,6 +78,7 @@ Made with Henrique on 2026-10-07, on the board and the palette lab:
 - **The animation ends on the left:** the left corners stay, the word slides behind them, and the right corners close in.
 - **The favicon is bare** and follows the browser's mode: white when dark, the black ground colour when light, red in both.
 - **Phone icons keep the black ground**, with the symbol at about 70%.
+- **The ground is pure black** (`#000000`), after Henrique tried it on staging: it looks much nicer around the stream. Panels and surfaces stay just above it.
 - **The symbol has two weights:** slim with room around it from 64 px up; heavier and filling its square at 32 px and under, so the favicon reads from afar.
 
 ## Open questions
