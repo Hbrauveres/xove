@@ -39,10 +39,12 @@ describe("the wordmark (spec 0111)", () => {
     for (const c of w.corners) expect(c.width).toBe(STROKE);
   });
 
-  it("knows where each side stops when the animation closes on the O: the icon's spacing", () => {
+  it("closes on the logo's left (spec 0113): the left corners stay, the word slides, the right corners meet the O", () => {
     const o = w.letters[1];
-    expect(w.frame.left + w.closed.dx.left).toBe(o.left - ICON_SPACING.left);
-    expect(w.frame.right + w.closed.dx.right).toBe(o.left + 100 + ICON_SPACING.right);
+    expect(w.closed.dx.left).toBe(0);
+    // The O slides to where the icon has it, next to the left corners that didn't move.
+    expect(o.left + w.closed.textShift).toBe(w.frame.left + ICON_SPACING.left);
+    expect(w.frame.right + w.closed.dx.right).toBe(o.left + w.closed.textShift + 100 + ICON_SPACING.right);
     expect(w.frame.top + w.closed.dy.top).toBe(-ICON_SPACING.top);
     expect(w.frame.bottom + w.closed.dy.bottom).toBe(100 + ICON_SPACING.bottom);
   });

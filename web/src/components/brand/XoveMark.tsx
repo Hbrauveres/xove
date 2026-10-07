@@ -49,7 +49,9 @@ export function XoveMark({ height: h }: { height: number }) {
           <MarkCorner c={c} />
         </g>
       ))}
-      <g data-letters clipPath={`url(#${id}-wipe)`}>
+      {/* The clip stays put; the letters slide under it (spec 0113). */}
+      <g clipPath={`url(#${id}-wipe)`}>
+        <g data-letters>
         {MARK.letters.map((l) =>
           l.letter === "O" ? (
             <RecordO key="O" ring={MARK.ring} dot={MARK.dot} />
@@ -61,6 +63,7 @@ export function XoveMark({ height: h }: { height: number }) {
             </g>
           ),
         )}
+        </g>
       </g>
     </svg>
   );

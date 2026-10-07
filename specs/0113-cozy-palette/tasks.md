@@ -21,12 +21,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The animation
 
-- [ ] **T2** `mark.ts`'s closed positions:
+- [x] **T2** `mark.ts`'s closed positions:
   - the left corners stay;
   - a `textShift` brings the O to `ICON_SPACING.left` from the left frame line;
   - the right corners close to the O.
   - `XoveMark` gets the letters in an inner group under the clip; `useMarkAnimation` slides that group, keeps the clip's left edge, and moves only the right corners.
   - · covers FR-7, FR-3 · verify: `mark.test.ts`, `useMarkAnimation.test.tsx` (left corners always `translate(0,…)`, letters move left), `markTimeline.test.ts` unchanged
+  - Done: `closed.textShift` and the new `dx`; the letters slide in an inner group under the fixed clip. 1 test rewritten, the animation tests now follow the letters.
 
 ## The symbol by size
 

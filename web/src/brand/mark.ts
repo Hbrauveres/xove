@@ -98,9 +98,14 @@ export function wordMark() {
     letters: [xLetter, oLetter, vLetter, eLetter],
     ring: ring(oLeft + 50, CAP / 2),
     dot: dot(oLeft + 50, CAP / 2),
-    /** Where each side moves when the animation closes on the O: the icon's spacing (FR-4a). */
+    /**
+     * Where things move when the animation closes on the O (spec 0113): the left corners stay,
+     * the letters slide left until the O sits where the icon has it, and the right corners
+     * close in to the O. Then the corners settle to the icon's spacing up and down.
+     */
     closed: {
-      dx: { left: oLeft - ICON_SPACING.left - left, right: oLeft + WIDTH.O + ICON_SPACING.right - right },
+      textShift: left + ICON_SPACING.left - oLeft,
+      dx: { left: 0, right: left + ICON_SPACING.left + WIDTH.O + ICON_SPACING.right - right },
       dy: { top: -ICON_SPACING.top - top, bottom: CAP + ICON_SPACING.bottom - bottom },
     },
   };

@@ -17,18 +17,21 @@ afterEach(() => {
 const mark = () => screen.getByRole("img", { name: "Xovê" });
 const side = (at: string) => mark().querySelector(`[data-side="${at}"]`)!;
 const dot = () => mark().querySelector("[data-dot]")!;
+const letters = () => mark().querySelector("[data-letters]")!;
 const advance = (ms: number) =>
   act(() => {
     vi.advanceTimersByTime(ms);
   });
 
 describe("the wordmark's hover animation (spec 0111, FR-4a)", () => {
-  it("slides the corners in, blinks the dot, and comes back to rest", () => {
+  it("keeps the left corners, slides the word left and the right corners in, blinks, and comes back to rest", () => {
     render(<XoveMark height={26} />);
     fireEvent.pointerEnter(mark());
 
     advance(300);
-    expect(side("top-left").getAttribute("transform")).toMatch(/translate\([1-9]/);
+    // Spec 0113: the left corners never move sideways; the letters and the right corners do.
+    expect(side("top-left").getAttribute("transform")).toMatch(/^translate\(0,/);
+    expect(letters().getAttribute("transform")).toMatch(/translate\(-[1-9]/);
     expect(side("top-right").getAttribute("transform")).toMatch(/translate\(-[1-9]/);
 
     // Somewhere in the blinks the dot is squashed nearly shut.
@@ -41,6 +44,7 @@ describe("the wordmark's hover animation (spec 0111, FR-4a)", () => {
 
     advance(TOTAL_MS);
     expect(side("top-left").getAttribute("transform")).toBe("translate(0,0)");
+    expect(letters().getAttribute("transform")).toBe("translate(0,0)");
     expect(dot().getAttribute("transform")).toBeNull();
   });
 
@@ -49,20 +53,20 @@ describe("the wordmark's hover animation (spec 0111, FR-4a)", () => {
     expect(mark()).toHaveAttribute("tabindex", "0");
     fireEvent.focus(mark());
     advance(300);
-    expect(side("top-left").getAttribute("transform")).toMatch(/translate\([1-9]/);
+    expect(letters().getAttribute("transform")).toMatch(/translate\(-[1-9]/);
   });
 
   it("doesn't restart while it plays", () => {
     render(<XoveMark height={26} />);
     fireEvent.pointerEnter(mark());
     advance(500);
-    const before = side("top-left").getAttribute("transform");
+    const at = () => -Number(/translate\((-?[\d.]+)/.exec(letters().getAttribute("transform")!)![1]);
+    const before = at();
     fireEvent.pointerLeave(mark());
     fireEvent.pointerEnter(mark());
     advance(16);
     // Still moving forward from where it was, not back at the start.
-    const now = Number(/translate\(([\d.]+)/.exec(side("top-left").getAttribute("transform")!)![1]);
-    expect(now).toBeGreaterThanOrEqual(Number(/translate\(([\d.]+)/.exec(before!)![1]));
+    expect(at()).toBeGreaterThanOrEqual(before);
   });
 
   it("doesn't play with reduced motion", () => {
@@ -70,6 +74,6 @@ describe("the wordmark's hover animation (spec 0111, FR-4a)", () => {
     render(<XoveMark height={26} />);
     fireEvent.pointerEnter(mark());
     advance(500);
-    expect(side("top-left").getAttribute("transform")).toBeNull();
+    expect(letters().getAttribute("transform")).toBeNull();
   });
 });
