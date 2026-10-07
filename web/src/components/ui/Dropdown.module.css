@@ -40,7 +40,7 @@
 .section {
   /* Full size while the panel unrolls: only its edge reveals them, so no scrollbar flashes. */
   flex: none;
-  background: rgba(12, 12, 13, 0.74);
+  background: rgba(9, 12, 17, 0.74);
   backdrop-filter: blur(22px) saturate(1.4);
   -webkit-backdrop-filter: blur(22px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.08);

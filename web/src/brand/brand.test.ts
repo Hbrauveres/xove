@@ -17,7 +17,7 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
     expect(href("icon")).toBe("/favicon.svg");
     expect(href("apple-touch-icon")).toBe("/apple-touch-icon.png");
     expect(href("manifest")).toBe("/site.webmanifest");
-    expect(html).toMatch(/<meta name="theme-color" content="#0c0c0d"/);
+    expect(html).toMatch(/<meta name="theme-color" content="#0b0e13"/);
   });
 
   it("ships every file it links", () => {
@@ -29,6 +29,7 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   it("lists the phone icons in the manifest, under Xovê's name", () => {
     const manifest = JSON.parse(manifestText);
     expect(manifest.name).toBe("Xovê");
+    expect([manifest.background_color, manifest.theme_color]).toEqual(["#0b0e13", "#0b0e13"]);
     expect(manifest.icons.map((i: { src: string; sizes: string }) => `${i.src} ${i.sizes}`)).toEqual([
       "/icon-192.png 192x192",
       "/icon-512.png 512x512",

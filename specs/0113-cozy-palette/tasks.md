@@ -8,7 +8,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## The palette
 
-- [ ] **T1** The test first, then the change:
+- [x] **T1** The test first, then the change:
   - `palette.test.ts` checks:
     - the board's tokens, with the nudged raised `#181f2a` and faint `#667083`;
     - that no 0111 neutral grey or glass is left;
@@ -17,6 +17,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `global.css` gets the tokens; the glass, the dropdown greys and the two dark literals go back to the blue family.
   - `theme-color` and the manifest become `#0b0e13`.
   - · covers FR-1, FR-2, FR-3, FR-4 · verify: `palette.test.ts`, `brand.test.ts`; `cd web && npm test && npm run build`
+  - Done: the board's tokens in `global.css`; 13 stylesheets back to the blue glass and greys; `theme-color` and the manifest `#0b0e13`. The test computes every text colour's contrast on ground, surface and raised. 3 tests new, 2 changed.
 
 ## The animation
 

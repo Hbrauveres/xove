@@ -22,14 +22,14 @@
   height: 34px;
   border: none;
   border-radius: 50%;
-  background: rgba(10, 10, 11, 0.72);
+  background: rgba(8, 10, 14, 0.72);
   color: var(--text);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .iconButton:hover {
-  background: rgba(10, 10, 11, 0.9);
+  background: rgba(8, 10, 14, 0.9);
 }
 
 /* Hidden with the player's bars when the mouse stops (see Stage). */
