@@ -1,35 +1,47 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { WIDESCREEN } from "../../hooks/useVideoShape";
-import { EASE, SPREAD, easeColors, edgeColors, gridFor, paintRing, ringPlacement } from "../../media/ambilight";
+import { CELL_PX, easeFor, edgeDraws, fadeMask, glowLayout, gridFor, type EdgeDraw } from "../../media/ambilight";
 import type { AmbilightPrefs } from "../../media/preferences";
 import styles from "./Ambilight.module.css";
 
-/** About 12 readings a second: smooth, and still far from every frame. */
-export const SAMPLE_MS = 83;
-/** With reduced motion, the light changes slowly instead. */
+/**
+ * About 60 updates a second, on the screen's frames: a faster screen skips frames evenly, so
+ * each update's easing stays above its 8-bit floor and the rate is 60 on any refresh rate.
+ */
+export const UPDATE_MS = 1000 / 60;
+/** A frame this early still counts as on time (frames never land exactly). */
+const ON_TIME_MS = 2;
+/** With reduced motion, the light changes slowly instead: twice a second, a gentle step each time. */
 export const SLOW_SAMPLE_MS = 500;
+export const SLOW_EASE = 0.3;
+/** The easing's time constant: after this long the light has gone about two thirds of the way. */
+export const EASE_MS = 120;
 
 type Props = {
   /** The stage's video, or null when nothing is on the stage. */
   video: HTMLVideoElement | null;
   prefs: AmbilightPrefs;
-  /** The stage's shape, width ÷ height (spec 0107): the LEDs follow it. */
+  /** The stage's shape, width ÷ height (spec 0107): the glow follows it. */
   shape?: number;
 };
 
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 /**
- * Ambilight (spec 0104): LEDs around the stage take the colours of the picture's edges. It
- * reads the video into a small frame (64×36 at 16:9; its grid follows the stage's shape, spec
- * 0107) about 12 times a second and paints a small canvas the page only stretches. It stops while the tab is hidden, the video is paused or missing, or
- * it's switched off; a video the browser won't let it read just gets no light.
+ * Ambilight (specs 0104 and 0118): the picture's own edges glow round the stage. Drawn by the
+ * browser's graphics pipeline, with no pixel reads: each update draws the picture's edges
+ * stretched outward onto a small canvas, over the last update at partial opacity (the
+ * easing), then blurs it once and cuts it with a fade mask made once. The page only stretches
+ * the result, so a 4K monitor costs the same as a small one. It updates with the screen's
+ * refresh, and stops while the tab is hidden, the video is paused or missing, or it's off.
  */
 export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
   const { cols, rows } = gridFor(shape);
+  const layout = useMemo(() => glowLayout(cols, rows), [cols, rows]);
+  // The fade mask's alpha, computed once per grid.
+  const maskAlpha = useMemo(() => fadeMask(layout), [layout]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
-  const [unreadable, setUnreadable] = useState<HTMLVideoElement | null>(null);
 
   // Whether the video plays, from its own events.
   useEffect(() => {
@@ -41,66 +53,100 @@ export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
     return () => events.forEach((e) => video.removeEventListener(e, follow));
   }, [video]);
 
-  const shown = prefs.on && video !== null && playing && video !== unreadable;
+  const shown = prefs.on && video !== null && playing;
 
   useEffect(() => {
     const out = canvas.current?.getContext("2d");
     if (!shown || !video || !out) return;
-    const sample = document.createElement("canvas");
-    sample.width = cols;
-    sample.height = rows;
-    const reader = sample.getContext("2d", { willReadFrequently: true });
-    const scratchCanvas = document.createElement("canvas");
-    scratchCanvas.width = cols + SPREAD * 2;
-    scratchCanvas.height = rows + SPREAD * 2;
-    const scratch = scratchCanvas.getContext("2d");
-    if (!reader || !scratch) return;
-    const colors = new Float32Array((cols * 2 + rows * 2) * 3);
-    let primed = false;
+    const { width, height } = layout;
+    const edgeCanvas = document.createElement("canvas");
+    edgeCanvas.width = width;
+    edgeCanvas.height = height;
+    const edge = edgeCanvas.getContext("2d");
+    // The fade mask, made once for this grid: alpha only.
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext("2d");
+    if (!edge || !maskCtx) return;
+    const img = maskCtx.createImageData(width, height);
+    for (let i = 0; i < maskAlpha.length; i++) img.data[i * 4 + 3] = maskAlpha[i];
+    maskCtx.putImageData(img, 0, 0);
 
-    const tick = () => {
-      if (video.paused || video.readyState < 2) return;
-      let pixels: Uint8ClampedArray;
-      try {
-        reader.drawImage(video, 0, 0, cols, rows);
-        pixels = reader.getImageData(0, 0, cols, rows).data;
-      } catch {
-        // The browser won't let this video be read: no light for it, and no more tries.
-        setUnreadable(video);
-        return;
-      }
-      easeColors(colors, edgeColors(pixels, cols, rows), primed ? EASE : 1);
+    const slow = reducedMotion();
+    let primed = false;
+    let last = 0;
+    // The nine draws, kept until the picture's size changes.
+    let draws: EdgeDraw[] = [];
+    let drawsFor = "";
+    const draw = (now: number) => {
+      if (video.paused || video.readyState < 2 || !video.videoWidth) return;
+      edge.globalAlpha = !primed ? 1 : slow ? SLOW_EASE : easeFor(last ? now - last : UPDATE_MS, EASE_MS);
       primed = true;
-      paintRing(out, scratch, colors, cols, rows);
+      last = now;
+      const size = `${video.videoWidth}x${video.videoHeight}`;
+      if (size !== drawsFor) {
+        draws = edgeDraws(layout, video.videoWidth, video.videoHeight);
+        drawsFor = size;
+      }
+      for (const { src, dst } of draws) {
+        edge.drawImage(video, src[0], src[1], src[2], src[3], dst[0], dst[1], dst[2], dst[3]);
+      }
+      out.globalCompositeOperation = "copy";
+      out.filter = `blur(${CELL_PX * 3}px)`;
+      out.drawImage(edgeCanvas, 0, 0);
+      out.filter = "none";
+      out.globalCompositeOperation = "destination-in";
+      out.drawImage(maskCanvas, 0, 0);
+      out.globalCompositeOperation = "source-over";
     };
 
-    // Only while the tab can be seen.
+    // In step with the screen while the tab can be seen; slowly with reduced motion.
+    let raf: number | undefined;
     let timer: number | undefined;
-    const run = () => {
+    const stop = () => {
+      if (raf !== undefined) cancelAnimationFrame(raf);
       window.clearInterval(timer);
-      timer = undefined;
+      raf = timer = undefined;
+    };
+    let due = 0;
+    const frame = (now: number) => {
+      if (now >= due - ON_TIME_MS) {
+        draw(now);
+        // Keep the cadence; after a long gap (a hidden tab), start again from now.
+        due = due + UPDATE_MS < now - UPDATE_MS ? now + UPDATE_MS : due + UPDATE_MS;
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    const run = () => {
+      stop();
       if (document.hidden) return;
-      tick();
-      timer = window.setInterval(tick, reducedMotion() ? SLOW_SAMPLE_MS : SAMPLE_MS);
+      due = 0;
+      if (slow) {
+        draw(performance.now());
+        timer = window.setInterval(() => draw(performance.now()), SLOW_SAMPLE_MS);
+      } else {
+        raf = requestAnimationFrame(frame);
+      }
     };
     run();
     document.addEventListener("visibilitychange", run);
     return () => {
-      window.clearInterval(timer);
+      stop();
       document.removeEventListener("visibilitychange", run);
     };
-  }, [shown, video, cols, rows]);
+  }, [shown, video, layout, maskAlpha]);
 
-  // No stream, or one the browser won't let it read: no light at all. Switched off or
-  // paused: the light fades out (and nothing is read), and fades back in.
-  if (!video || video === unreadable) return null;
+  // No stream: no light at all. Switched off or paused: the light fades out (and nothing is
+  // drawn), and fades back in.
+  if (!video) return null;
   return (
     <canvas
       ref={canvas}
       className={styles.light}
-      width={cols + SPREAD * 2}
-      height={rows + SPREAD * 2}
-      style={{ ...ringPlacement(cols, rows), opacity: shown ? prefs.brightness : 0 }}
+      width={layout.width}
+      height={layout.height}
+      style={{ ...layout.placement, opacity: shown ? prefs.brightness : 0 }}
       data-on={shown || undefined}
       aria-hidden="true"
     />

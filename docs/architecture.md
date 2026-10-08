@@ -141,11 +141,17 @@ sequenceDiagram
     - the stage's box sizes itself from it in container units, inside the 16:9 box: a wider picture keeps the full width and gets shorter, a taller one keeps the full height and gets narrower, centred. No black bars.
     - Empty and loading stages are 16:9; fullscreen keeps its bars.
   - **Dropdowns** (`components/ui/Dropdown.tsx`): frosted sections with 2 px clear cuts. They unroll by their height, since a clip or fade would stop the blur. One opens at a time.
-- **Ambilight** (`media/ambilight.ts`, `stage/Ambilight.tsx`):
-  - the big video is read into a small frame about 12 times a second (2 with reduced motion), only while the tab is visible and the video plays. Its grid follows the stage's shape with square cells (`gridFor`): 64×36 at 16:9, 36×64 for a portrait picture, at most 96 along the longer side, so the glow reaches as far on every side;
-  - its edges give the LEDs (200 at 16:9), eased towards their new colours;
-  - they're painted as fading strips into a small canvas, blurred 3 px at that size, which the page only stretches past the frame. No blur at screen size, so a 4K monitor costs the same.
-  - On and brightness are saved in the browser (`xove.ambilight.*`).
+- **Ambilight** (`media/ambilight.ts`, `stage/Ambilight.tsx`, [spec 0118](../specs/0118-ambilight-smooth/spec.md)): drawn by the browser's graphics pipeline, with no pixel reads.
+  - **The canvas:** a grid of square cells round the stage follows its shape (`gridFor`): 64×36 at 16:9, 36×64 for a portrait picture, at most 96 along the longer side. On it, the glow reaches 16 cells, then a 3-cell margin, at 2 px a cell (`glowLayout`).
+  - **Each update:**
+    - draws the picture in nine pieces (`edgeDraws`): the whole picture under the stage, its edge strips stretched outward, and its corner patches stretched into the corners;
+    - draws them over the last update at partial opacity: the easing, with a 120 ms time constant (`easeFor`);
+    - blurs the result once and cuts it with a fade mask (`fadeMask`), made once per grid: the falloff to exactly zero before the margin, plus a fixed grain against bands.
+
+    The page only stretches the canvas, so a 4K monitor costs the same.
+  - **Timing:** it updates with the screen's refresh (`requestAnimationFrame`, at most 60 a second), every 500 ms with reduced motion, and only while the tab is visible, the video plays and it's on.
+  - **Unreadable streams:** it reads no pixels, so a stream the page can't read is lit too.
+  - **Settings:** on and brightness are saved in the browser (`xove.ambilight.*`).
 - **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
 - **Who watches what:** each browser reports what's on its stage (`PUT /api/streams/watching`), once it has been still for a second, and again when a poll shows the API lost it. The streams poll returns everyone's, for the people panel.
 - **The info row** (spec 0107): both sides centred on one line.

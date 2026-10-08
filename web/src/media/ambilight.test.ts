@@ -1,113 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  COLS,
-  FALLOFF,
-  LED_COUNT,
-  ROWS,
-  SPREAD,
-  easeColors,
-  edgeColors,
-  gridFor,
-  paintRing,
-  ringPlacement,
-} from "./ambilight";
-
-/** A frame of the given size, every pixel the colour `at(x, y)` says. */
-function frame(cols: number, rows: number, at: (x: number, y: number) => [number, number, number]) {
-  const px = new Uint8ClampedArray(cols * rows * 4);
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const [r, g, b] = at(x, y);
-      px.set([r, g, b, 255], (y * cols + x) * 4);
-    }
-  }
-  return px;
-}
-
-const led = (colors: Float32Array, i: number) => [...colors.slice(i * 3, i * 3 + 3)].map(Math.round);
-
-describe("ambilight: the LEDs' colours (spec 0104)", () => {
-  it("has 200 LEDs: 64 along the top and the bottom, 36 down each side", () => {
-    expect([COLS, ROWS, LED_COUNT]).toEqual([64, 36, 200]);
-  });
-
-  it("takes each LED from its own edge, averaged with the pixel next to it inward", () => {
-    // Top row red, second row black; bottom row blue; left column green; right column white.
-    const px = frame(COLS, ROWS, (x, y) =>
-      y === 0
-        ? [200, 0, 0]
-        : y === ROWS - 1
-          ? [0, 0, 200]
-          : x === 0
-            ? [0, 200, 0]
-            : x === COLS - 1
-              ? [255, 255, 255]
-              : [0, 0, 0],
-    );
-
-    const colors = edgeColors(px);
-
-    expect(colors).toHaveLength(LED_COUNT * 3);
-    expect(led(colors, 10)).toEqual([100, 0, 0]); // top: red with the black below it
-    expect(led(colors, COLS + 10)).toEqual([0, 0, 100]); // bottom
-    expect(led(colors, COLS * 2 + 10)).toEqual([0, 100, 0]); // left
-    expect(led(colors, COLS * 2 + ROWS + 10)).toEqual([128, 128, 128]); // right
-  });
-
-  it("eases each LED towards its new colour, and jumps there the first time", () => {
-    const current = new Float32Array([0, 0, 0]);
-    easeColors(current, new Float32Array([100, 200, 50]), 0.3);
-    expect([...current].map((v) => Math.round(v))).toEqual([30, 60, 15]);
-
-    const first = new Float32Array([0, 0, 0]);
-    easeColors(first, new Float32Array([100, 200, 50]), 1);
-    expect([...first]).toEqual([100, 200, 50]);
-  });
-});
-
-describe("ambilight: painting the ring (spec 0104)", () => {
-  it("maps the canvas so its middle covers the stage exactly", () => {
-    expect(ringPlacement()).toEqual({
-      left: `${(-SPREAD / COLS) * 100}%`,
-      width: `${((COLS + SPREAD * 2) / COLS) * 100}%`,
-      top: `${(-SPREAD / ROWS) * 100}%`,
-      height: `${((ROWS + SPREAD * 2) / ROWS) * 100}%`,
-    });
-  });
-
-  it("paints one fading strip per LED, on a soft curve, then blurs it a little at that size", () => {
-    const stops: [number, string][] = [];
-    const rects: number[][] = [];
-    const ctx = {
-      filter: "none",
-      canvas: { width: COLS + SPREAD * 2, height: ROWS + SPREAD * 2 },
-      clearRect: () => {},
-      createLinearGradient: () => ({ addColorStop: (at: number, color: string) => stops.push([at, color]) }),
-      fillRect: (...r: number[]) => rects.push(r),
-      drawImage: () => {},
-      fillStyle: "" as unknown,
-    };
-    const colors = new Float32Array(LED_COUNT * 3).fill(80);
-
-    const filters: string[] = [];
-    const out = {
-      ...ctx,
-      set filter(f: string) {
-        filters.push(f);
-      },
-      get filter() {
-        return filters.at(-1) ?? "none";
-      },
-    };
-    paintRing(out as unknown as CanvasRenderingContext2D, ctx as unknown as CanvasRenderingContext2D, colors);
-
-    expect(rects).toHaveLength(LED_COUNT);
-    expect(stops.slice(0, FALLOFF.length).map(([at, c]) => [at, c])).toEqual(
-      FALLOFF.map(([at, alpha]) => [at, `rgba(80,80,80,${alpha})`]),
-    );
-    expect(filters).toContain("blur(3px)");
-  });
-});
+import { MARGIN, SPREAD, easeFor, edgeDraws, falloff, fadeMask, glowLayout, gridFor } from "./ambilight";
 
 describe("ambilight: the grid follows the stage's shape (spec 0107)", () => {
   it("is 64×36 at 16:9, as before", () => {
@@ -130,9 +22,90 @@ describe("ambilight: the grid follows the stage's shape (spec 0107)", () => {
 
   it("places the canvas so the glow reaches as far on every side", () => {
     const { cols, rows } = gridFor(9 / 16);
-    const place = ringPlacement(cols, rows);
-    // 16 cells beyond each edge; the cells are square, so the same distance in pixels.
-    expect(parseFloat(place.left)).toBeCloseTo((-SPREAD / 36) * 100);
-    expect(parseFloat(place.top)).toBeCloseTo((-SPREAD / 64) * 100);
+    const { placement } = glowLayout(cols, rows);
+    // The reach and the margin beyond each edge; the cells are square, so the same distance in pixels.
+    expect(parseFloat(placement.left)).toBeCloseTo((-(SPREAD + MARGIN) / 36) * 100);
+    expect(parseFloat(placement.top)).toBeCloseTo((-(SPREAD + MARGIN) / 64) * 100);
+  });
+});
+
+describe("ambilight drawn by the graphics pipeline (spec 0118)", () => {
+  const L = glowLayout(64, 36);
+  const at = (x: number, y: number) => y * L.width + x;
+
+  it("lays the glow out at 2 px a cell: the 16-cell reach, then a 3-cell margin, round the stage", () => {
+    expect([L.width, L.height]).toEqual([(64 + 38) * 2, (36 + 38) * 2]);
+    expect(L.stage).toEqual({ x: 38, y: 38, w: 128, h: 72 });
+    expect(L.placement.left).toBe(`${(-19 / 64) * 100}%`);
+    expect(L.placement.height).toBe(`${(74 / 36) * 100}%`);
+  });
+
+  it("draws the picture in nine pieces that tile the canvas, corners from the picture's corners", () => {
+    const draws = edgeDraws(L, 1920, 1080);
+    expect(draws).toHaveLength(9);
+    // Every canvas pixel is drawn exactly once: no gap, no dent at the corners.
+    const hits = new Uint8Array(L.width * L.height);
+    for (const { dst: [dx, dy, dw, dh] } of draws) {
+      for (let y = dy; y < dy + dh; y++) for (let x = dx; x < dx + dw; x++) hits[at(x, y)]++;
+    }
+    expect(hits.every((n) => n === 1)).toBe(true);
+    const corner = (name: string) => draws.find((d) => d.at === name)!.src.slice(0, 2);
+    expect(corner("top-left")).toEqual([0, 0]);
+    expect(corner("bottom-right")).toEqual([1920 - 6, 1080 - 6]);
+    expect(draws.find((d) => d.at === "stage")!.src).toEqual([0, 0, 1920, 1080]);
+  });
+
+  it("fades to exactly nothing at the reach, with nothing past it to cut, and lights everything under the stage", () => {
+    const m = fadeMask(L);
+    const { x, y, w, h } = L.stage;
+    for (let px = 0; px < L.width; px++) expect(m[at(px, 0)] + m[at(px, L.height - 1)]).toBe(0);
+    for (let py = 0; py < L.height; py++) expect(m[at(0, py)] + m[at(L.width - 1, py)]).toBe(0);
+    expect(m[at(x + w / 2, y + h / 2)]).toBe(255);
+    // 16 cells out (32 px) from the right edge: gone.
+    expect(m[at(x + w + 32, y + h / 2)]).toBe(0);
+  });
+
+  it("fades smoothly outward: never brighter further out, and no big steps", () => {
+    const m = fadeMask(L);
+    const { x, y, w, h } = L.stage, row = y + h / 2;
+    let last = 255;
+    for (let px = x + w; px < L.width; px++) {
+      const a = m[at(px, row)];
+      expect(a).toBeLessThanOrEqual(last + 1); // the grain may lift a level
+      expect(last - a).toBeLessThanOrEqual(30);
+      last = a;
+    }
+  });
+
+  it("wraps round the corners: as bright diagonally out from a corner as straight out from a side", () => {
+    const m = fadeMask(L);
+    const { x, y } = L.stage, d = 10;
+    const straight = m[at(x - d, y + 30)];
+    const diagonal = m[at(x - Math.round(d / Math.SQRT2), y - Math.round(d / Math.SQRT2))];
+    expect(Math.abs(straight - diagonal)).toBeLessThanOrEqual(4);
+    expect(diagonal).toBeGreaterThan(0);
+  });
+
+  it("uses the same grain every time, so the dark shades don't shimmer", () => {
+    expect(fadeMask(L)).toEqual(fadeMask(L));
+  });
+
+  it("falls off strong near the frame, with a long tail, to exactly zero", () => {
+    expect(falloff(0)).toBe(1);
+    expect(falloff(1)).toBe(0);
+    expect(falloff(0.5)).toBeGreaterThan(falloff(0.6));
+    expect(falloff(0.95)).toBeGreaterThan(0);
+  });
+
+  it("eases the same per second whatever the update rate, above the floor", () => {
+    const left = (hz: number) => (1 - easeFor(1000 / hz, 120)) ** hz;
+    expect(left(60)).toBeCloseTo(left(30), 6);
+  });
+
+  it("eases by time, not by frame, never below the 8-bit floor", () => {
+    expect(easeFor(1000 / 60, 120)).toBeCloseTo(1 - Math.exp(-1000 / 60 / 120), 5);
+    expect(easeFor(1000 / 30, 120)).toBeCloseTo(1 - Math.exp(-1000 / 30 / 120), 5);
+    expect(easeFor(2, 120)).toBe(0.12);
+    expect(easeFor(16, 0)).toBe(1);
   });
 });
