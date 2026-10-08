@@ -55,7 +55,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Review
 
-- [ ] **T7** Review every AC (`/review`), then the PR with `Closes #121`. Henrique checks AC-6 on staging (Chrome and Firefox). · verify: no gaps left; AC-6 written in the PR
+- [x] **T7** Review every AC (`/review`), then the PR with `Closes #121`. Henrique checks AC-6 on staging (Chrome and Firefox). · verify: no gaps left; AC-6 written in the PR
 
 ## Coverage
 
