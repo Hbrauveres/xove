@@ -8,7 +8,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** The soft black ground, tests first:
+- [x] **T1** The soft black ground, tests first:
   - `palette.test.ts`:
     - the ground is `#0c0c0d`;
     - pure black (`#000`) appears only in the five video frames: `Stage`, `ScreenVideo`, `Facecam`, `AlsoLive`, `ShareSetup`;
@@ -16,6 +16,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - then change `--ground`, `index.html`, `site.webmanifest`, `GROUND` in `iconSvg.ts`;
   - regenerate `favicon.svg` (`node scripts/brand-icons.mjs`) and the three phone PNGs (from `--phone`).
   - · covers FR-1, FR-2, FR-3 · verify: `palette.test.ts`, `brand.test.ts`; `cd web && npm test && npm run build`
+  - Done: `--ground`, theme colour, manifest and `iconSvg.ts` at `#0c0c0d`; favicon and phone PNGs regenerated; a test keeps `#000` to the five video frames.
 - [ ] **T2** `components/ui/Range`, the white slider, tests first:
   - `Range.test.tsx`: renders a range input, passes props through (label, min, max, step, value, disabled, onChange, className), and sets `--fill` right at the ends and the middle;
   - `controls.test.ts` (new): `Range.module.css` has the 3 px round track, the white fill (via `--fill` in WebKit, `::-moz-range-progress` in Firefox), `#ebebec` at 22% for the rest, a 12 px white thumb growing to 14 px on hover and focus, a focus ring, the dimmed disabled look, and no `--accent`;

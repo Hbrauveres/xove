@@ -36,8 +36,8 @@ describe("the palette: black, neutral greys, red accent (specs 0111 and 0113)", 
     }
   });
 
-  it("is pure black, neutral greys and red (spec 0113), with the raised surface nudged to pass", () => {
-    expect(token("ground")).toBe("#000000");
+  it("is soft black, neutral greys and red (specs 0113 and 0121), with the raised surface nudged to pass", () => {
+    expect(token("ground")).toBe("#0c0c0d");
     expect(token("surface")).toBe("#161617");
     expect(token("surface-raised")).toBe("#1b1b1d");
     expect(token("line")).toBe("#2c2c2f");
@@ -79,6 +79,14 @@ describe("the palette: black, neutral greys, red accent (specs 0111 and 0113)", 
       }
     }
     expect(ratio(token("accent-ink")!, token("accent")!), "ink on red").toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps pure black only behind the video, the picture's own frame (spec 0121)", () => {
+    const frames = ["Stage", "ScreenVideo", "Facecam", "AlsoLive", "ShareSetup"].map((n) => `/${n}.module.css`);
+    for (const [path, css] of all) {
+      const black = /#000(000)?\b/i.test(css);
+      expect(black, path).toBe(frames.some((f) => path.endsWith(f)));
+    }
   });
 
   it("keeps the status colours: green for connected, yellow for reconnecting", () => {
