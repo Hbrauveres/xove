@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { WatchPrefs } from "../../media/preferences";
+import { Range } from "../ui/Range";
 import round from "./RoundButton.module.css";
 import styles from "./VolumeButton.module.css";
 
@@ -103,9 +104,8 @@ export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenCh
       {/* After the button, so Tab goes button, then slider. */}
       {canSlide && (
         <div className={styles.popup} data-open={open || undefined} inert={!open}>
-          <input
+          <Range
             className={styles.slider}
-            type="range"
             min={0}
             max={1}
             step={0.05}

@@ -5,10 +5,11 @@
 :root {
   color-scheme: dark;
 
-  /* Pure black, neutral greys (specs 0111 and 0113): the record light reads best on black, and
-     the stream keeps the colour. Panels sit just above the black so they still stand apart. The raised surface is a touch darker than 0111's so red and
-     faint text pass on it too. */
-  --ground: #000000;
+  /* Soft black, neutral greys (specs 0111, 0113 and 0121): the record light reads best on black,
+     and the stream keeps the colour; pure black stays only behind the video, as its frame.
+     Panels sit just above the ground so they still stand apart. The raised surface is a touch
+     darker than 0111's so red and faint text pass on it too. */
+  --ground: #0c0c0d;
   --surface: #161617;
   --surface-raised: #1b1b1d;
   --line: #2c2c2f;

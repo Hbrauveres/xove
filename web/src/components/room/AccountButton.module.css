@@ -100,48 +100,54 @@
   font-weight: 600;
 }
 
+/* The switch (spec 0121): a slim grey track, the same off and on, and a bigger knob that
+   overhangs it, grey when off and red when on. The button keeps a 36 × 20 px target. */
 .switch {
   position: relative;
   width: 36px;
   height: 20px;
   border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  padding: 0;
+  background: transparent;
   cursor: pointer;
-  transition: background 0.2s;
+}
+
+.switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 36px;
+  height: 14px;
+  border-radius: 999px;
+  background: #3a3a3d;
 }
 
 .switch i {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 14px;
-  height: 14px;
+  top: 0;
+  left: -2px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform 0.2s;
-}
-
-.switch[aria-checked="true"] {
-  background: var(--accent);
+  background: #bdbdc0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .switch[aria-checked="true"] i {
-  transform: translateX(16px);
+  background: var(--accent);
+  transform: translateX(20px);
 }
 
 .switch:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--text);
+  outline-offset: 4px;
+  border-radius: 999px;
 }
 
 .slider {
   width: 100%;
-  accent-color: var(--accent);
-}
-
-.slider:disabled {
-  opacity: 0.4;
 }
 
 .actions {

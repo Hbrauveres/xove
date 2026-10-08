@@ -199,7 +199,7 @@ To check a share on staging, open `chrome://webrtc-internals` in the viewer's or
 
 ## The look
 
-Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-palette/spec.md), with the reference in [0113's design](../specs/0113-cozy-palette/design.html) (its black palette).
+Specs [0111](../specs/0111-brand-mark/spec.md), [0113](../specs/0113-cozy-palette/spec.md) and [0121](../specs/0121-soft-black-controls/spec.md), with the reference in [0121's design](../specs/0121-soft-black-controls/design.html) (its black palette and its Controls section).
 
 - **The mark:** [XOVE] in a slim viewfinder, the O a record button (a white ring and a red dot), and the top-right corner red, standing in for the ^ of Xovê.
   - Its geometry lives in one place, `web/src/brand/mark.ts`.
@@ -213,14 +213,20 @@ Specs [0111](../specs/0111-brand-mark/spec.md) and [0113](../specs/0113-cozy-pal
   - **Small** (32 px) and **tiny** (16 px): heavier strokes, filling more of the square. Tiny runs edge to edge.
   - The outer edges are the same in all three.
 - **Icons:** `web/public/` holds the favicon, the phone icons and `site.webmanifest`. `index.html` links them.
-  - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn black when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
-  - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the black ground, since phones fill transparency with black anyway.
+  - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn soft black when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
+  - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the soft black ground, since phones fill transparency with black anyway.
   - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
 - **The palette** (`styles/global.css`): black, neutral greys and red, chosen over a dark blue and five greys compared on the real pages.
-  - **Neutrals:** ground pure black `#000000`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
+  - **Neutrals:** ground soft black `#0c0c0d`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
   - **Accent:** red, `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`.
+  - **Pure black only behind the video:** the stage, the previews, the facecam and the share preview keep `#000` behind the picture, its own frame, so the stage reads as a screen.
   - **Unchanged:** green and yellow stay for status, the avatars keep a colour per person, and the empty stage's colour bars keep theirs.
-  - `styles/palette.test.ts` checks the tokens, rejects the old palettes, and computes every text colour's contrast on every surface: 4.5:1, and 3:1 for faint labels.
+  - `styles/palette.test.ts` checks the tokens, rejects the old palettes, keeps pure black to the five video frames, and computes every text colour's contrast on every surface: 4.5:1, and 3:1 for faint labels.
+- **The controls** (spec 0121): quiet, so red stays for the brand and what's live.
+  - **Sliders:** `components/ui/Range`, a plain range input styled white like a video player's: a 3 px track, white up to the knob and `#ebebec` at 22% after, and a 12 px white knob that grows to 14 px on hover or focus. WebKit has no part for the filled side, so `Range` sets `--fill`; Firefox uses `::-moz-range-progress`. The ambilight's brightness, the stage's volume (turned a quarter) and a preview's volume all use it.
+  - **The switch** (the ambilight's, in the account menu): a 36 × 14 px grey `#3a3a3d` track, the same off and on, and a 20 px knob that overhangs it, `#bdbdc0` off and red on, sliding in 180 ms.
+  - **The footer:** "Buy me a coffee" is white, among muted links.
+  - `styles/controls.test.ts` checks these values.
 
 ## Data model
 

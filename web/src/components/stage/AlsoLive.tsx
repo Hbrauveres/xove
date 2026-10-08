@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LiveFeed, Sharer } from "../../types";
 import { Avatar } from "../ui/Avatar";
+import { Range } from "../ui/Range";
 import { ScreenVideo } from "./ScreenVideo";
 import styles from "./AlsoLive.module.css";
 
@@ -161,9 +162,8 @@ function PreviewSpeaker({
         </svg>
       </button>
       {sliding && (
-        <input
+        <Range
           className={styles.slider}
-          type="range"
           min={0}
           max={1}
           step={0.05}

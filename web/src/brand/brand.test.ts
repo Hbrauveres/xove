@@ -20,7 +20,7 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
     expect(href("icon")).toBe("/favicon.svg");
     expect(href("apple-touch-icon")).toBe("/apple-touch-icon.png");
     expect(href("manifest")).toBe("/site.webmanifest");
-    expect(html).toMatch(/<meta name="theme-color" content="#000000"/);
+    expect(html).toMatch(/<meta name="theme-color" content="#0c0c0d"/);
   });
 
   it("ships every file it links", () => {
@@ -32,7 +32,7 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   it("lists the phone icons in the manifest, under Xovê's name", () => {
     const manifest = JSON.parse(manifestText);
     expect(manifest.name).toBe("Xovê");
-    expect([manifest.background_color, manifest.theme_color]).toEqual(["#000000", "#000000"]);
+    expect([manifest.background_color, manifest.theme_color]).toEqual(["#0c0c0d", "#0c0c0d"]);
     expect(manifest.icons.map((i: { src: string; sizes: string }) => `${i.src} ${i.sizes}`)).toEqual([
       "/icon-192.png 192x192",
       "/icon-512.png 512x512",
@@ -52,16 +52,16 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
     expect(h).toBe(146);
   });
 
-  it("follows the browser's mode: white strokes on dark, black on light, the red fixed (spec 0113)", () => {
+  it("follows the browser's mode: white strokes on dark, soft black on light, the red fixed (specs 0113 and 0121)", () => {
     expect(favicon).toMatch(/\.ink\s*\{\s*stroke:\s*#ebebec/);
-    expect(favicon).toMatch(/@media \(prefers-color-scheme: light\)\s*\{\s*\.ink\s*\{\s*stroke:\s*#000000/);
+    expect(favicon).toMatch(/@media \(prefers-color-scheme: light\)\s*\{\s*\.ink\s*\{\s*stroke:\s*#0c0c0d/);
     expect(favicon).toMatch(/stroke="#ef4b4b"/);
     expect(favicon).toMatch(/fill="#ef4b4b"/);
   });
 
-  it("puts the phone icon's larger, slim symbol on the black ground (spec 0113)", () => {
+  it("puts the phone icon's larger, slim symbol on the soft black ground (specs 0113 and 0121)", () => {
     const phone = iconSvg("phone");
-    expect(phone).toMatch(/<rect[^>]*fill="#000000"/);
+    expect(phone).toMatch(/<rect[^>]*fill="#0c0c0d"/);
     expect(phone).toMatch(/stroke-width="10"/);
   });
 });
@@ -82,12 +82,12 @@ describe("the phone icon files (spec 0113, FR-6b)", () => {
     return { width, height, colorType: buf[25], first: [raw[1], raw[2], raw[3]] };
   };
 
-  it("ships the three sizes, on the black ground", () => {
+  it("ships the three sizes, on the soft black ground (spec 0121)", () => {
     for (const [name, size] of [["apple-touch-icon.png", 180], ["icon-192.png", 192], ["icon-512.png", 512]] as const) {
       const png = pngAt(name);
       expect([png.width, png.height], name).toEqual([size, size]);
       expect(png.colorType, name).toBe(2);
-      expect(png.first, name).toEqual([0x00, 0x00, 0x00]);
+      expect(png.first, name).toEqual([0x0c, 0x0c, 0x0d]);
     }
   });
 });

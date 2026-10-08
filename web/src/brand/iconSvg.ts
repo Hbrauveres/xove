@@ -1,14 +1,14 @@
 import { iconMark, pointsAttr, type Optical } from "./mark.ts";
 
-/** The icon files' colours, which can't read the page's tokens: the black ground (also the ink on a light browser), white and red. */
-const GROUND = "#000000", WHITE = "#ebebec", RED = "#ef4b4b";
+/** The icon files' colours, which can't read the page's tokens: the soft black ground (also the ink on a light browser; spec 0121), white and red. */
+const GROUND = "#0c0c0d", WHITE = "#ebebec", RED = "#ef4b4b";
 
 /**
  * The icon as a standalone SVG file (specs 0111 and 0113). scripts/brand-icons.mjs writes it.
- * - "favicon": the bare symbol at its 16 px weight, edge to edge. Its white parts turn dark
+ * - "favicon": the bare symbol at its 16 px weight, edge to edge. Its white parts turn soft
  *   black when the browser is light (browsers apply prefers-color-scheme inside SVG favicons);
  *   the red stays.
- * - "phone": the slim symbol on the black ground, with room around it. Phones fill
+ * - "phone": the slim symbol on the soft black ground, with room around it. Phones fill
  *   transparency with black, so this one keeps its ground.
  */
 export function iconSvg(kind: "favicon" | "phone"): string {

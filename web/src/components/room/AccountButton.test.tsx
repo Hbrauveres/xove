@@ -68,6 +68,11 @@ describe("account button (spec 0104)", () => {
     await user.click(screen.getByRole("switch", { name: "Ambilight" }));
     expect(onAmbilightChange).toHaveBeenLastCalledWith({ on: false, brightness: 0.9 });
     expect(loadAmbilight()).toEqual({ on: false, brightness: 0.9 });
+    // Space toggles it too, from the keyboard (the test's prefs stay on, so it asks for off again).
+    const calls = onAmbilightChange.mock.calls.length;
+    screen.getByRole("switch", { name: "Ambilight" }).focus();
+    await user.keyboard(" ");
+    expect(onAmbilightChange).toHaveBeenCalledTimes(calls + 1);
 
     fireEvent.change(screen.getByRole("slider", { name: "Ambilight brightness" }), { target: { value: "0.85" } });
     expect(onAmbilightChange).toHaveBeenLastCalledWith({ on: true, brightness: 0.85 });
