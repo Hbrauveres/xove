@@ -46,6 +46,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: the ambilight section of `docs/architecture.md` rewritten, decision 40, the web count updated.
 - [x] **T4** Review every AC (`spec-reviewer`), fix what it finds, open the PR with `Closes #118`.
   - Henrique on staging (AC-5): maximum brightness on the 2K monitor, and the performance panel.
+  - Done 2026-10-07: Henrique checked it on staging after #119 merged; it works. Live in production with v0.0.9.
   - · verify: no gaps left; the manual AC written in the PR
   - Done: review fixes:
     - an even 60 a second on any refresh rate (75/90/144 Hz no longer drop to 37–48);
