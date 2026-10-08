@@ -103,3 +103,11 @@ describe("the switch: a slim grey track, a bigger knob that lights red (spec 012
     expect(rule(css, ".switch:focus-visible")).toMatch(/outline:\s*2px solid var\(--text\)/);
   });
 });
+
+describe("the footer's coffee link (spec 0121, FR-8)", () => {
+  it("is white, in the text colour, not red", () => {
+    const coffee = rule(sheet("components/room/RoomFooter.module.css"), ".coffee");
+    expect(coffee).toMatch(/color:\s*var\(--text\)/);
+    expect(coffee).not.toMatch(/--accent/);
+  });
+});

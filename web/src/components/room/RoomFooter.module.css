@@ -29,8 +29,9 @@
   color: var(--text-muted);
 }
 
+/* White, among the muted links (spec 0121): it stands out without the red. */
 .coffee {
-  color: var(--accent);
+  color: var(--text);
 }
 
 /* A phone: one line still, a little smaller and closer. */
