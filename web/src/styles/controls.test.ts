@@ -67,3 +67,39 @@ describe("the three sliders use the white slider (spec 0121, FR-4)", () => {
     }
   });
 });
+
+describe("the switch: a slim grey track, a bigger knob that lights red (spec 0121, FR-6)", () => {
+  const css = sheet("components/room/AccountButton.module.css");
+
+  it("keeps a 36 × 20 px button to click, with no fill of its own", () => {
+    const button = rule(css, ".switch");
+    expect(button).toMatch(/width:\s*36px/);
+    expect(button).toMatch(/height:\s*20px/);
+    expect(button).toMatch(/background:\s*transparent/);
+    expect(css).not.toMatch(/\.switch\[aria-checked="true"\] \{/);
+  });
+
+  it("draws a 36 × 14 px grey track, the same off and on", () => {
+    const track = rule(css, ".switch::before");
+    expect(track).toMatch(/width:\s*36px/);
+    expect(track).toMatch(/height:\s*14px/);
+    expect(track).toMatch(/background:\s*#3a3a3d/);
+  });
+
+  it("has a 20 px knob with a soft shadow: grey off, red on, sliding in 180 ms", () => {
+    const knob = rule(css, ".switch i");
+    expect(knob).toMatch(/width:\s*20px/);
+    expect(knob).toMatch(/height:\s*20px/);
+    expect(knob).toMatch(/box-shadow:/);
+    expect(knob).toMatch(/background:\s*#bdbdc0/);
+    expect(knob).toMatch(/transition:[^;]*0\.18s/);
+    const on = rule(css, '.switch[aria-checked="true"] i');
+    expect(on).toMatch(/background:\s*var\(--accent\)/);
+    expect(knob).toMatch(/left:\s*-2px/);
+    expect(on).toMatch(/translateX\(20px\)/);
+  });
+
+  it("shows its focus in the text colour", () => {
+    expect(rule(css, ".switch:focus-visible")).toMatch(/outline:\s*2px solid var\(--text\)/);
+  });
+});

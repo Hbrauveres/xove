@@ -43,7 +43,7 @@
   - the button stays 36 × 20 px, so it's as easy to hit as today, with a transparent background;
   - a `::before` draws the 36 × 14 px grey `#3a3a3d` track, centred, the same in both states;
   - the `<i>` becomes the 20 px knob, with a soft shadow, `#bdbdc0` off and `--accent` on;
-  - the knob moves 16 px, in 180 ms, with `transform` and `background` transitions; reduced motion turns the transition off, as today.
+  - the knob starts 2 px past the track's left end and moves 20 px (overhanging both ends, as on the board), in 180 ms, with `transform` and `background` transitions; reduced motion turns the transition off, as today.
 - Its focus ring changes from red to the text colour, as on the board.
 
 **The footer (FR-8).** In `RoomFooter.module.css`, `.coffee` changes from `var(--accent)` to `var(--text)`.

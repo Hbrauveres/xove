@@ -32,14 +32,15 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `controls.test.ts`: no `accent-color` left in the three.
   - · covers FR-4, FR-5 · verify: `controls.test.ts`, existing `AccountButton`, `VolumeButton` and `AlsoLive` tests; `npm test && npm run build`
   - Done: the three use `Range`; `accent-color` and the volume's red focus ring gone from their stylesheets.
-- [ ] **T4** The switch, in `AccountButton.module.css`:
+- [x] **T4** The switch, in `AccountButton.module.css`:
   - the button stays 36 × 20 px with a transparent background;
   - a `::before` track, 36 × 14 px, `#3a3a3d`, centred, the same in both states;
-  - the `<i>` knob, 20 px with a soft shadow, `#bdbdc0` off and `var(--accent)` on, moving 16 px in 180 ms;
+  - the `<i>` knob, 20 px with a soft shadow, `#bdbdc0` off and `var(--accent)` on, overhanging both ends by 2 px and moving 20 px in 180 ms;
   - no transition with reduced motion;
   - the focus ring in the text colour;
   - `controls.test.ts` checks these values.
   - · covers FR-6, FR-7 · verify: `controls.test.ts`, existing `AccountButton` tests (role, `aria-checked`, toggling)
+  - Done: track drawn by `::before`, knob `<i>` overhanging by 2 px and travelling 20 px as on the board (plan said 16 px; corrected to the board). 4 tests.
 - [ ] **T5** "Buy me a coffee" in the text colour: `.coffee` uses `var(--text)`; `controls.test.ts` checks it. · covers FR-8 · verify: `controls.test.ts`
 
 ## Docs
