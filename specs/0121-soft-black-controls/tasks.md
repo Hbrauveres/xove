@@ -40,7 +40,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - the focus ring in the text colour;
   - `controls.test.ts` checks these values.
   - · covers FR-6, FR-7 · verify: `controls.test.ts`, existing `AccountButton` tests (role, `aria-checked`, toggling)
-  - Done: track drawn by `::before`, knob `<i>` overhanging by 2 px and travelling 20 px as on the board (plan said 16 px; corrected to the board). 4 tests.
+  - Done: track drawn by `::before`, knob `<i>` overhanging by 2 px and travelling 20 px as on the board (as on the board). 4 tests.
 - [x] **T5** "Buy me a coffee" in the text colour: `.coffee` uses `var(--text)`; `controls.test.ts` checks it. · covers FR-8 · verify: `controls.test.ts`
   - Done: `.coffee` uses `var(--text)`.
 
@@ -51,7 +51,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `docs/decisions.md`: decision 41;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new look
-  - Done: "The look" covers the soft black, the video's pure black and the controls; decision 41; web count 371.
+  - Done: "The look" covers the soft black, the video's pure black and the controls; decision 41; web count 373.
 
 ## Review
 

@@ -99,6 +99,11 @@ describe("the switch: a slim grey track, a bigger knob that lights red (spec 012
     expect(on).toMatch(/translateX\(20px\)/);
   });
 
+  it("moves without sliding when the system asks for reduced motion", () => {
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduced).toMatch(/\.switch i[^{]*\{\s*transition:\s*none/);
+  });
+
   it("shows its focus in the text colour", () => {
     expect(rule(css, ".switch:focus-visible")).toMatch(/outline:\s*2px solid var\(--text\)/);
   });

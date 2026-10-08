@@ -33,4 +33,9 @@ describe("Range, the white slider (spec 0121)", () => {
     // Out of range values stay on the track.
     expect(fill(2)).toBe("100%");
   });
+
+  it("fills nothing, rather than breaking the track, without a value", () => {
+    render(<Range aria-label="r" min={0} max={1} defaultValue={0.5} />);
+    expect(screen.getByRole("slider").style.getPropertyValue("--fill")).toBe("0%");
+  });
 });
