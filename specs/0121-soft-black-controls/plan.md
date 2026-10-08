@@ -71,7 +71,7 @@
 | Web | `RoomFooter.module.css` | Coffee in the text colour |
 | Web | `styles/palette.test.ts`, `brand/brand.test.ts` | The new ground, and pure black only behind the video |
 | Web | `components/ui/Range.test.tsx` (new), `styles/controls.test.ts` (new) | The slider, the switch and the coffee link |
-| Docs | `docs/architecture.md` ("The look"), `docs/decisions.md` | The ground, the controls; decision 40 |
+| Docs | `docs/architecture.md` ("The look"), `docs/decisions.md` | The ground, the controls; decision 41 |
 | Docs | `CLAUDE.md` | Web test count |
 
 ## API and data

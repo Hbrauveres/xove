@@ -46,11 +46,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs
 
-- [ ] **T6** Docs:
+- [x] **T6** Docs:
   - `docs/architecture.md` "The look": the soft black ground, pure black only behind the video, the controls (white `Range`, the switch), the coffee link, and the reference in 0121's design;
-  - `docs/decisions.md`: decision 40;
+  - `docs/decisions.md`: decision 41;
   - `CLAUDE.md`: the web test count.
   - · verify: the pages describe the new look
+  - Done: "The look" covers the soft black, the video's pure black and the controls; decision 41; web count 371.
 
 ## Review
 
