@@ -158,7 +158,6 @@
 .slider {
   width: 64px;
   margin: 0 6px 0 0;
-  accent-color: var(--accent);
   animation: slide-out 0.18s ease;
 }
 

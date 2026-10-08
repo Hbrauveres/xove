@@ -50,3 +50,20 @@ describe("the white slider, like a video player's (spec 0121, FR-4)", () => {
     }
   });
 });
+
+describe("the three sliders use the white slider (spec 0121, FR-4)", () => {
+  const uses = [
+    ["components/room/AccountButton", "the ambilight's brightness"],
+    ["components/stage/VolumeButton", "the stage's volume"],
+    ["components/stage/AlsoLive", "a preview's volume"],
+  ] as const;
+
+  it("draws them with Range, with no red of their own", () => {
+    for (const [path, what] of uses) {
+      const tsx = sheet(`${path}.tsx`);
+      expect(tsx, what).toMatch(/<Range\b/);
+      expect(tsx, what).not.toMatch(/type="range"/);
+      expect(sheet(`${path}.module.css`), what).not.toMatch(/accent-color/);
+    }
+  });
+});

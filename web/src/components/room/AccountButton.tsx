@@ -4,6 +4,7 @@ import { saveAmbilight, type AmbilightPrefs } from "../../media/preferences";
 import type { ConnectionState, Friend } from "../../types";
 import { Avatar } from "../ui/Avatar";
 import { Dropdown, DropdownSection } from "../ui/Dropdown";
+import { Range } from "../ui/Range";
 import styles from "./AccountButton.module.css";
 
 type Props = {
@@ -88,9 +89,8 @@ export function AccountButton({ me, isAdmin, connection, ambilight, onAmbilightC
               <i />
             </button>
           </label>
-          <input
+          <Range
             className={styles.slider}
-            type="range"
             min={0.2}
             max={1}
             step={0.05}

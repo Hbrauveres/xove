@@ -26,11 +26,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Wiring
 
-- [ ] **T3** The three sliders use `Range`:
+- [x] **T3** The three sliders use `Range`:
   - `AccountButton` (ambilight brightness), `VolumeButton` (vertical, still turned a quarter), `AlsoLive` (preview volume);
   - their stylesheets keep only size and placement, and drop `accent-color`;
   - `controls.test.ts`: no `accent-color` left in the three.
   - · covers FR-4, FR-5 · verify: `controls.test.ts`, existing `AccountButton`, `VolumeButton` and `AlsoLive` tests; `npm test && npm run build`
+  - Done: the three use `Range`; `accent-color` and the volume's red focus ring gone from their stylesheets.
 - [ ] **T4** The switch, in `AccountButton.module.css`:
   - the button stays 36 × 20 px with a transparent background;
   - a `::before` track, 36 × 14 px, `#3a3a3d`, centred, the same in both states;
