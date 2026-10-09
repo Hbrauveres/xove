@@ -37,7 +37,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   `StageDots.test.tsx`.
   - · covers FR-4 · verify: `StageDots.test.tsx`
   - Done: `StageDots`; mine is "Watch yourself".
-- [ ] **T5** The stage on the phone:
+- [x] **T5** The stage on the phone:
   - the `.slide` wrapper around the picture, with its transitions and `--swipe`;
   - `useStageSwipe` on the frame, enabled on the phone with at least two people live, stepping with `stepOnStage` and `pick`;
   - `data-no-swipe` on the controls layer and the facecam;
@@ -51,6 +51,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - after a swipe, the sound, the feed and `PUT /api/streams/watching` follow;
   - the dots jump.
   - · covers FR-1–FR-7 · verify: `cd web && npm test && npm run build`
+  - Done: the `.slide` wrapper (picture and facecam), the swipe on the frame, the dots in the controls layer; `data-no-swipe` on the controls, the facecam and the fullscreen button (found by the tests); the bars moved to `stage/bars.ts` for the linter. 6 room tests.
 
 ## Docs and review
 
