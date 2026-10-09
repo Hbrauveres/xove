@@ -6,7 +6,7 @@ import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureRequest
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, myLiveStream, someoneSharing } from "../test/fakeApi";
 import { FakeLocalScreenTrack, lastRoom } from "../test/fakeLiveKit";
-import { PHONE_QUERY } from "../hooks/usePhoneView";
+import { NARROW_UPRIGHT_QUERY, PORTRAIT_QUERY, SMALL_QUERY, TOUCH_QUERY } from "../hooks/useRoomLayout";
 import { RoomPage } from "./RoomPage";
 
 const member = aUser({ name: "Henrique Brauveres", status: "MEMBER" });
@@ -2061,7 +2061,7 @@ function phoneWindow(upright = true) {
   let phone = upright;
   window.matchMedia = ((query: string) => ({
     get matches() {
-      return query === PHONE_QUERY && phone;
+      return query === NARROW_UPRIGHT_QUERY && phone;
     },
     media: query,
     onchange: null,
@@ -2400,5 +2400,200 @@ describe("room: swiping the phone's stage (spec 0159)", () => {
     await user.click(screen.getByRole("button", { name: "Watch Duda" }));
     await onStage("Duda");
     expect(screen.getByRole("button", { name: "Watch Duda" })).toHaveAttribute("aria-current", "true");
+  });
+});
+
+/** A phone (touch, small), sideways at first; `turn()` holds it upright or sideways again. */
+function phoneSideways() {
+  const listeners = new Set<() => void>();
+  let portrait = false;
+  const answer = (q: string) =>
+    q === TOUCH_QUERY || q === SMALL_QUERY ? true : q === PORTRAIT_QUERY || q === NARROW_UPRIGHT_QUERY ? portrait : false;
+  window.matchMedia = ((query: string) => ({
+    get matches() {
+      return answer(query);
+    },
+    media: query,
+    onchange: null,
+    addEventListener: (_: string, l: () => void) => listeners.add(l),
+    removeEventListener: (_: string, l: () => void) => listeners.delete(l),
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+  return {
+    turn() {
+      portrait = !portrait;
+      act(() => listeners.forEach((l) => l()));
+    },
+  };
+}
+
+describe("room: on a phone sideways (spec 0160)", () => {
+  const desktopMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
+  });
+
+  async function sidewaysWith(names: string[], withSound = false) {
+    const phone = phoneSideways();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 732, height: 412 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    server.streams = names.map((n, i) => someoneSharing(n, i + 2, "screen", undefined, new Date(Date.now() - (300 - i * 50) * 1000)));
+    const view = renderRoom();
+    await connected();
+    const room = lastRoom();
+    act(() => {
+      names.forEach((_, i) => room.publishScreen(`user-${i + 2}`, { withSound }));
+    });
+    return { phone, server, room, view };
+  }
+  const stageLayer = () => screen.getByRole("region", { name: /shared screen/i });
+  /** A quick drag on the picture. */
+  function drag(dx: number, dy: number, on?: Element) {
+    const target = on ?? stageLayer().querySelector("video")!;
+    fireEvent.pointerDown(target, { pointerId: 1, clientX: 400, clientY: 250, button: 0 });
+    fireEvent.pointerMove(target, { pointerId: 1, clientX: 400 + dx, clientY: 250 + dy });
+    fireEvent.pointerUp(target, { pointerId: 1, clientX: 400 + dx, clientY: 250 + dy });
+  }
+  const row = () => screen.queryByRole("region", { name: /Live now/ });
+
+  it("has no header, logo or footer; the top line has who's on the stage and my buttons", async () => {
+    const { view } = await sidewaysWith(["Marina", "Rafa"]);
+    expect(await screen.findByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+    expect(view.container.querySelector("header")).toBeNull();
+    expect(view.container.querySelector("footer")).toBeNull();
+    expect(screen.queryByRole("img", { name: "Xovê" })).toBeNull();
+    const top = stageLayer().querySelector("[data-fades]") as HTMLElement;
+    expect(within(top).getByText("LIVE")).toBeInTheDocument();
+    expect(within(top).getByRole("button", { name: /people here/ })).toBeInTheDocument();
+    expect(within(top).getByRole("button", { name: "Activity" })).toBeInTheDocument();
+    expect(within(top).getByRole("button", { name: /: account,/ })).toBeInTheDocument();
+    // No feed or cards under the stage: the row replaces them.
+    expect(screen.queryByRole("heading", { name: /^Here/ })).toBeNull();
+  });
+
+  it("with nobody live, shows the bars, Nobody live and the places, and the camera button", async () => {
+    phoneSideways();
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    expect(screen.getByRole("heading", { name: "Nobody live" })).toBeInTheDocument();
+    expect(screen.getByText("0 of 6 · 6 free")).toBeInTheDocument();
+    expect(stageLayer().querySelectorAll("[data-bar]").length).toBeGreaterThan(0);
+    expect(within(stageLayer()).getByRole("button", { name: /camera/i })).toBeInTheDocument();
+    // Over the empty stage nothing fades.
+    expect(stageLayer()).not.toHaveAttribute("data-chrome");
+  });
+
+  it("keeps the same video when the phone turns upright and back", async () => {
+    const { phone } = await sidewaysWith(["Marina"]);
+    const video = await screen.findByLabelText("Marina's shared screen");
+    phone.turn();
+    // Upright: the info row under the stage, and the feed.
+    expect(await screen.findByRole("heading", { name: /^Live now/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Marina's shared screen")).toBe(video);
+    phone.turn();
+    expect(screen.getByLabelText("Marina's shared screen")).toBe(video);
+  });
+
+  it("fades the controls after a while without a touch, closing an open row; a touch brings them back", async () => {
+    await sidewaysWith(["Marina", "Rafa"]);
+    await screen.findByLabelText("Marina's shared screen");
+    drag(0, -150);
+    await waitFor(() => expect(row()?.closest("[data-open]") ?? row()).toHaveAttribute("data-open"));
+    expect(stageLayer()).toHaveAttribute("data-chrome", "shown");
+    await waitFor(() => expect(stageLayer()).toHaveAttribute("data-chrome", "hidden"), { timeout: 4000 });
+    expect(row()).toBeNull();
+    fireEvent.pointerDown(stageLayer(), { pointerId: 2, clientX: 10, clientY: 10, button: 0 });
+    expect(stageLayer()).toHaveAttribute("data-chrome", "shown");
+  });
+
+  it("opens the row with a swipe up and closes it with a swipe down; a tap in it changes the stage, silently", async () => {
+    const { room } = await sidewaysWith(["Marina", "Rafa"], true);
+    await screen.findByLabelText("Marina's shared screen");
+    expect(row()).toBeNull();
+    drag(0, -150);
+    const open = await waitFor(() => {
+      const r = row();
+      expect(r).not.toBeNull();
+      return r!;
+    });
+    expect(open).toHaveTextContent("2 of 6");
+    drag(0, 150);
+    await waitFor(() => expect(row()).toBeNull());
+    await userEvent.setup().click(screen.getByRole("button", { name: "Show the other streams" }));
+    const again = await waitFor(() => row()!);
+    await userEvent.setup().click(within(again).getByRole("button", { name: "Watch Rafa's screen" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Rafa · Screen" })).toBeInTheDocument();
+    await waitFor(() => expect(room.soundPublication("user-2")!.isSubscribed).toBe(false));
+  });
+
+  it("keeps an open panel, and the bar it hangs from, past the idle time", async () => {
+    await sidewaysWith(["Marina", "Rafa"]);
+    await screen.findByLabelText("Marina's shared screen");
+    fireEvent.pointerDown(stageLayer(), { pointerId: 3, clientX: 10, clientY: 10, button: 0 });
+    await userEvent.setup().click(within(stageLayer()).getByRole("button", { name: "Activity" }));
+    expect(screen.getByRole("dialog", { name: "Activity" })).toBeInTheDocument();
+    // A tap on a phone may not focus the button: only the open panel holds the bar.
+    act(() => (document.activeElement as HTMLElement | null)?.blur());
+    await new Promise((r) => setTimeout(r, 3200));
+    expect(stageLayer()).toHaveAttribute("data-chrome", "shown");
+    expect(screen.getByRole("dialog", { name: "Activity" })).toBeInTheDocument();
+  }, 8000);
+
+  it("opens the row only from a drag on the picture, not the black sides or the facecam", async () => {
+    phoneSideways();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 732, height: 412 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Bruno", 7, "screen", undefined, new Date(Date.now() - 300_000)),
+      someoneSharing("Bruno", 7, "camera", undefined, new Date(Date.now() - 300_000)),
+      someoneSharing("Ana", 3, "screen"),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+      lastRoom().publishCamera("user-7");
+      lastRoom().publishScreen("user-3");
+    });
+    const facecam = await waitFor(() => document.querySelector("[data-facecam]")!);
+    drag(0, -150, facecam);
+    drag(0, -150, stageLayer());
+    await new Promise((r) => setTimeout(r, 100));
+    expect(row()).toBeNull();
+  });
+
+  it("doesn't open the row from the empty stage, and has no tab with nobody else live", async () => {
+    phoneSideways();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 732, height: 412 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const bars = stageLayer().querySelector("[data-bars]")!;
+    drag(0, -150, bars);
+    act(() => {
+      server.streams = [someoneSharing("Marina", 2)];
+    });
+    act(() => {
+      lastRoom().publishScreen("user-2");
+    });
+    await screen.findByRole("heading", { level: 2, name: "Marina · Screen" });
+    expect(row()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show the other streams" })).toBeNull();
+  });
+
+  it("doesn't change the stream on a left or right drag, and drags on the buttons don't open the row", async () => {
+    await sidewaysWith(["Marina", "Rafa"]);
+    await screen.findByLabelText("Marina's shared screen");
+    drag(-300, 0);
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+    drag(0, -150, within(stageLayer()).getByRole("button", { name: "Fullscreen" }));
+    drag(0, -150, stageLayer().querySelector("[data-no-swipe] button[aria-label*=camera i]")!);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(row()).toBeNull();
   });
 });

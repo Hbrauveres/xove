@@ -14,7 +14,7 @@ import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
-import { usePhoneView } from "../hooks/usePhoneView";
+import { useRoomLayout } from "../hooks/useRoomLayout";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useStagePick } from "../hooks/useStagePick";
@@ -85,8 +85,12 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [people, watchingOf, bigId],
   );
   const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
-  // A phone held upright (spec 0158): the same room, laid out for it.
-  const phone = usePhoneView();
+  // A phone or tablet held upright (specs 0158 and 0160): the same room, laid out for it.
+  const layout = useRoomLayout();
+  const phone = layout === "upright";
+  const sideways = layout === "sideways";
+  // Either phone view: the bell, and the footer's items in my menu (specs 0158 and 0160).
+  const handheld = phone || sideways;
   // For the phone's feed: who has each sharer on their stage, as under the stage.
   const watchersOf = useCallback(
     (id: string) => people.filter((p) => p.id !== id && watchingOf[p.id]?.sharerId === id),
@@ -105,55 +109,60 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     return () => window.clearInterval(timer);
   }, [seated, reenter, participantSid, pollMs]);
 
+  // People, then (on a phone) the bell, then me at the far right (spec 0158).
+  const myButtons = (
+    <>
+      <PeopleButton
+        people={session.people}
+        meId={session.me.id}
+        sharing={sharing}
+        watchingOf={session.watchingOf}
+        seats={session.seats}
+      />
+      {handheld && (
+        <ActivityBell
+          events={session.activity}
+          people={session.knownPeople}
+          meId={session.me.id}
+          isLive={isLive}
+          watching={watching}
+          onWatch={stage.pick}
+        />
+      )}
+      <AccountButton
+        me={session.me}
+        isAdmin={me?.admin ?? false}
+        connection={session.connection}
+        ambilight={ambilight}
+        onAmbilightChange={setAmbilight}
+        onSignOut={onSignOut}
+        footer={handheld ? <FooterItems /> : undefined}
+      />
+    </>
+  );
+
   return (
-    <div className={styles.theater} data-layout={phone ? "phone" : undefined}>
-      <RoomHeader
-        middle={
-          // On the phone the bell takes the pill's place, on the right (spec 0158).
-          !phone && (
-            <ActivityPill
-              events={session.activity}
-              people={session.knownPeople}
-              meId={session.me.id}
-              connection={session.connection}
-              isLive={isLive}
-              watching={watching}
-              onWatch={stage.pick}
-            />
-          )
-        }
-        right={
-          <>
-            <PeopleButton
-              people={session.people}
-              meId={session.me.id}
-              sharing={sharing}
-              watchingOf={session.watchingOf}
-              seats={session.seats}
-            />
-            {/* On the phone, by use: people, the bell, then me at the far right (spec 0158). */}
-            {phone && (
-              <ActivityBell
+    <div className={styles.theater} data-layout={phone ? "phone" : sideways ? "sideways" : undefined}>
+      {/* Sideways there's no header: my buttons sit in the stage's top bar (spec 0160). */}
+      {!sideways && (
+        <RoomHeader
+          middle={
+            // On the phone the bell takes the pill's place, on the right (spec 0158).
+            !phone && (
+              <ActivityPill
                 events={session.activity}
                 people={session.knownPeople}
                 meId={session.me.id}
+                connection={session.connection}
                 isLive={isLive}
                 watching={watching}
                 onWatch={stage.pick}
               />
-            )}
-            <AccountButton
-              me={session.me}
-              isAdmin={me?.admin ?? false}
-              connection={session.connection}
-              ambilight={ambilight}
-              onAmbilightChange={setAmbilight}
-              onSignOut={onSignOut}
-              footer={phone ? <FooterItems /> : undefined}
-            />
-          </>
-        }
-      />
+            )
+          }
+          right={myButtons}
+        />
+      )}
 
       {/* One column as wide as the stage can be: the stage and its info row share its edges. */}
       <main className={styles.middle}>
@@ -164,7 +173,8 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
             ambilight={ambilight}
             watchers={watchers}
             others={others}
-            layout={phone ? "phone" : undefined}
+            layout={phone ? "phone" : sideways ? "sideways" : undefined}
+            topRight={sideways ? myButtons : undefined}
             watchersOf={watchersOf}
             people={people}
             meId={meId}
@@ -194,7 +204,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
         )}
       </main>
 
-      {!phone && <RoomFooter />}
+      {!handheld && <RoomFooter />}
 
       {fullscreen &&
         session.error &&

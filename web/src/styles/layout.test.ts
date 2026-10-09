@@ -50,3 +50,23 @@ describe("the phone's feed (spec 0158)", () => {
     expect(rule(sheet("components/stage/LiveFeed.module.css"), ".picture")).toMatch(/position:\s*relative/);
   });
 });
+
+describe("the room on a phone sideways, and tablets (spec 0160)", () => {
+  const stage = sheet("components/stage/Stage.module.css");
+
+  it("fills the screen height first, hugging the picture", () => {
+    const box = rule(stage, '.stage[data-layout="sideways"] .box');
+    expect(box).toMatch(/width:\s*min\(100cqw, 100dvh \* var\(--shape\)\)/);
+    expect(box).toMatch(/height:\s*min\(100dvh, 100cqw \/ var\(--shape\)\)/);
+  });
+
+  it("fades the top bar and the row's tab with the controls", () => {
+    expect(rule(stage, '.stage[data-layout="sideways"][data-chrome="hidden"] [data-fades]')).toMatch(/opacity:\s*0/);
+  });
+
+  it("centres what's under the stage in a 640 px column on a wider screen held upright", () => {
+    const column = rule(stage, '.stage[data-layout="phone"] .info,\n.below > *');
+    expect(column).toMatch(/max-width:\s*640px/);
+    expect(column).toMatch(/margin-inline:\s*auto/);
+  });
+});

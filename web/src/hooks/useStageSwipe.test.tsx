@@ -160,3 +160,44 @@ describe("the stage's swipe gesture (spec 0159)", () => {
     expect(onStep).not.toHaveBeenCalled();
   });
 });
+
+// ---- up and down, sideways (spec 0160) ----
+
+function Vertical({ onOpen, onClose }: { onOpen: () => void; onClose: () => void }) {
+  const slide = useRef<HTMLDivElement>(null);
+  const handlers = useStageSwipe(slide, { enabled: true, axis: "vertical", onOpen, onClose });
+  return (
+    <div data-testid="frame" {...handlers}>
+      <div data-testid="slide" ref={slide} />
+    </div>
+  );
+}
+
+describe("the stage's up-and-down swipe (spec 0160)", () => {
+  it("opens on a swipe up and closes on a swipe down, without moving the picture", () => {
+    const onOpen = vi.fn();
+    const onClose = vi.fn();
+    render(<Vertical onOpen={onOpen} onClose={onClose} />);
+    const frame = screen.getByTestId("frame");
+    drag(frame, 0, -120);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("slide").style.getPropertyValue("--swipe")).toBe("");
+    drag(frame, 10, 120);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing on a left or right drag, or a short one", () => {
+    const onOpen = vi.fn();
+    const onClose = vi.fn();
+    render(<Vertical onOpen={onOpen} onClose={onClose} />);
+    const frame = screen.getByTestId("frame");
+    drag(frame, -200, 10);
+    drag(frame, 0, -10);
+    act(() => {
+      vi.advanceTimersByTime(SLIDE_MS * 3);
+    });
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId("slide").style.getPropertyValue("--swipe")).not.toBe("-200px");
+  });
+});

@@ -161,13 +161,28 @@ sequenceDiagram
   - **Right:** the other streams as previews, then a dashed box with "N of 6 live" and the places left, gone when all 6 are live. A preview shows their screen, or their camera when that's all they share.
   - **When room runs short:** the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
 - **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
-- **On a phone held upright** ([spec 0158](../specs/0158-phone-upright/spec.md), [its design](../specs/0158-phone-upright/design.html)):
-  - **When:** a window up to 760 px wide that's at least as tall as it is wide (`usePhoneView`), phone or not. Turning it switches layouts at once; the stage keeps its place in the page, so the video and a share go on.
+- **On a phone or tablet** (specs [0158](../specs/0158-phone-upright/spec.md) and [0160](../specs/0160-phone-sideways/spec.md), [the design](../specs/0160-phone-sideways/design.html)):
+  - **Which layout** (`useRoomLayout`, `layoutFor`):
+
+    | Device | Upright | Sideways |
+    | --- | --- | --- |
+    | Phone: touch first (`pointer: coarse`), shorter side ≤ 500 px | upright view | sideways view |
+    | Tablet: touch first, larger | upright view | desktop layout |
+    | Anything else | upright view if the window is ≤ 760 px wide and upright | desktop layout |
+
+    Turning switches layouts at once; the stage keeps its place in the page, so the video and a share go on.
+  - **Upright:**
   - **The top bar:** the wordmark; then, by use, the people button, a bell (`ActivityBell`: the activity list, with no count or dot) and my account at the far right. No footer: its items end the account menu.
   - **The stage:** still one screen, with the stage edge to edge under the top bar, hugging the picture but never taller than 60% of the screen. Its info row is the compact `NowWatching`: "Name · what", then LIVE, the time and "N watching".
   - **Under it, the only part that scrolls:** "Live now · N of 6" and the other streams as a feed (`LiveFeed`: full-width pictures, then the same info row; silent, so their sound isn't downloaded; a tap puts one on the stage). With nobody live, "Nobody live · 0 of 6 · 6 free" and who's here as cards (`HereCards`), with how long each has been here, from the API's `here`.
   - **Swiping the stage** ([spec 0159](../specs/0159-swipe-stage/spec.md)): left for the next person live, right for the previous, in the feed's order and wrapping around (`stepOnStage`). The picture follows the finger and slides (`useStageSwipe`); a drag under a quarter of the width, unless it's a quick flick, springs back; reduced motion changes at once. Drags that start on the round buttons, the facecam or the fullscreen button (`data-no-swipe`) are theirs. Dots above the buttons (`StageDots`) show who's on the stage and jump on a tap; they fade with the buttons, and there are none with one person live.
-  - A sideways phone keeps the desktop layout for now (#160).
+  - **Upright on a tablet:** the stage stays full width; the info row and what scrolls under it sit in a centred column, at most 640 px wide.
+  - **Sideways:**
+    - **The stage:** no header, logo or footer. It fills the screen height first and hugs the picture, black at its sides where the light glows.
+    - **The top bar:** a black gradient across the top: who's on the stage (the compact info row, or "Nobody live · 0 of 6 · 6 free") on the left, and the people button, the bell and my account on the right.
+    - **The buttons:** the round buttons at the bottom of the stage; the fullscreen button at its bottom right.
+    - **Fading:** while a stream plays, a touch anywhere shows the controls, and about 2.5 s later the top bar, the buttons and the row's tab fade (`data-fades`), and an open row closes. Over the empty stage nothing fades.
+    - **The streams row** (`StreamsRow`): the other streams as small silent pictures with names, "Live now · N of 6", along the bottom over a black gradient. It's closed at first; a swipe up opens it (`useStageSwipe` with `axis: "vertical"`), a swipe down or the controls fading close it, and the tab at the bottom edge opens it too. A tap puts that person on the stage; a left or right drag does nothing.
 - **Sound:** the big person's plays. Previews are muted, each with its own speaker and a horizontal volume slider; a muted preview's sound isn't downloaded at all. A preview without sound has no speaker.
 - **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so previews and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
 

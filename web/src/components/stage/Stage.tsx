@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
@@ -24,6 +24,7 @@ import { useVideoShape } from "../../hooks/useVideoShape";
 import { useStageSwipe } from "../../hooks/useStageSwipe";
 import { stepOnStage } from "../../media/stagePick";
 import { StageDots } from "./StageDots";
+import { StreamsRow } from "./StreamsRow";
 import { gridFor } from "../../media/ambilight";
 import styles from "./Stage.module.css";
 
@@ -40,8 +41,13 @@ type Props = {
   watchers?: Friend[];
   /** The others in the room, for an empty stage's invitation (spec 0107). */
   others?: Friend[];
-  /** The phone's layout (spec 0158): the compact info row, then the feed, or who's here. */
-  layout?: "phone";
+  /**
+   * The phone's layouts: upright (spec 0158), the compact info row then the feed or who's here;
+   * sideways (spec 0160), the stage filling the screen with a top bar and the streams row.
+   */
+  layout?: "phone" | "sideways";
+  /** Sideways: the people button, the bell and my account, on the right of the top bar. */
+  topRight?: ReactNode;
   /** On the phone: who has this person's stream on their stage, for the feed's cards. */
   watchersOf?: (personId: string) => Friend[];
   /** On the phone, with nobody live: everyone in the room, me included, and when they arrived. */
@@ -82,8 +88,10 @@ export function Stage({
   people = NOBODY,
   meId = "me",
   arrivedAt = NO_ARRIVALS,
+  topRight,
 }: Props) {
   const phone = layout === "phone";
+  const sideways = layout === "sideways";
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -106,7 +114,13 @@ export function Stage({
   const idleTimer = useRef<number | undefined>(undefined);
   // Nothing fades while a control has the keyboard focus, or a menu or the volume slider is open.
   const held = useRef(new Set<string>());
-  const focusInside = () => held.current.size > 0 || (frameRef.current?.contains(document.activeElement) ?? false);
+  // Sideways the top bar is part of it too: its focus, and an open panel (spec 0160).
+  const topRef = useRef<HTMLDivElement>(null);
+  const focusInside = () =>
+    held.current.size > 0 ||
+    (frameRef.current?.contains(document.activeElement) ?? false) ||
+    (topRef.current?.contains(document.activeElement) ?? false) ||
+    Boolean(topRef.current?.querySelector('[aria-expanded="true"]'));
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
@@ -150,10 +164,10 @@ export function Stage({
     for (const s of sharers) {
       if (s.isMe || !s.setSoundOn) continue;
       // The phone's feed is silent (spec 0158): a preview unmuted on desktop isn't downloaded there.
-      const preview = !phone && (thumbnailSound[s.person.id] ?? MUTED).muted === false;
+      const preview = !phone && !sideways && (thumbnailSound[s.person.id] ?? MUTED).muted === false;
       s.setSoundOn(s.person.id === bigId || preview);
     }
-  }, [sharers, bigId, thumbnailSound, phone]);
+  }, [sharers, bigId, thumbnailSound, phone, sideways]);
 
   const changeWatch = (next: WatchPrefs) => {
     setWatch(next);
@@ -214,6 +228,53 @@ export function Stage({
     },
   });
 
+  // Sideways (spec 0160): the streams row, closed at first and each time the phone turns
+  // sideways; a swipe up opens it, a swipe down closes it, and it closes with the controls.
+  const [rowOpen, setRowOpen] = useState(false);
+  const [rowFor, setRowFor] = useState(layout);
+  if (rowFor !== layout) {
+    setRowFor(layout);
+    setRowOpen(false);
+  }
+  // Nobody live: there's no row to open.
+  if (rowOpen && !big) setRowOpen(false);
+  if (rowOpen && sideways && playing && !chromeShown) setRowOpen(false);
+  const rowSwipe = useStageSwipe(slideRef, {
+    enabled: sideways && Boolean(big),
+    axis: "vertical",
+    onOpen: () => setRowOpen(true),
+    onClose: () => setRowOpen(false),
+  });
+  // Turning sideways shows the controls, so the top bar is there to start with.
+  useEffect(() => {
+    if (sideways) showChrome();
+  }, [sideways, showChrome]);
+  // Touches and moves: the frame's, or sideways the whole screen's, so the black at the
+  // stage's sides counts too.
+  const gestures = {
+    onPointerMove: (e: React.PointerEvent) => {
+      showChrome();
+      swipe.onPointerMove(e);
+      rowSwipe.onPointerMove(e);
+    },
+    onPointerDown: (e: React.PointerEvent) => {
+      showChrome();
+      swipe.onPointerDown(e);
+      // Only a drag that starts on the picture opens or closes the row (FR-12).
+      if (slideRef.current?.contains(e.target as Node)) rowSwipe.onPointerDown(e);
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      swipe.onPointerUp(e);
+      rowSwipe.onPointerUp(e);
+    },
+    onPointerCancel: (e: React.PointerEvent) => {
+      swipe.onPointerCancel(e);
+      rowSwipe.onPointerCancel(e);
+    },
+  };
+  // Only over a playing video: notices and the empty stage never fade.
+  const chrome = playing ? (chromeShown ? "shown" : "hidden") : undefined;
+
   const body = () => {
     if (!big || !main) return <EmptyStage canShareScreen={controls.canShareScreen} />;
 
@@ -264,7 +325,13 @@ export function Stage({
   };
 
   return (
-    <section className={styles.stage} data-layout={layout} aria-label="Shared screen">
+    <section
+      className={styles.stage}
+      data-layout={layout}
+      data-chrome={sideways ? chrome : undefined}
+      aria-label="Shared screen"
+      {...(sideways ? gestures : {})}
+    >
       <div
         className={styles.box}
         data-shape={shape.toFixed(4)}
@@ -283,18 +350,8 @@ export function Stage({
         <div
           ref={frameRef}
           className={styles.frame}
-          // Only over a playing video: notices and the empty stage never fade.
-          data-chrome={playing ? (chromeShown ? "shown" : "hidden") : undefined}
-          onPointerMove={(e) => {
-            showChrome();
-            swipe.onPointerMove(e);
-          }}
-          onPointerDown={(e) => {
-            showChrome();
-            swipe.onPointerDown(e);
-          }}
-          onPointerUp={swipe.onPointerUp}
-          onPointerCancel={swipe.onPointerCancel}
+          data-chrome={chrome}
+          {...(sideways ? {} : gestures)}
           onPointerLeave={leaveChrome}
           onFocus={showChrome}
         >
@@ -344,7 +401,29 @@ export function Stage({
         </div>
       </div>
 
-      {phone ? (
+      {sideways ? (
+        <>
+          {/* Over the top, across the screen: who's on the stage, and my buttons (spec 0160). */}
+          <div ref={topRef} className={styles.top} data-fades onFocus={showChrome}>
+            <NowWatching compact sharer={big} watchers={watchers} free={controls.free} />
+            <div className={styles.topRight} data-no-swipe>
+              {topRight}
+            </div>
+          </div>
+          {big && sharers.length > 1 && (
+            <StreamsRow
+              others={sharers.filter((s) => s !== big)}
+              liveCount={STREAM_PLACES - controls.free}
+              open={rowOpen}
+              onOpen={() => {
+                setRowOpen(true);
+                showChrome();
+              }}
+              onPick={(id) => pick(id)}
+            />
+          )}
+        </>
+      ) : phone ? (
         <>
           <div className={styles.info}>
             <NowWatching compact sharer={big} watchers={watchers} free={controls.free} />
