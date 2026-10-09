@@ -8,7 +8,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** The API remembers when each person arrived, tests first:
+- [x] **T1** The API remembers when each person arrived, tests first:
   - `RoomSeatsTest`:
     - a seat's `since` is set when it's given;
     - it's kept across a leave and a return within the kept time;
@@ -17,6 +17,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `StreamsControllerTest`: `GET /api/streams` has `here: [{ userId, since, mine }]` for everyone seated;
   - then `Seat.since`, `RoomSeats.arrivals()`, and `StreamsView.here`.
   - · covers FR-19 · verify: `cd api && ./mvnw test`
+  - Done: `Seat.since`, `RoomSeats.arrivals()`, `StreamsView.here`; 5 tests; API suite 168 green.
 - [x] **T2** The web reads it: `here` in `api/types.ts` (optional, for an older API); `useRoomSession` exposes `arrivedAt` by person id ("me", "user-42"). `useRoomSession.test.ts`: mapped by id, and empty without `here`. · covers FR-19 · verify: `useRoomSession.test.ts`
   - Done: `here` in the streams state (optional); `arrivedAt` by person id in the session.
 - [x] **T3** `hereFor(sinceMs, nowMs)`: "just arrived" under a minute, "here N min", "here 1 h 5 min". `hereFor.test.ts`. · covers FR-18, FR-19 · verify: `hereFor.test.ts`
