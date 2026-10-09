@@ -2530,6 +2530,61 @@ describe("room: on a phone sideways (spec 0160)", () => {
     await waitFor(() => expect(room.soundPublication("user-2")!.isSubscribed).toBe(false));
   });
 
+  it("keeps an open panel, and the bar it hangs from, past the idle time", async () => {
+    await sidewaysWith(["Marina", "Rafa"]);
+    await screen.findByLabelText("Marina's shared screen");
+    fireEvent.pointerDown(stageLayer(), { pointerId: 3, clientX: 10, clientY: 10, button: 0 });
+    await userEvent.setup().click(within(stageLayer()).getByRole("button", { name: "Activity" }));
+    expect(screen.getByRole("dialog", { name: "Activity" })).toBeInTheDocument();
+    // A tap on a phone may not focus the button: only the open panel holds the bar.
+    act(() => (document.activeElement as HTMLElement | null)?.blur());
+    await new Promise((r) => setTimeout(r, 3200));
+    expect(stageLayer()).toHaveAttribute("data-chrome", "shown");
+    expect(screen.getByRole("dialog", { name: "Activity" })).toBeInTheDocument();
+  }, 8000);
+
+  it("opens the row only from a drag on the picture, not the black sides or the facecam", async () => {
+    phoneSideways();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 732, height: 412 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Bruno", 7, "screen", undefined, new Date(Date.now() - 300_000)),
+      someoneSharing("Bruno", 7, "camera", undefined, new Date(Date.now() - 300_000)),
+      someoneSharing("Ana", 3, "screen"),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+      lastRoom().publishCamera("user-7");
+      lastRoom().publishScreen("user-3");
+    });
+    const facecam = await waitFor(() => document.querySelector("[data-facecam]")!);
+    drag(0, -150, facecam);
+    drag(0, -150, stageLayer());
+    await new Promise((r) => setTimeout(r, 100));
+    expect(row()).toBeNull();
+  });
+
+  it("doesn't open the row from the empty stage, and has no tab with nobody else live", async () => {
+    phoneSideways();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 732, height: 412 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const bars = stageLayer().querySelector("[data-bars]")!;
+    drag(0, -150, bars);
+    act(() => {
+      server.streams = [someoneSharing("Marina", 2)];
+    });
+    act(() => {
+      lastRoom().publishScreen("user-2");
+    });
+    await screen.findByRole("heading", { level: 2, name: "Marina · Screen" });
+    expect(row()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show the other streams" })).toBeNull();
+  });
+
   it("doesn't change the stream on a left or right drag, and drags on the buttons don't open the row", async () => {
     await sidewaysWith(["Marina", "Rafa"]);
     await screen.findByLabelText("Marina's shared screen");

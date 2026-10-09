@@ -210,6 +210,9 @@
 }
 
 .topRight {
+  /* The panels under these buttons fit the short screen and scroll inside (FR-5). */
+  --panel-max: calc(100dvh - 64px);
+  --panel-overflow: auto;
   flex: none;
   display: flex;
   align-items: center;

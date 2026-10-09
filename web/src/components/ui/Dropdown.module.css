@@ -30,7 +30,10 @@
 /* Sections stacked with a clear 2px cut between them: the divider is the page behind, sharp. */
 .roll {
   min-height: 0;
+  /* Sideways on a phone, as tall as the screen allows, scrolling inside (spec 0160). */
+  max-height: var(--panel-max, none);
   overflow: hidden;
+  overflow-y: var(--panel-overflow, hidden);
   display: flex;
   flex-direction: column;
   gap: 2px;

@@ -114,7 +114,13 @@ export function Stage({
   const idleTimer = useRef<number | undefined>(undefined);
   // Nothing fades while a control has the keyboard focus, or a menu or the volume slider is open.
   const held = useRef(new Set<string>());
-  const focusInside = () => held.current.size > 0 || (frameRef.current?.contains(document.activeElement) ?? false);
+  // Sideways the top bar is part of it too: its focus, and an open panel (spec 0160).
+  const topRef = useRef<HTMLDivElement>(null);
+  const focusInside = () =>
+    held.current.size > 0 ||
+    (frameRef.current?.contains(document.activeElement) ?? false) ||
+    (topRef.current?.contains(document.activeElement) ?? false) ||
+    Boolean(topRef.current?.querySelector('[aria-expanded="true"]'));
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
@@ -230,13 +236,19 @@ export function Stage({
     setRowFor(layout);
     setRowOpen(false);
   }
+  // Nobody live: there's no row to open.
+  if (rowOpen && !big) setRowOpen(false);
   if (rowOpen && sideways && playing && !chromeShown) setRowOpen(false);
   const rowSwipe = useStageSwipe(slideRef, {
-    enabled: sideways,
+    enabled: sideways && Boolean(big),
     axis: "vertical",
     onOpen: () => setRowOpen(true),
     onClose: () => setRowOpen(false),
   });
+  // Turning sideways shows the controls, so the top bar is there to start with.
+  useEffect(() => {
+    if (sideways) showChrome();
+  }, [sideways, showChrome]);
   // Touches and moves: the frame's, or sideways the whole screen's, so the black at the
   // stage's sides counts too.
   const gestures = {
@@ -248,7 +260,8 @@ export function Stage({
     onPointerDown: (e: React.PointerEvent) => {
       showChrome();
       swipe.onPointerDown(e);
-      rowSwipe.onPointerDown(e);
+      // Only a drag that starts on the picture opens or closes the row (FR-12).
+      if (slideRef.current?.contains(e.target as Node)) rowSwipe.onPointerDown(e);
     },
     onPointerUp: (e: React.PointerEvent) => {
       swipe.onPointerUp(e);
@@ -391,13 +404,13 @@ export function Stage({
       {sideways ? (
         <>
           {/* Over the top, across the screen: who's on the stage, and my buttons (spec 0160). */}
-          <div className={styles.top} data-fades>
+          <div ref={topRef} className={styles.top} data-fades onFocus={showChrome}>
             <NowWatching compact sharer={big} watchers={watchers} free={controls.free} />
             <div className={styles.topRight} data-no-swipe>
               {topRight}
             </div>
           </div>
-          {big && (
+          {big && sharers.length > 1 && (
             <StreamsRow
               others={sharers.filter((s) => s !== big)}
               liveCount={STREAM_PLACES - controls.free}

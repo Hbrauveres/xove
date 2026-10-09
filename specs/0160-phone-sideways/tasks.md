@@ -48,7 +48,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `layout.test.ts`: the box's size.
   - · covers FR-3, FR-4, FR-5, FR-6, FR-7 · verify: `cd web && npm test && npm run build`
-  - Done: `Room` without header or footer sideways, my buttons handed to `Stage` as `topRight`; `Stage` `layout="sideways"`: the full-screen layer, the height-first box, the top bar; the fullscreen button moves to the bottom right and the round buttons sit higher, clear of the tab (seen in the harness). The panels fit as they are, so `Dropdown` is unchanged.
+  - Done: `Room` without header or footer sideways, my buttons handed to `Stage` as `topRight`; `Stage` `layout="sideways"`: the full-screen layer, the height-first box, the top bar; the fullscreen button moves to the bottom right and the round buttons sit higher, clear of the tab (seen in the harness). The panels are capped sideways (`--panel-max`, scrolling inside).
 - [x] **T5** Fading sideways:
   - the stage layer listens for touches and carries `data-chrome`;
   - the top bar, buttons and tab fade with it;
@@ -80,8 +80,16 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `CLAUDE.md`: test counts.
   - Checked in the local Playwright harness against the design: phone upright, phone sideways (live, nobody live, row open), tablet upright and sideways.
   - · verify: the pages describe the new behaviour; the harness screenshots match the design
-  - Done: "On a phone or tablet" in the architecture page, decision 43, web count 462. Harness (Playwright, real `RoomPage` with fakes): phone upright, sideways live, nobody live, a portrait camera, the row opened by a swipe up and closed after idling, tablet upright (640 px column) and sideways (desktop).
-- [ ] **T9** Review every AC (`/review`), then the PR with `Closes #160`, `Closes #161`, `Closes #163`. Henrique checks AC-7 on staging: Android Chrome and iPhone Safari sideways, and a tablet. · verify: no gaps left; AC-7 written in the PR
+  - Done: "On a phone or tablet" in the architecture page, decision 43, web count 465. Harness (Playwright, real `RoomPage` with fakes): phone upright, sideways live, nobody live, a portrait camera, the row opened by a swipe up and closed after idling, tablet upright (640 px column) and sideways (desktop).
+- [x] **T9** Review every AC (`/review`), then the PR with `Closes #160`, `Closes #161`, `Closes #163`. Henrique checks AC-7 on staging: Android Chrome and iPhone Safari sideways, and a tablet. · verify: no gaps left; AC-7 written in the PR
+  - Done: review fixed:
+    - an open panel (or focus in the top bar) keeps the controls shown;
+    - the panels capped to the screen and scrolling;
+    - no row from the empty stage, and no tab with nobody else live;
+    - the row opens only from a drag on the picture;
+    - the controls show when turning sideways.
+
+    Tests for each, and the panel checked at 667 × 375 in the harness. AC-7 is in the PR.
 
 ## Coverage
 
