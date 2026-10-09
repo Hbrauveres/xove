@@ -362,7 +362,8 @@ export function Stage({
 
           {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
           <div className={styles.controls} data-no-swipe>
-            {phone && (
+            {/* Upright and sideways alike: where you are among the people live (specs 0159, 0160). */}
+            {(phone || sideways) && (
               <StageDots
                 people={sharers.map((s) => s.person)}
                 meId={meId}

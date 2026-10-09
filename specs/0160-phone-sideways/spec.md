@@ -47,7 +47,7 @@ Everyone watching on a phone turned sideways, and on a tablet.
 
 **After the first check on a phone (2026-10-09)**
 
-- **FR-13** On a phone or tablet, in the upright and the sideways views, the browser's address bar goes away: the first tap puts the whole room in fullscreen, where the browser allows it (Android), and again after each turn if it was left. Turning the phone keeps it fullscreen. A desktop window never goes fullscreen by itself. The stage's own fullscreen button still works as before.
+- **FR-13** ~~A tap puts the whole room in fullscreen.~~ Removed after the phone checks (2026-10-09): a browser tab can't keep it (back drops it, and it can only start on a tap). Phones and tablets will use the home-screen app instead (#171).
 - **FR-14** Added to the home screen, Xovê opens with no browser bar at all, on Android and iPhone. That's the only way on iPhone, where Safari doesn't let a page go fullscreen.
 - **FR-15** On a short, wide screen (a phone sideways), the setup window for a screen or a camera puts a smaller preview on the left and the title, settings, hint and buttons on the right, so it fits without scrolling. Upright and on desktop it's unchanged.
 
@@ -62,7 +62,7 @@ Everyone watching on a phone turned sideways, and on a tablet.
 - **AC-6** A left or right drag on the sideways stage changes the stream, as upright; drags starting on the facecam, the buttons or the black sides don't swipe or open the row (automated test).
 - **AC-7** On staging, on Android Chrome and iPhone Safari, sideways: the stage fills the screen with the glow at its sides, the top gradient and the buttons fade and come back on a touch, the row opens and closes with a swipe and the tab, a tap in the row changes the stage, and turning the phone back and forth keeps the video playing (manual, written in the PR). On a tablet (or a browser's tablet emulation): upright, the upright view with the centred column; sideways, the desktop layout (manual).
 
-- **AC-8** On a phone or tablet, upright or sideways, the first tap (when the finger lifts) asks for fullscreen of the whole page, once until the next turn; turning keeps it; a desktop window doesn't ask; the page's fullscreen doesn't count as the player's (windows and errors stay where they were) (automated test). On Android, a tap hides the address bar, upright and sideways (manual).
+- **AC-8** ~~The first tap asks for fullscreen.~~ Removed with FR-13; the page's fullscreen still doesn't count as the player's (automated test).
 - **AC-9** The web manifest's display is fullscreen (automated test); added to the home screen on Android and iPhone, it opens with no browser bar (manual).
 - **AC-10** Sideways, the setup window shows its preview on the left and its settings and buttons on the right, without scrolling, at 915 × 412 and 667 × 375 (automated test of the styles; checked in the harness; manual on a phone).
 
@@ -82,7 +82,8 @@ Made with Henrique, 2026-10-09:
 - **Over the empty stage nothing fades,** as on desktop.
 - **Panels open under the top right,** as tall as the screen allows.
 
-- **The address bar** (after the first phone check): fullscreen on the first tap, upright and sideways, on phones and tablets where allowed, plus the home-screen app opening with no browser bar.
+- **The address bar** (after the phone checks): the home-screen app opening with no browser bar; the tap-to-fullscreen was tried and removed (#171 makes the app the way in).
+- **The dots sideways too:** where you are among the people live shows in both phone views.
 - **The setup window sideways:** the preview on the left, the settings on the right.
 
 ## Open questions

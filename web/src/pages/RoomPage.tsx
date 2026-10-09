@@ -14,8 +14,7 @@ import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
-import { TOUCH_QUERY, useRoomLayout } from "../hooks/useRoomLayout";
-import { usePageFullscreen } from "../hooks/usePageFullscreen";
+import { useRoomLayout } from "../hooks/useRoomLayout";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useStagePick } from "../hooks/useStagePick";
@@ -92,9 +91,6 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   const sideways = layout === "sideways";
   // Either phone view: the bell, and the footer's items in my menu (specs 0158 and 0160).
   const handheld = phone || sideways;
-  // On a phone or tablet, a tap puts the whole room in fullscreen, so the address bar goes (spec 0160).
-  const touch = window.matchMedia?.(TOUCH_QUERY).matches ?? false;
-  usePageFullscreen(handheld && touch, layout);
   // For the phone's feed: who has each sharer on their stage, as under the stage.
   const watchersOf = useCallback(
     (id: string) => people.filter((p) => p.id !== id && watchingOf[p.id]?.sharerId === id),

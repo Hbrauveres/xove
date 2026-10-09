@@ -109,6 +109,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   Tests: `useLiveKitRoom.test.ts`, `layout.test.ts`, `StreamsRow.test.tsx`, `RoomPage.test.tsx`; checked in the harness. · covers FR-10, FR-12, AC-5, AC-6 · verify: `cd web && npm test && npm run build`
 
+- [x] **T12** Before #171: the tap-to-fullscreen removed (`usePageFullscreen`), since a browser tab can't keep it and the home-screen app will be the way in; the dots show sideways too. Tests: `RoomPage.test.tsx` (the dots sideways); the hook's tests removed with it. · covers FR-13 (removed), FR-12 · verify: `cd web && npm test && npm run build`
+
 ## Coverage
 
 | Requirement | Task |
