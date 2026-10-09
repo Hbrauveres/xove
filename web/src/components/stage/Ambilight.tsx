@@ -20,6 +20,8 @@ export const EASE_MS = 120;
 type Props = {
   /** The stage's video, or null when nothing is on the stage. */
   video: HTMLVideoElement | null;
+  /** A still picture to light when there's no video: the empty stage's colour bars (spec 0158). */
+  still?: HTMLCanvasElement | null;
   prefs: AmbilightPrefs;
   /** The stage's shape, width ÷ height (spec 0107): the glow follows it. */
   shape?: number;
@@ -35,7 +37,7 @@ const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce
  * the result, so a 4K monitor costs the same as a small one. It updates with the screen's
  * refresh, and stops while the tab is hidden, the video is paused or missing, or it's off.
  */
-export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
+export function Ambilight({ video, still = null, prefs, shape = WIDESCREEN }: Props) {
   const { cols, rows } = gridFor(shape);
   const layout = useMemo(() => glowLayout(cols, rows), [cols, rows]);
   // The fade mask's alpha, computed once per grid.
@@ -54,6 +56,36 @@ export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
   }, [video]);
 
   const shown = prefs.on && video !== null && playing;
+  // A still picture is lit once, while there's no video.
+  const stillShown = prefs.on && video === null && still !== null;
+
+  useEffect(() => {
+    const out = canvas.current?.getContext("2d");
+    if (!stillShown || !still || !out) return;
+    const { width, height } = layout;
+    const edgeCanvas = document.createElement("canvas");
+    edgeCanvas.width = width;
+    edgeCanvas.height = height;
+    const edge = edgeCanvas.getContext("2d");
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext("2d");
+    if (!edge || !maskCtx) return;
+    const img = maskCtx.createImageData(width, height);
+    for (let i = 0; i < maskAlpha.length; i++) img.data[i * 4 + 3] = maskAlpha[i];
+    maskCtx.putImageData(img, 0, 0);
+    for (const { src, dst } of edgeDraws(layout, still.width, still.height)) {
+      edge.drawImage(still, src[0], src[1], src[2], src[3], dst[0], dst[1], dst[2], dst[3]);
+    }
+    out.globalCompositeOperation = "copy";
+    out.filter = `blur(${CELL_PX * 3}px)`;
+    out.drawImage(edgeCanvas, 0, 0);
+    out.filter = "none";
+    out.globalCompositeOperation = "destination-in";
+    out.drawImage(maskCanvas, 0, 0);
+    out.globalCompositeOperation = "source-over";
+  }, [stillShown, still, layout, maskAlpha]);
 
   useEffect(() => {
     const out = canvas.current?.getContext("2d");
@@ -137,17 +169,18 @@ export function Ambilight({ video, prefs, shape = WIDESCREEN }: Props) {
     };
   }, [shown, video, layout, maskAlpha]);
 
-  // No stream: no light at all. Switched off or paused: the light fades out (and nothing is
-  // drawn), and fades back in.
-  if (!video) return null;
+  // No stream and no still picture: no light at all. Switched off or paused: the light fades
+  // out (and nothing is drawn), and fades back in.
+  if (!video && !still) return null;
+  const lit = shown || stillShown;
   return (
     <canvas
       ref={canvas}
       className={styles.light}
       width={layout.width}
       height={layout.height}
-      style={{ ...layout.placement, opacity: shown ? prefs.brightness : 0 }}
-      data-on={shown || undefined}
+      style={{ ...layout.placement, opacity: lit ? prefs.brightness : 0 }}
+      data-on={lit || undefined}
       aria-hidden="true"
     />
   );

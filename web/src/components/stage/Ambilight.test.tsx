@@ -13,6 +13,8 @@ let blurs: string[] = [];
 let composites: string[] = [];
 let masks = 0;
 let alphas: number[] = [];
+/** Draws of a still picture (the empty stage's bars, spec 0158). */
+let stillDraws = 0;
 function fakeContext(this: HTMLCanvasElement) {
   return {
     canvas: this,
@@ -38,6 +40,7 @@ function fakeContext(this: HTMLCanvasElement) {
     clearRect: () => {},
     drawImage: (source: unknown) => {
       if (source instanceof HTMLVideoElement) pictureDraws++;
+      if (source instanceof HTMLCanvasElement && source.dataset.still) stillDraws++;
     },
     createImageData: (w: number, h: number) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
     putImageData: () => {
@@ -64,7 +67,7 @@ const updates = () => pictureDraws / 9;
 
 let hidden = false;
 beforeEach(() => {
-  pictureDraws = pixelReads = masks = 0;
+  pictureDraws = pixelReads = masks = stillDraws = 0;
   alphas = [];
   blurs = [];
   composites = [];
@@ -217,5 +220,38 @@ describe("ambilight drawn by the graphics pipeline (specs 0104 and 0118)", () =>
     const light = container.querySelector("canvas")!;
     expect([light.width, light.height]).toEqual([l.width, l.height]);
     expect(light.style.left).toBe(l.placement.left);
+  });
+});
+
+/** A still picture, like the empty stage's colour bars. */
+function stillPicture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 70;
+  canvas.height = 40;
+  canvas.dataset.still = "bars";
+  return canvas;
+}
+
+describe("ambilight for a still picture: the empty stage's bars (spec 0158)", () => {
+  it("draws the still picture's edges once, with no loop, and shows the light", () => {
+    const { container } = render(<Ambilight video={null} still={stillPicture()} prefs={{ on: true, brightness: 0.8 }} />);
+    expect(stillDraws).toBe(9);
+    advance(1000);
+    expect(stillDraws).toBe(9);
+    const light = container.querySelector("canvas") as HTMLCanvasElement;
+    expect(light.style.opacity).toBe("0.8");
+  });
+
+  it("follows the switch: no light when it's off", () => {
+    const { container } = render(<Ambilight video={null} still={stillPicture()} prefs={{ on: false, brightness: 0.8 }} />);
+    expect(stillDraws).toBe(0);
+    expect((container.querySelector("canvas") as HTMLCanvasElement).style.opacity).toBe("0");
+  });
+
+  it("prefers the video when there is one", () => {
+    render(<Ambilight video={playingVideo()} still={stillPicture()} prefs={{ on: true, brightness: 0.9 }} />);
+    advance(200);
+    expect(stillDraws).toBe(0);
+    expect(updates()).toBeGreaterThan(0);
   });
 });

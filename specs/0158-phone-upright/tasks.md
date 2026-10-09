@@ -58,13 +58,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   `HereCards.test.tsx`, with fake timers for the tick.
   - · covers FR-18, FR-19 · verify: `HereCards.test.tsx`
   - Done: `HereCards`; no time shown for someone the API doesn't list yet.
-- [ ] **T10** The glowing colour bars:
-  - `EmptyStage`'s colours in one exported list;
+- [x] **T10** The glowing colour bars:
+  - `EmptyStage`'s colours in one exported list, at full colour (desktop too);
   - the line "Turn on your camera with the button below." when a screen can't be shared;
-  - `Ambilight` takes a still canvas and draws it once (no loop);
+  - `Ambilight` takes a still canvas and draws it once (no loop); `Stage` passes it whenever the stage is empty, desktop and phone;
   - `Ambilight.test.tsx`: a still picture is drawn once and shown;
   - `EmptyStage` test: the camera-only line.
   - · covers FR-15, FR-16 · verify: `Ambilight.test.tsx`, `EmptyStage.test.tsx`
+  - Done: full-colour `BARS` with `barsPicture()`; `Ambilight` `still`; `Stage` lights the empty stage on desktop and phone; the line sits above the buttons.
 
 ## Wiring
 

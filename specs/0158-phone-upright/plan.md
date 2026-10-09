@@ -55,14 +55,14 @@
 
 **Nobody live (FR-15 to FR-19).**
 
-- **The empty stage on the phone (FR-15).** It's `EmptyStage`, with the line "Turn on your camera with the button below." when `canShareScreen()` is false.
+- **The empty stage (FR-15).** `EmptyStage`'s bars go from 7% to full colour, with a shadow under the line so it reads over them, on desktop and phone. The line is "Turn on your camera with the button below." when `canShareScreen()` is false.
   - Today the line is the same everywhere.
   - The desktop never lacks the screen button, so it keeps its line.
 - **The glowing colour bars (FR-16).**
   - `EmptyStage`'s colours move to one exported list.
   - `Ambilight` learns to take a still picture as well as a video: a small canvas with the bars drawn on it once.
   - With a still picture, it draws the edges once (no animation loop) and shows the result.
-  - `Stage` passes that canvas only when `layout === "phone"` and the stage is empty. The desktop's empty stage keeps no light.
+  - `Stage` passes that canvas whenever the stage is empty, on desktop and phone (FR-16).
 - **"Nobody live" and "0 of 6 · 6 free" (FR-17)** come from `NowWatching` in its compact form, given no sharer: it replaces the desktop's "The stage is yours." there.
 - **The "Here" cards (FR-18, FR-18a).** Only while nobody is live; otherwise the feed is there, and who's in the room stays in the people panel. A new `HereCards` component:
   - the heading and the count;

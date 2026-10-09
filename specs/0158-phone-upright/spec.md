@@ -60,8 +60,8 @@ Everyone who opens the room on a phone held upright.
 
 **Nobody live**
 
-- **FR-15** With nobody live, the stage shows the same picture as on desktop: the colour bars, with the line about how to go live and the round buttons. On a phone that can't share a screen, the line says "Turn on your camera with the button below."
-- **FR-16** The colour bars glow with the ambilight, as a live picture does. This is the phone view only; on desktop, the empty stage stays without light, as today.
+- **FR-15** With nobody live, the stage shows the colour bars at full colour (today they're faded to 7%), with the line about how to go live and the round buttons. This applies on desktop too. On a phone that can't share a screen, the line says "Turn on your camera with the button below."
+- **FR-16** The colour bars glow with the ambilight, as a live picture does, on the phone and on desktop, following the ambilight's on/off and brightness.
 - **FR-17** Under the stage: "Nobody live" and "0 of 6 · 6 free".
 - **FR-18** Then, only while nobody is live, a heading "Here", with how many are in the room. Under it, everyone in the room, each on a soft card with no dividing lines (the design's "H3 · Cards"):
   - their avatar, their name, and under the name how long they've been here: "just arrived" under a minute, then "here N min", then "here 1 h 5 min";
@@ -79,7 +79,7 @@ Everyone who opens the room on a phone held upright.
 - **AC-5** The info row shows the avatar with its ring, "Name · what", the filled LIVE badge, the time and "N watching" in words; the stage has no LIVE badge over it (automated test).
 - **AC-6** "Live now" shows "N of 6" and every live stream except the one on the stage, each as a picture with nothing over it, then the avatar, "Name · what", the LIVE badge, the time and "N watching"; the feed has no sound controls and its streams' sound isn't downloaded (automated test).
 - **AC-7** Tapping a stream in the feed puts it on the stage; scrolling the feed leaves the top bar, the stage and the info row in place (automated test; manual on a phone for the scrolling).
-- **AC-8** With nobody live: the colour bars with the right line and buttons, "Nobody live", "0 of 6 · 6 free", and "Here" with a card for everyone in the room, me first as "(you)", the others with "WAITING" (automated test). On a phone, the bars glow (manual).
+- **AC-8** With nobody live: the colour bars at full colour (on desktop too) with the right line and buttons, "Nobody live", "0 of 6 · 6 free", and "Here" with a card for everyone in the room, me first as "(you)", the others with "WAITING" (automated test). The bars glow, on the phone and on desktop (automated test that the ambilight gets the bars; manual for the look).
 - **AC-9** Each card says how long that person has been here: "just arrived", "here N min", "here 1 h 5 min". The time comes from when they entered the room, and a reload doesn't reset it (automated tests, web and API).
 - **AC-10** On staging, on a real phone (Android Chrome and iPhone Safari): the view matches the design's upright phone, live and with nobody live, and nothing scrolls sideways (manual, written in the PR).
 
@@ -106,6 +106,7 @@ Made with Henrique on the drafts, 2026-10-08:
 - **The stage stays pinned:** only the feed or the cards scroll under it (decided with the plan, 2026-10-08).
 - **The feed is silent:** sound comes only from the stage.
 - **Nobody live:** the desktop's colour bars, glowing with the ambilight, then "Nobody live" and who's here. A standby viewfinder and a go-live card were drafted and dropped.
+- **Bright bars, glowing, on desktop too** (2026-10-09, during the build): the desktop's faded bars become full colour and get the ambilight, so both views match.
 - **Who's here as cards:** soft cards with how long each person has been here, and no dividing lines. A plain list with lines, an avatar grid and chips were drafted and dropped. The room starts reporting when each person entered.
 
 ## Open questions

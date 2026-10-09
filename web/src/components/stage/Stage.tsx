@@ -4,7 +4,7 @@ import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
 import type { Friend, LiveFeed, Sharer } from "../../types";
-import { EmptyStage } from "./EmptyStage";
+import { barsPicture, EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
@@ -170,7 +170,7 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
   };
 
   const body = () => {
-    if (!big || !main) return <EmptyStage />;
+    if (!big || !main) return <EmptyStage canShareScreen={controls.canShareScreen} />;
 
     // My own stream as everyone sees it, without its sound (it would echo). Sharing
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
@@ -227,6 +227,8 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
         <Ambilight
           key={big ? `${big.person.id}|${stage.mainKind}|${gridKey(shape)}` : "none"}
           video={big ? bigVideoEl : null}
+          // Nobody live: the colour bars glow too (spec 0158).
+          still={big ? null : barsPicture()}
           prefs={ambilight}
           shape={shape}
         />
