@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { BARS, EmptyStage } from "./EmptyStage";
+import { BARS } from "./bars";
+import { EmptyStage } from "./EmptyStage";
 
 describe("the empty stage (spec 0158)", () => {
   it("shows the colour bars at full colour", () => {

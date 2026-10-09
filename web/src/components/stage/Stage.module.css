@@ -134,3 +134,31 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/*
+ * A swipe on the phone (spec 0159): the picture follows the finger (`--swipe`), then eases out
+ * and the next one eases in. Up and down stays with the page.
+ */
+.slide {
+  position: absolute;
+  inset: 0;
+}
+
+/* Only on the phone: a transform would put the desktop's facecam under the fullscreen button. */
+.stage[data-layout="phone"] .slide {
+  transform: translateX(var(--swipe, 0px));
+}
+
+.slide[data-phase="settle"] {
+  transition: transform 0.18s ease;
+}
+
+.stage[data-layout="phone"] .frame {
+  touch-action: pan-y;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide[data-phase="settle"] {
+    transition: none;
+  }
+}

@@ -16,6 +16,8 @@ export function StageOverlay({ fullscreen, onFullscreen }: Props) {
       <div className={styles.top}>
         <button
           type="button"
+          // A button, never the start of a swipe (spec 0159).
+          data-no-swipe
           className={styles.iconButton}
           onClick={onFullscreen}
           aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}

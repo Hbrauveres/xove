@@ -2251,3 +2251,154 @@ describe("room: the empty stage glows (spec 0158)", () => {
     expect(Number(light.style.opacity)).toBeGreaterThan(0);
   });
 });
+
+describe("room: swiping the phone's stage (spec 0159)", () => {
+  const desktopMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
+  });
+
+  /** Three people sharing their screens, in this order (the longest first), on a phone. */
+  async function threeLive(withSound = false) {
+    phoneWindow();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 400, height: 225 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    const ago = (s: number) => new Date(Date.now() - s * 1000);
+    server.streams = [
+      someoneSharing("Marina", 2, "screen", undefined, ago(300)),
+      someoneSharing("Rafa", 3, "screen", undefined, ago(200)),
+      someoneSharing("Duda", 4, "screen", undefined, ago(100)),
+    ];
+    renderRoom();
+    await connected();
+    const room = lastRoom();
+    act(() => {
+      for (const id of ["user-2", "user-3", "user-4"]) room.publishScreen(id, { withSound });
+    });
+    await screen.findByRole("heading", { level: 2, name: "Marina · Screen" });
+    return { server, room };
+  }
+
+  const onStage = (name: string) => screen.findByRole("heading", { level: 2, name: `${name} · Screen` });
+  /** A drag on the stage's picture, quick, of `dx` pixels. */
+  function swipe(dx: number, on?: Element) {
+    const target = on ?? screen.getByRole("region", { name: /shared screen/i }).querySelector("video")!;
+    fireEvent.pointerDown(target, { pointerId: 1, clientX: 200, clientY: 100, button: 0 });
+    fireEvent.pointerMove(target, { pointerId: 1, clientX: 200 + dx, clientY: 102 });
+    fireEvent.pointerUp(target, { pointerId: 1, clientX: 200 + dx, clientY: 102 });
+  }
+
+  it("goes to the next person on a swipe left, the previous on a swipe right, wrapping around", async () => {
+    await threeLive();
+    // Each swipe slides the next one in; the next swipe waits until it's in place.
+    const slidIn = () => new Promise((r) => setTimeout(r, 250));
+    swipe(-200);
+    await onStage("Rafa");
+    await slidIn();
+    swipe(-200);
+    await onStage("Duda");
+    await slidIn();
+    swipe(-200);
+    await onStage("Marina");
+    await slidIn();
+    swipe(200);
+    await onStage("Duda");
+  });
+
+  it("changes nothing on a short drag", async () => {
+    await threeLive();
+    swipe(-20);
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+  });
+
+  it("leaves the stage alone when the drag starts on a round button or the fullscreen button", async () => {
+    await threeLive();
+    const stageRegion = screen.getByRole("region", { name: /shared screen/i });
+    swipe(-200, stageRegion.querySelector("[data-no-swipe] button[aria-label*=camera i]")!);
+    swipe(-200, within(stageRegion).getByRole("button", { name: "Fullscreen" }));
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+  });
+
+  it("leaves the stage alone when the drag starts on the facecam", async () => {
+    phoneWindow();
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 400, height: 225 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    server.streams = [
+      someoneSharing("Bruno", 7, "screen", undefined, new Date(Date.now() - 300_000)),
+      someoneSharing("Bruno", 7, "camera", undefined, new Date(Date.now() - 300_000)),
+      someoneSharing("Ana", 3, "screen"),
+    ];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+      lastRoom().publishCamera("user-7");
+      lastRoom().publishScreen("user-3");
+    });
+    const facecam = await waitFor(() => {
+      const f = document.querySelector("[data-facecam]");
+      expect(f).not.toBeNull();
+      return f!;
+    });
+    swipe(-200, facecam);
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { level: 2, name: "Bruno · Screen with camera" })).toBeInTheDocument();
+  });
+
+  it("moves the sound, the feed and what I watch with the stage", async () => {
+    const { server, room } = await threeLive(true);
+    swipe(-200);
+    await onStage("Rafa");
+    await waitFor(() => expect(room.soundPublication("user-3")!.isSubscribed).toBe(true));
+    expect(room.soundPublication("user-2")!.isSubscribed).toBe(false);
+    const feed = screen.getByRole("region", { name: /Live now/ });
+    expect(within(feed).getByRole("heading", { name: "Marina · Screen" })).toBeInTheDocument();
+    await waitFor(
+      () =>
+        expect(server.calls.filter((c) => c.method === "PUT" && c.path === "/api/streams/watching").at(-1)?.body).toEqual({
+          sharerId: 3,
+          kind: "screen",
+        }),
+      { timeout: 3000 },
+    );
+  });
+
+  it("ignores a mostly up-and-down drag", async () => {
+    await threeLive();
+    const video = screen.getByRole("region", { name: /shared screen/i }).querySelector("video")!;
+    fireEvent.pointerDown(video, { pointerId: 1, clientX: 200, clientY: 100, button: 0 });
+    fireEvent.pointerMove(video, { pointerId: 1, clientX: 140, clientY: 220 });
+    fireEvent.pointerUp(video, { pointerId: 1, clientX: 140, clientY: 220 });
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+  });
+
+  it("doesn't swipe on the desktop layout", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 400, height: 225 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Marina", 2, "screen", undefined, new Date(Date.now() - 300_000)), someoneSharing("Rafa", 3)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-2");
+      lastRoom().publishScreen("user-3");
+    });
+    await screen.findByRole("heading", { name: "Marina" });
+    swipe(-200);
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { name: "Marina" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch Rafa" })).toBeNull();
+  });
+
+  it("has a dot per person live, and a tap on one puts them on the stage", async () => {
+    await threeLive();
+    const user = userEvent.setup();
+    expect(screen.getByRole("button", { name: "Watch Marina" })).toHaveAttribute("aria-current", "true");
+    await user.click(screen.getByRole("button", { name: "Watch Duda" }));
+    await onStage("Duda");
+    expect(screen.getByRole("button", { name: "Watch Duda" })).toHaveAttribute("aria-current", "true");
+  });
+});

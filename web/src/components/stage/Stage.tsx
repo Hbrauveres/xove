@@ -4,7 +4,8 @@ import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
 import type { Friend, LiveFeed, Sharer } from "../../types";
-import { barsPicture, EmptyStage } from "./EmptyStage";
+import { barsPicture } from "./bars";
+import { EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
@@ -20,6 +21,9 @@ import { LiveFeed as LiveNowFeed } from "./LiveFeed";
 import { HereCards } from "./HereCards";
 import { MUTED, type PreviewSound } from "./previewSound";
 import { useVideoShape } from "../../hooks/useVideoShape";
+import { useStageSwipe } from "../../hooks/useStageSwipe";
+import { stepOnStage } from "../../media/stagePick";
+import { StageDots } from "./StageDots";
 import { gridFor } from "../../media/ambilight";
 import styles from "./Stage.module.css";
 
@@ -199,6 +203,17 @@ export function Stage({
     });
   };
 
+  // On the phone, a swipe on the picture goes to the next or previous person live (spec 0159).
+  const slideRef = useRef<HTMLDivElement>(null);
+  const order = sharers.map((s) => s.person.id);
+  const swipe = useStageSwipe(slideRef, {
+    enabled: phone && order.length > 1,
+    onStep: (direction) => {
+      const next = stepOnStage(order, bigId, direction);
+      if (next) pick(next);
+    },
+  });
+
   const body = () => {
     if (!big || !main) return <EmptyStage canShareScreen={controls.canShareScreen} />;
 
@@ -228,18 +243,21 @@ export function Stage({
 
     return (
       <>
-        {content}
-        {small && (
-          <Facecam
-            video={big.isMe ? small.local : small.remote?.video}
-            label={big.isMe ? `Your ${what(small)}` : `${big.person.name}'s ${what(small)}`}
-            place={facecamPlace}
-            collapsed={facecamCollapsed}
-            onSwap={() => toggleSwap(big.person.id)}
-            onMove={setFacecamPlace}
-            onCollapse={setFacecamCollapsed}
-          />
-        )}
+        {/* The picture (and its facecam) moves with a swipe; the buttons stay put. */}
+        <div ref={slideRef} className={styles.slide}>
+          {content}
+          {small && (
+            <Facecam
+              video={big.isMe ? small.local : small.remote?.video}
+              label={big.isMe ? `Your ${what(small)}` : `${big.person.name}'s ${what(small)}`}
+              place={facecamPlace}
+              collapsed={facecamCollapsed}
+              onSwap={() => toggleSwap(big.person.id)}
+              onMove={setFacecamPlace}
+              onCollapse={setFacecamCollapsed}
+            />
+          )}
+        </div>
         <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
       </>
     );
@@ -267,15 +285,31 @@ export function Stage({
           className={styles.frame}
           // Only over a playing video: notices and the empty stage never fade.
           data-chrome={playing ? (chromeShown ? "shown" : "hidden") : undefined}
-          onPointerMove={showChrome}
-          onPointerDown={showChrome}
+          onPointerMove={(e) => {
+            showChrome();
+            swipe.onPointerMove(e);
+          }}
+          onPointerDown={(e) => {
+            showChrome();
+            swipe.onPointerDown(e);
+          }}
+          onPointerUp={swipe.onPointerUp}
+          onPointerCancel={swipe.onPointerCancel}
           onPointerLeave={leaveChrome}
           onFocus={showChrome}
         >
           {body()}
 
           {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
-          <div className={styles.controls}>
+          <div className={styles.controls} data-no-swipe>
+            {phone && (
+              <StageDots
+                people={sharers.map((s) => s.person)}
+                meId={meId}
+                onStage={bigId}
+                onPick={(id) => pick(id)}
+              />
+            )}
             <PlayerButtons
               {...controls}
               onMenuChange={onMenuChange}
