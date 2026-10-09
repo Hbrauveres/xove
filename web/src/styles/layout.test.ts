@@ -93,3 +93,12 @@ describe("the fullscreen button in the full-screen view (spec 0171)", () => {
     expect(stage).toMatch(/@media \(max-width: 520px\) \{\s*\.stage\[data-layout="sideways"\] \[data-overlay\] \{\s*padding-bottom:\s*calc\(12px \+ \(42px - 34px\) \/ 2\)/);
   });
 });
+
+describe("the stage on a tall desktop window", () => {
+  it("may be as tall as the free height above the info row, never less than the 16:9 box", () => {
+    const box = rule(sheet("components/stage/Stage.module.css"), ".box");
+    expect(box).toMatch(/--free-h:\s*max\(100cqw \* 9 \/ 16, 100cqh - var\(--info-h, 104px\) - var\(--info-gap, 14px\)\)/);
+    expect(box).toMatch(/width:\s*min\(100cqw, var\(--free-h\) \* var\(--shape\)\)/);
+    expect(box).toMatch(/height:\s*min\(100cqw \/ var\(--shape\), var\(--free-h\)\)/);
+  });
+});
