@@ -42,6 +42,7 @@ export function InstallPage() {
 
   return (
     <main className={styles.wrap}>
+      <div className={styles.above} aria-hidden="true" />
       <section className={styles.card} aria-labelledby="install-title">
         <p className={styles.brand}>
           <XoveMark height={30} />
@@ -104,6 +105,7 @@ export function InstallPage() {
 
         {!installed && <p className={styles.note}>Already added? Open Xovê from your home screen.</p>}
       </section>
+      <div className={styles.below} aria-hidden="true" />
     </main>
   );
 }

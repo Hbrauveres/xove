@@ -62,8 +62,10 @@ h1.page { font-family: var(--display); font-weight: 800; font-size: 26px; margin
 .info[aria-expanded="true"] { background: var(--text); }
 .why { margin: -6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--raised); color: var(--muted); font-size: 12.5px; line-height: 1.5; text-align: left; }
 .how { display: grid; gap: 10px; width: 100%; text-align: left; }
-.done { margin-top: auto; padding-bottom: 8px; font-size: 12px; color: var(--faint); text-align: center; }
-.center { align-items: center; text-align: center; }
+.done { margin: 0; font-size: 12px; color: var(--faint); text-align: center; }
+.center { align-items: center; text-align: center; justify-content: center; }
+/* The card in the middle, with a soft red glow from the top of the screen that fades out before the wordmark (decided 2026-10-10). */
+.screen.center { background: radial-gradient(60% 34% at 50% 0%, rgba(239,75,75,.16), transparent 100%); }
 /* Safari's address bar floats above its toolbar: keep the last line clear of it. */
 #iphone .screen { padding-bottom: 52px; }
 .center .perks { justify-items: start; text-align: left; }
@@ -81,7 +83,7 @@ h1.page { font-family: var(--display); font-weight: 800; font-size: 26px; margin
 <div class="wrap">
   <header>
     <h1 class="page">Install screen</h1>
-    <p class="lede"><b>Decided:</b> the card. What a phone or tablet sees in a browser tab, on every page, until Xovê is opened from the home screen. Everything is the same on both; only the action differs: on Android one button, on iPhone Safari's three Share steps.</p>
+    <p class="lede"><b>Decided:</b> the card, centred on the screen, with a soft glow from the top that fades out before the wordmark (never meeting the icon's glow), and "Already added?" right under the action. What a phone or tablet sees in a browser tab, on every page, until Xovê is opened from the home screen. Everything is the same on both; only the action differs: on Android one button, on iPhone Safari's three Share steps.</p>
   </header>
   <div class="phones">
     <div><div class="cap">Android · Chrome</div><div class="phone" id="android"></div></div>

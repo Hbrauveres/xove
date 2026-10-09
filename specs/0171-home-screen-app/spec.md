@@ -57,6 +57,7 @@ Made with Henrique, 2026-10-10:
 
 - **Every page,** sign-in included, shows the install screen in a phone's tab, so the session is made inside the app, where it'll be used.
 - **The card,** short: no list of reasons. The same on every device; only the action differs: one button on Android, the Share steps on iPhone and iPad.
+- **The install screen's layout** (2026-10-10, after comparing with the top-aligned draft): the card centred on the screen, a soft red glow from the top that fades out before the wordmark, so it never meets the icon tile's glow, and "Already added?" right under the action.
 - **The full-screen view follows how the phone is held:** a portrait stream is best watched upright, a wide one sideways.
 - **The button toggles the full-screen view;** turning sideways always shows it, and turning back returns to where it was.
 
