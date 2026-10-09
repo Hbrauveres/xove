@@ -114,7 +114,7 @@ public class StreamsController {
 
     private StreamsView view(User me) {
         return StreamsView.of(streams, me.getId(), seats.isSeated(me.getId()), seats.occupancy(),
-                watching.current(seats::isSeated, streams));
+                watching.current(seats::isSeated, streams), seats.arrivals());
     }
 
     private static StreamKind kindOf(String kind) {

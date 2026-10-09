@@ -82,6 +82,22 @@ class StreamsControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ---- who is here, since when (spec 0158) ----
+
+    @Test
+    void listsEveryoneSeatedWithWhenTheyArrived() throws Exception {
+        mvc.perform(get("/api/streams").with(as("sub-friend"))).andExpect(jsonPath("$.here").isEmpty());
+
+        mvc.perform(post("/api/room/enter").with(as("sub-friend")).with(csrf()));
+        mvc.perform(post("/api/room/enter").with(as("sub-m1")).with(csrf()));
+
+        mvc.perform(get("/api/streams").with(as("sub-friend")))
+                .andExpect(jsonPath("$.here.length()").value(2))
+                .andExpect(jsonPath("$.here[?(@.mine == true)].userId").value(idOf("sub-friend").intValue()))
+                .andExpect(jsonPath("$.here[?(@.mine == false)].userId").value(idOf("sub-m1").intValue()))
+                .andExpect(jsonPath("$.here[0].since").isString());
+    }
+
     // ---- streams through HTTP ----
 
     @Test
