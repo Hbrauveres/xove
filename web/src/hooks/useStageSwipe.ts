@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 /** How far a drag must go, as a share of the stage's width, to change stream (spec 0159). */
 export const SWIPE_SHARE = 0.25;
@@ -40,67 +40,62 @@ type Options = {
 export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, onStep }: Options) {
   const start = useRef<{ id: number; x: number; y: number; at: number } | null>(null);
   const timers = useRef<number[]>([]);
-  const step = useRef(onStep);
   useEffect(() => {
-    step.current = onStep;
-  });
-  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+    const pending = timers.current;
+    return () => pending.forEach((t) => window.clearTimeout(t));
+  }, []);
 
-  const move = (px: number, phase?: "drag" | "settle") => {
+  /** Where the picture is, and how it gets there. */
+  const place = (px: number, phase?: "drag" | "settle") => {
     const el = slide.current;
     if (!el) return;
     el.style.setProperty("--swipe", `${px}px`);
-    if (phase) el.dataset.phase = phase;
-    else delete el.dataset.phase;
+    if (phase) el.setAttribute("data-phase", phase);
+    else el.removeAttribute("data-phase");
   };
   const later = (ms: number, then: () => void) => timers.current.push(window.setTimeout(then, ms));
 
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (!enabled || e.button !== 0 || (e.target as Element).closest("[data-no-swipe]")) return;
-      start.current = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() };
-    },
-    [enabled],
-  );
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    const s = start.current;
-    if (!s || s.id !== e.pointerId) return;
-    const dx = e.clientX - s.x;
-    // Up and down is left to the page; only a sideways drag moves the picture.
-    if (Math.abs(dx) > Math.abs(e.clientY - s.y)) move(dx, "drag");
-  }, []);
-  const finish = useCallback((e: React.PointerEvent, cancelled: boolean) => {
+  const finish = (e: React.PointerEvent, cancelled: boolean) => {
     const s = start.current;
     if (!s || s.id !== e.pointerId) return;
     start.current = null;
     const width = slide.current?.getBoundingClientRect().width || 1;
     const direction = cancelled ? 0 : swipeOutcome(e.clientX - s.x, e.clientY - s.y, performance.now() - s.at, width);
     if (direction === 0) {
-      move(0, "settle");
-      later(SLIDE_MS, () => move(0));
+      place(0, "settle");
+      later(SLIDE_MS, () => place(0));
       return;
     }
     if (reducedMotion()) {
-      move(0);
-      step.current(direction);
+      place(0);
+      onStep(direction);
       return;
     }
     // Out the way the finger went, then the next one in from the other side.
-    move(-direction * width, "settle");
+    place(-direction * width, "settle");
     later(SLIDE_MS, () => {
-      step.current(direction);
-      move(direction * width);
+      onStep(direction);
+      place(direction * width);
       later(16, () => {
-        move(0, "settle");
-        later(SLIDE_MS, () => move(0));
+        place(0, "settle");
+        later(SLIDE_MS, () => place(0));
       });
     });
-  }, []);
+  };
 
   return {
-    onPointerDown,
-    onPointerMove,
-    onPointerUp: useCallback((e: React.PointerEvent) => finish(e, false), [finish]),
-    onPointerCancel: useCallback((e: React.PointerEvent) => finish(e, true), [finish]),
+    onPointerDown: (e: React.PointerEvent) => {
+      if (!enabled || e.button !== 0 || (e.target as Element).closest("[data-no-swipe]")) return;
+      start.current = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() };
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const s = start.current;
+      if (!s || s.id !== e.pointerId) return;
+      const dx = e.clientX - s.x;
+      // Up and down is left to the page; only a sideways drag moves the picture.
+      if (Math.abs(dx) > Math.abs(e.clientY - s.y)) place(dx, "drag");
+    },
+    onPointerUp: (e: React.PointerEvent) => finish(e, false),
+    onPointerCancel: (e: React.PointerEvent) => finish(e, true),
   };
 }
