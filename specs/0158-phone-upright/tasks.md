@@ -21,7 +21,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `here` in the streams state (optional); `arrivedAt` by person id in the session.
 - [x] **T3** `hereFor(sinceMs, nowMs)`: "just arrived" under a minute, "here N min", "here 1 h 5 min". `hereFor.test.ts`. · covers FR-18, FR-19 · verify: `hereFor.test.ts`
   - Done: `hereFor` in `stage/hereFor.ts`; on the hour it says "here 1 h".
-- [ ] **T4** `usePhoneView`: true for a window up to 760 px wide that is at least as tall as it is wide, following changes. `usePhoneView.test.ts` with a mocked `matchMedia`: 390×844 and 760×1000 true; 800×1000 and 844×390 false; a change re-renders. · covers FR-1 · verify: `usePhoneView.test.ts`
+- [x] **T4** `usePhoneView`: true for a window up to 760 px wide that is at least as tall as it is wide, following changes. `usePhoneView.test.ts` with a mocked `matchMedia`: 390×844 and 760×1000 true; 800×1000 and 844×390 false; a change re-renders. · covers FR-1 · verify: `usePhoneView.test.ts`
+  - Done: `usePhoneView` and `PHONE_QUERY` (`max-width: 760px` and portrait).
 
 ## Pieces
 
