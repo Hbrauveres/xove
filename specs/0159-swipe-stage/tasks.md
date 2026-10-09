@@ -17,13 +17,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   `useStageSwipe.test.ts`.
   - · covers FR-3, FR-6 · verify: `useStageSwipe.test.ts`
   - Done: `swipeOutcome` with `SWIPE_SHARE`, `FLICK_SPEED`, `FLICK_MIN_PX`.
-- [ ] **T3** `useStageSwipe(frameRef, { enabled, onStep })`:
+- [x] **T3** `useStageSwipe(frameRef, { enabled, onStep })`:
   - pointer down, move and up on the frame, ignoring pointers that go down inside `[data-no-swipe]`;
   - `--swipe` set while dragging;
   - on a step: a slide out, then `onStep`, then a slide in, or `onStep` at once with reduced motion; otherwise a spring back.
 
   `useStageSwipe.test.ts` (with fake timers).
-  - · covers FR-3, FR-6, FR-7 · verify: `useStageSwipe.test.ts`
+  - · covers FR-3, FR-6, FR-7 · verify: `useStageSwipe.test.tsx`
+  - Done: `useStageSwipe(slide, { enabled, onStep })` returns pointer handlers for the frame; the wrapper moves with `--swipe` and `data-phase`.
 
 ## Pieces and wiring
 
