@@ -72,6 +72,8 @@ flowchart TD
 | `/room` | Members | Stage (with my screen and camera buttons), people, activity feed |
 | `/admin` | Admins | Pending requests (approve, decline), members (remove) |
 
+On a phone or tablet (touch first) in a browser tab, every route shows the install screen instead ([spec 0171](../specs/0171-home-screen-app/spec.md)): Xovê is used from the home screen there, so sign-in happens inside the app.
+
 Every sign-in gets a session, even for non-members; it just can't reach member-only endpoints.
 
 ## Sharing screens and cameras
@@ -178,7 +180,8 @@ sequenceDiagram
   - **Swiping the stage** ([spec 0159](../specs/0159-swipe-stage/spec.md)): left for the next person live, right for the previous, in the feed's order and wrapping around (`stepOnStage`). The picture follows the finger and slides (`useStageSwipe`); a drag under a quarter of the width, unless it's a quick flick, springs back; reduced motion changes at once. Drags that start on the round buttons, the facecam or the fullscreen button (`data-no-swipe`) are theirs. Dots above the buttons (`StageDots`), upright and sideways, show who's on the stage and jump on a tap; they fade with the buttons, and there are none with one person live.
   - **Sound on a phone:** phones block sound that starts without a tap on the page, so the first tap or key in the room unlocks it (`room.startAudio()`), and LiveKit plays what was silent.
   - **No pull-to-refresh:** the page has `overscroll-behavior: none`, so a drag down (the volume slider near the top) never reloads it.
-  - **No address bar:** a browser tab can't keep the bar away, so phones and tablets are meant to use the home-screen app (#171), which opens with no browser bar on Android and iPhone (the manifest's `"display": "fullscreen"`, and Apple's meta tags). A page fullscreen doesn't count as the player's: windows and errors stay in the page.
+  - **Only from the home screen** ([spec 0171](../specs/0171-home-screen-app/spec.md), [its design](../specs/0171-home-screen-app/design.html)): in a browser tab, a touch device sees only `InstallPage`. It tells the home-screen app by the display mode (`useInstalled`: `display-mode` fullscreen or standalone, or `navigator.standalone`). On Android, "Get Xovê" opens the browser's install prompt, caught as the page loads (`install/prompt.ts`), or points to the menu when there's none; on iPhone and iPad (`isApple`), Safari's Share steps. The manifest has what Chrome checks before offering an install (`id`, `start_url`, `scope`, a maskable icon) and `"display": "fullscreen"`, so the app opens with no browser bar.
+  - **The full-screen view:** on a phone or tablet, the stage's fullscreen button switches to the sideways layout while the phone stays upright, and back ("Full-screen view", "Exit full-screen view"). Turning doesn't change the choice, and sideways there's no button: the room is already in that view. Desktops keep the player's fullscreen.
   - **The setup window** on a short, wide screen shows its preview on the left and its settings on the right.
   - **Upright on a tablet:** the stage stays full width; the info row and what scrolls under it sit in a centred column, at most 640 px wide.
   - **Sideways:**

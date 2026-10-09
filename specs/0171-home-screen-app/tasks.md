@@ -56,12 +56,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T7** Docs:
+- [x] **T7** Docs:
   - `docs/architecture.md`: "Who gets in" and "On a phone or tablet" cover the install screen, the app and the full view;
   - `docs/decisions.md`: decision 44;
   - `CLAUDE.md`: test counts.
   - Checked in the local Playwright harness: the install screen (Android, iPhone), and the full view upright.
   - · verify: the pages describe the new behaviour; the harness matches the design
+  - Done: "Who gets in" and "Only from the home screen" in the architecture page, decision 44, web count 495. Harness: the install screen on Android and iPhone (matching the design), and the full view upright from the home-screen app.
 - [ ] **T8** Review every AC (`/review`), then the PR with `Closes #171`. Henrique checks AC-5 on staging, with an Android phone and an iPhone. · verify: no gaps left; AC-5 written in the PR
 
 ## Coverage
