@@ -144,8 +144,9 @@
   inset: 0;
 }
 
-/* Only on the phone: a transform would put the desktop's facecam under the fullscreen button. */
-.stage[data-layout="phone"] .slide {
+/* Only on the phones: a transform would put the desktop's facecam under the fullscreen button. */
+.stage[data-layout="phone"] .slide,
+.stage[data-layout="sideways"] .slide {
   transform: translateX(var(--swipe, 0px));
 }
 
@@ -225,12 +226,7 @@
   padding-bottom: 26px;
 }
 
-/* The round buttons sit a little higher, clear of the streams row's tab. */
-.stage[data-layout="sideways"] .controls > * {
-  padding-bottom: 26px;
-}
-
-/* Fading sideways: the top bar and the row's tab go with the round buttons (FR-8). */
+/* Fading sideways: the top bar and the row's arrow button go with the round buttons (FR-8). */
 .stage[data-layout="sideways"] [data-fades] {
   transition: opacity 0.25s ease;
 }

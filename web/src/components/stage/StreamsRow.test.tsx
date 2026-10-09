@@ -21,9 +21,11 @@ const sharer = (id: string, name: string, kind: "screen" | "camera"): Sharer => 
 const RAFA = sharer("user-3", "Rafa", "screen");
 const DUDA = sharer("user-4", "Duda", "camera");
 
-function row(open: boolean, onPick = vi.fn(), onOpen = vi.fn()) {
-  const view = render(<StreamsRow others={[RAFA, DUDA]} liveCount={3} open={open} onOpen={onOpen} onPick={onPick} />);
-  return { ...view, onPick, onOpen };
+function row(open: boolean, onPick = vi.fn(), onOpen = vi.fn(), onClose = vi.fn()) {
+  const view = render(
+    <StreamsRow others={[RAFA, DUDA]} liveCount={3} open={open} onOpen={onOpen} onClose={onClose} onPick={onPick} />,
+  );
+  return { ...view, onPick, onOpen, onClose };
 }
 
 describe("the streams row, sideways (spec 0160)", () => {
@@ -48,7 +50,7 @@ describe("the streams row, sideways (spec 0160)", () => {
     expect(onPick).toHaveBeenCalledWith("user-4");
   });
 
-  it("is closed at first, out of reach, with a tab that opens it", async () => {
+  it("is closed at first, out of reach, with a button with an arrow up that opens it", async () => {
     const { container, onOpen } = row(false);
     expect(container.querySelector("[data-open]")).toBeNull();
     expect(screen.queryByRole("button", { name: "Watch Rafa's screen" })).toBeNull();
@@ -56,9 +58,20 @@ describe("the streams row, sideways (spec 0160)", () => {
     expect(onOpen).toHaveBeenCalled();
   });
 
-  it("has no tab while open, and is never the start of a swipe of the stage", () => {
-    const { container } = row(true);
+  it("while open, the same button with an arrow down closes it, and it's never the start of a swipe", async () => {
+    const { container, onClose } = row(true);
     expect(screen.queryByRole("button", { name: "Show the other streams" })).toBeNull();
+    const hide = screen.getByRole("button", { name: "Hide the other streams" });
+    expect(hide).toHaveAttribute("data-arrow", "down");
+    await userEvent.setup().click(hide);
+    expect(onClose).toHaveBeenCalled();
     expect(container.querySelector("[data-open]")).toHaveAttribute("data-no-swipe");
+  });
+
+  it("has no tab at the bottom: the button sits at the bottom left, arrow up", () => {
+    row(false);
+    const show = screen.getByRole("button", { name: "Show the other streams" });
+    expect(show).toHaveAttribute("data-arrow", "up");
+    expect(show.querySelector("svg")).not.toBeNull();
   });
 });

@@ -20,6 +20,7 @@
 
 .head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   margin: 0;
   padding: 0 16px 6px;
@@ -29,6 +30,11 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-faint);
+}
+
+/* "Live now" next to the arrow, the count at the far right. */
+.title {
+  flex: 1;
 }
 
 .count {
@@ -82,35 +88,36 @@
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.8));
 }
 
-/* The tab: a small handle at the bottom edge while the row is closed. */
-.tab {
-  position: absolute;
-  left: 50%;
-  bottom: env(safe-area-inset-bottom, 0px);
-  z-index: 4;
-  width: 56px;
-  height: 18px;
+/* The arrow button: at the bottom left while the row is closed, on the row's line while it's open. */
+.toggle,
+.toggleOpen {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 0;
-  border-radius: 9px 9px 0 0;
-  background: rgba(235, 235, 236, 0.14);
-  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(10, 10, 11, 0.72);
+  color: var(--text);
   cursor: pointer;
 }
 
-.tab::after {
-  content: "";
+.toggle {
   position: absolute;
-  left: 50%;
-  top: 7px;
-  width: 20px;
-  height: 3px;
-  border-radius: 3px;
-  background: rgba(235, 235, 236, 0.5);
-  transform: translateX(-50%);
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 4;
 }
 
-.tab:focus-visible {
+.toggleOpen {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+}
+
+.toggle:focus-visible,
+.toggleOpen:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
 }

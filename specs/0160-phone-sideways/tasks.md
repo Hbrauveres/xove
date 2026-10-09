@@ -101,6 +101,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   Tests: `usePageFullscreen.test.ts`, `useFullscreenElement.test.ts`, `brand.test.ts`, `layout.test.ts`, `RoomPage.test.tsx`. Checked in the harness at 915 × 412 and 667 × 375: no scroll. · covers FR-13, FR-14, FR-15, AC-8, AC-9, AC-10 · verify: `cd web && npm test && npm run build`
 
+- [x] **T11** After the second phone check (2026-10-09):
+  - sound unlocks on the first tap or key (`room.startAudio()`);
+  - no pull-to-refresh (`overscroll-behavior: none`);
+  - the row's tab replaced by an arrow button at the bottom left (up opens, down on the row closes);
+  - left and right swipes change the stream sideways too.
+
+  Tests: `useLiveKitRoom.test.ts`, `layout.test.ts`, `StreamsRow.test.tsx`, `RoomPage.test.tsx`; checked in the harness. · covers FR-10, FR-12, AC-5, AC-6 · verify: `cd web && npm test && npm run build`
+
 ## Coverage
 
 | Requirement | Task |
