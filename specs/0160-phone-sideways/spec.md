@@ -45,6 +45,12 @@ Everyone watching on a phone turned sideways, and on a tablet.
 - **FR-11** Tapping a picture in the row puts that person on the stage, as a feed card does.
 - **FR-12** Swipes start on the picture only, as in spec 0159: dragging the facecam, the round buttons or a menu works as before. A sideways drag on the stage does nothing here (changing stream sideways is the row's job).
 
+**After the first check on a phone (2026-10-09)**
+
+- **FR-13** On a phone or tablet, in the upright and the sideways views, the browser's address bar goes away: the first tap puts the whole room in fullscreen, where the browser allows it (Android), and again after each turn if it was left. Turning the phone keeps it fullscreen. A desktop window never goes fullscreen by itself. The stage's own fullscreen button still works as before.
+- **FR-14** Added to the home screen, Xovê opens with no browser bar at all, on Android and iPhone. That's the only way on iPhone, where Safari doesn't let a page go fullscreen.
+- **FR-15** On a short, wide screen (a phone sideways), the setup window for a screen or a camera puts a smaller preview on the left and the title, settings, hint and buttons on the right, so it fits without scrolling. Upright and on desktop it's unchanged.
+
 ## Acceptance criteria
 
 - **AC-1** A touch-first device with a shorter side of 412 px shows the upright view at 412 × 915 and the sideways view at 915 × 412; a desktop window at 915 × 412 shows the desktop layout, and at 412 × 915 the upright view; a touch tablet with a shorter side of 820 px shows the upright view at 820 × 1180 and the desktop layout at 1180 × 820 (automated test). Turning doesn't restart the video (automated test; manual on a phone).
@@ -55,6 +61,10 @@ Everyone watching on a phone turned sideways, and on a tablet.
 - **AC-5** The row starts closed; a swipe up opens it, a swipe down closes it, the tab opens it; it lists every live stream but the stage's with names and "N of 6"; tapping one puts it on the stage; its sound isn't downloaded (automated test).
 - **AC-6** A sideways drag on the sideways stage doesn't change the stream; drags starting on the facecam or the buttons don't open or close the row (automated test).
 - **AC-7** On staging, on Android Chrome and iPhone Safari, sideways: the stage fills the screen with the glow at its sides, the top gradient and the buttons fade and come back on a touch, the row opens and closes with a swipe and the tab, a tap in the row changes the stage, and turning the phone back and forth keeps the video playing (manual, written in the PR). On a tablet (or a browser's tablet emulation): upright, the upright view with the centred column; sideways, the desktop layout (manual).
+
+- **AC-8** On a phone or tablet, upright or sideways, the first tap (when the finger lifts) asks for fullscreen of the whole page, once until the next turn; turning keeps it; a desktop window doesn't ask; the page's fullscreen doesn't count as the player's (windows and errors stay where they were) (automated test). On Android, a tap hides the address bar, upright and sideways (manual).
+- **AC-9** The web manifest's display is fullscreen (automated test); added to the home screen on Android and iPhone, it opens with no browser bar (manual).
+- **AC-10** Sideways, the setup window shows its preview on the left and its settings and buttons on the right, without scrolling, at 915 × 412 and 667 × 375 (automated test of the styles; checked in the harness; manual on a phone).
 
 ## Out of scope
 
@@ -72,6 +82,9 @@ Made with Henrique, 2026-10-09:
 - **The row starts closed** and closes with the rest of the controls when nothing is touched.
 - **Over the empty stage nothing fades,** as on desktop.
 - **Panels open under the top right,** as tall as the screen allows.
+
+- **The address bar** (after the first phone check): fullscreen on the first tap, upright and sideways, on phones and tablets where allowed, plus the home-screen app opening with no browser bar.
+- **The setup window sideways:** the preview on the left, the settings on the right.
 
 ## Open questions
 
