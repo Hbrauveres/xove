@@ -43,3 +43,10 @@ describe("the empty stage's colour bars (spec 0158)", () => {
     expect(rule(empty, ".test")).not.toMatch(/opacity/);
   });
 });
+
+describe("the phone's feed (spec 0158)", () => {
+  it("keeps each video inside its card: the picture box positions it", () => {
+    // The video is absolutely positioned (ScreenVideo); without this it covered the whole page.
+    expect(rule(sheet("components/stage/LiveFeed.module.css"), ".picture")).toMatch(/position:\s*relative/);
+  });
+});
