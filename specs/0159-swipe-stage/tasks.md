@@ -10,12 +10,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 - [x] **T1** `stepOnStage(order, current, direction)` in `media/stagePick.ts`: next and previous in the feed's order, wrapping both ways; null with fewer than two people. `stagePick.test.ts`. · covers FR-1, FR-2 · verify: `stagePick.test.ts`
   - Done: `stepOnStage`; with nobody on the stage it starts from the first.
-- [ ] **T2** `swipeOutcome(dx, dy, ms, width)`: next, previous, or nothing.
+- [x] **T2** `swipeOutcome(dx, dy, ms, width)`: next, previous, or nothing.
   - Next or previous for at least 25% of the width, or a flick faster than 0.5 px/ms over at least 30 px.
   - Nothing when shorter, or mostly up and down.
 
   `useStageSwipe.test.ts`.
   - · covers FR-3, FR-6 · verify: `useStageSwipe.test.ts`
+  - Done: `swipeOutcome` with `SWIPE_SHARE`, `FLICK_SPEED`, `FLICK_MIN_PX`.
 - [ ] **T3** `useStageSwipe(frameRef, { enabled, onStep })`:
   - pointer down, move and up on the frame, ignoring pointers that go down inside `[data-no-swipe]`;
   - `--swipe` set while dragging;
