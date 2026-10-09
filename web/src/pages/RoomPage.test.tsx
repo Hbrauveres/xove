@@ -772,6 +772,43 @@ describe("room: the player's labels and bars", () => {
   });
 });
 
+describe("room: the controls don't vanish under a still mouse", () => {
+  async function playing() {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const frame = (await screen.findByLabelText("Bruno's shared screen")).closest("[data-chrome]") as HTMLElement;
+    fireEvent.pointerMove(frame);
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+    return frame;
+  }
+  afterEach(() => {
+    delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+    vi.restoreAllMocks();
+  });
+
+  it("ignores a 'mouse left' while the player is fullscreen: there's nothing outside it", async () => {
+    const frame = await playing();
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => frame });
+    fireEvent.pointerLeave(frame, { pointerType: "mouse", clientX: 0, clientY: 0 });
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+  });
+
+  it("ignores a 'mouse left' that comes while the pointer is still over the player", async () => {
+    const frame = await playing();
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, right: 800, bottom: 450, width: 800, height: 450 } as DOMRect);
+    fireEvent.pointerLeave(frame, { pointerType: "mouse", clientX: 400, clientY: 200 });
+    expect(frame).toHaveAttribute("data-chrome", "shown");
+    // Really outside: hidden at once, as before.
+    fireEvent.pointerLeave(frame, { pointerType: "mouse", clientX: 900, clientY: 200 });
+    expect(frame).toHaveAttribute("data-chrome", "hidden");
+  });
+});
+
 describe("room: my screen and camera buttons on the player (spec 0098)", () => {
   it("has no bar under the player: the buttons are on the stage, and never fade over an empty one", async () => {
     installFakeApi({ me: member });
