@@ -29,7 +29,7 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   });
 
   it("ships every file it links", () => {
-    for (const f of ["favicon.svg", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "site.webmanifest"]) {
+    for (const f of ["favicon.svg", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "site.webmanifest"]) {
       expect(shipped, f).toContain(f);
     }
   });
@@ -41,7 +41,15 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
     expect(manifest.icons.map((i: { src: string; sizes: string }) => `${i.src} ${i.sizes}`)).toEqual([
       "/icon-192.png 192x192",
       "/icon-512.png 512x512",
+      "/icon-maskable-512.png 512x512",
     ]);
+  });
+
+  it("has what Chrome checks before it offers to install it (spec 0171)", () => {
+    const manifest = JSON.parse(manifestText);
+    expect([manifest.start_url, manifest.scope, manifest.id]).toEqual(["/", "/", "/"]);
+    const maskable = manifest.icons.find((i: { purpose?: string }) => i.purpose === "maskable");
+    expect(maskable?.src).toBe("/icon-maskable-512.png");
   });
 
   it("opens from the home screen with no browser bar, on Android and iPhone (spec 0160)", () => {
@@ -94,7 +102,7 @@ describe("the phone icon files (spec 0113, FR-6b)", () => {
   };
 
   it("ships the three sizes, on the soft black ground (spec 0121)", () => {
-    for (const [name, size] of [["apple-touch-icon.png", 180], ["icon-192.png", 192], ["icon-512.png", 512]] as const) {
+    for (const [name, size] of [["apple-touch-icon.png", 180], ["icon-192.png", 192], ["icon-512.png", 512], ["icon-maskable-512.png", 512]] as const) {
       const png = pngAt(name);
       expect([png.width, png.height], name).toEqual([size, size]);
       expect(png.colorType, name).toBe(2);

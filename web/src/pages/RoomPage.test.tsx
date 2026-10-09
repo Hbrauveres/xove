@@ -2668,9 +2668,69 @@ describe("room: on a phone sideways (spec 0160)", () => {
     await new Promise((r) => setTimeout(r, 450));
     drag(300, 0);
     expect(await screen.findByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
-    drag(0, -150, within(stageLayer()).getByRole("button", { name: "Fullscreen" }));
+    // On a phone sideways there's no fullscreen button (spec 0171): the round buttons are the controls.
     drag(0, -150, stageLayer().querySelector("[data-no-swipe] button[aria-label*=camera i]")!);
     await new Promise((r) => setTimeout(r, 100));
     expect(row()).toBeNull();
+  });
+});
+
+describe("room: the full-screen view on a phone (spec 0171)", () => {
+  const desktopMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
+  });
+
+  /** A phone held upright, someone live. */
+  async function upright() {
+    const phone = phoneSideways();
+    phone.turn();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Marina", 2), someoneSharing("Rafa", 3)];
+    const view = renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-2");
+      lastRoom().publishScreen("user-3");
+    });
+    const video = await screen.findByLabelText("Marina's shared screen");
+    return { phone, view, video };
+  }
+  const layoutOf = (view: ReturnType<typeof renderRoom>) =>
+    view.container.querySelector("[data-layout]")?.getAttribute("data-layout");
+
+  it("the button opens the sideways layout without turning, and leaves it, with the same video", async () => {
+    const { view, video } = await upright();
+    expect(layoutOf(view)).toBe("phone");
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    expect(layoutOf(view)).toBe("sideways");
+    expect(screen.getByLabelText("Marina's shared screen")).toBe(video);
+    await user.click(within(stage()).getByRole("button", { name: "Exit full-screen view" }));
+    expect(layoutOf(view)).toBe("phone");
+    expect(screen.getByLabelText("Marina's shared screen")).toBe(video);
+  });
+
+  it("sideways there's no button; turning back returns to where it was", async () => {
+    const { phone, view } = await upright();
+    await userEvent.setup().click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    phone.turn();
+    expect(layoutOf(view)).toBe("sideways");
+    expect(within(stage()).queryByRole("button", { name: /full-screen view|fullscreen/i })).toBeNull();
+    phone.turn();
+    expect(layoutOf(view)).toBe("sideways");
+    await userEvent.setup().click(within(stage()).getByRole("button", { name: "Exit full-screen view" }));
+    phone.turn();
+    phone.turn();
+    expect(layoutOf(view)).toBe("phone");
+  });
+
+  it("never asks the browser for the player's fullscreen on a phone", async () => {
+    await upright();
+    const frame = screen.getByLabelText("Marina's shared screen").closest("[data-chrome]") as HTMLElement;
+    frame.requestFullscreen = vi.fn(async () => {});
+    await userEvent.setup().click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    expect(frame.requestFullscreen).not.toHaveBeenCalled();
   });
 });

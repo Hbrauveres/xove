@@ -1,0 +1,223 @@
+/* The install screen (spec 0171): see specs/0171-home-screen-app/design.html. */
+/* The card in the middle of the screen (decided 2026-10-10, over the top-aligned draft). */
+.wrap {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-inline: var(--gutter);
+  background: var(--ground);
+}
+
+/*
+ * The space above and below the card, equal, so it sits in the middle. The one above holds a
+ * soft red glow from the top of the screen that fades out where the card starts, so it never
+ * meets the icon tile's own glow, on any screen's height.
+ */
+.above,
+.below {
+  flex: 1;
+  min-height: calc(32px + env(safe-area-inset-top, 0px));
+  align-self: stretch;
+  margin-inline: calc(-1 * var(--gutter));
+}
+
+.above {
+  background: radial-gradient(60% 100% at 50% 0%, var(--accent-soft), transparent 100%);
+}
+
+.below {
+  min-height: calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.brand {
+  display: flex;
+  margin: 0;
+  color: var(--text);
+}
+
+/* The app's icon, as it'll look on the home screen. */
+.tile {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background: var(--ground);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line), 0 10px 30px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.title {
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+
+.title em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+/* The "i": a small filled dot right after "screen", its top level with the letters'. */
+.info {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  margin-left: 3px;
+  vertical-align: 0.85em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text-muted);
+  color: var(--ground);
+  font: 700 8.5px/1 var(--font-mono);
+  cursor: pointer;
+}
+
+/* A finger-sized target around the small dot. */
+.info::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+
+.info[aria-expanded="true"] {
+  background: var(--text);
+}
+
+.info:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.why {
+  margin: -6px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.copy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.action,
+.steps {
+  width: 100%;
+}
+
+.action {
+  display: grid;
+  gap: 10px;
+}
+
+.get {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 600 1rem var(--font-body);
+  cursor: pointer;
+}
+
+.get:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.menu {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  transition: color 0.2s ease;
+}
+
+/* Get Xovê with no prompt to open: the menu line is the way. */
+.menu[data-highlight] {
+  color: var(--text);
+}
+
+.steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  text-align: left;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 12px 12px 12px 48px;
+  position: relative;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  font: 600 0.75rem var(--font-mono);
+}
+
+/* Safari's own icons, in Safari's blue, so they're easy to spot in its bar. */
+.safari {
+  width: 18px;
+  height: 18px;
+  margin-inline: 2px;
+  color: #3d8bfd;
+}
+
+.done {
+  margin: 0;
+  color: var(--text);
+}
+
+.note {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    transition: none;
+  }
+}

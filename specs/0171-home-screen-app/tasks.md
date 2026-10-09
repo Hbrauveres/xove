@@ -1,0 +1,85 @@
+# Phones and tablets use the home-screen app, with a full-screen view — tasks
+
+- Plan: [plan.md](plan.md)
+
+Each task is small enough for one commit, leaves the build green, and says which requirements it serves and how it's verified. Tick a task only when its verification passes.
+
+Nothing to do outside the repo before starting. Henrique's part: merging the PR, the checks on two phones on staging (T8), and the release tag.
+
+## Core
+
+- [x] **T1** `install/prompt.ts`, imported first in `main.tsx`:
+  - it keeps `beforeinstallprompt` (with its default prevented) and notes `appinstalled`;
+  - `installPrompt()` returns the kept prompt;
+  - `onInstalled()` notifies when the app is installed.
+
+  `prompt.test.ts`.
+  - · covers FR-3 · verify: `prompt.test.ts`
+  - Done: `install/prompt.ts` (`listenForInstall`, `installPrompt`, `onInstalled`), started first in `main.tsx`.
+- [x] **T2** `useInstalled()`: true from the home screen (`display-mode` fullscreen or standalone, or `navigator.standalone`). `useInstalled.test.ts`. · covers FR-1, FR-4 · verify: `useInstalled.test.ts`
+  - Done: `useInstalled` with `INSTALLED_QUERY` and `navigator.standalone`.
+- [x] **T3** The manifest:
+  - `start_url`, `scope`, `id`;
+  - a 512 px maskable icon, rendered from the phone icon and listed;
+  - `brand.test.ts` checks the fields and that the icon is shipped.
+  - · covers FR-4 · verify: `brand.test.ts`
+  - Done: `id`, `start_url`, `scope`; `icon-maskable-512.png` (`brand-icons.mjs --maskable`, the mark inside the 80% safe circle).
+
+## Pieces and wiring
+
+- [x] **T4** `InstallPage`, following the design:
+  - the wordmark, the icon tile, the headline with its "i" (showing and hiding why), the line under it, "Already added? …";
+  - Apple devices get the three Share steps;
+  - others get "Get Xovê" (opening the kept prompt, or highlighting the menu line without one) and the menu line;
+  - after `appinstalled`, "Open Xovê from your home screen".
+
+  `InstallPage.test.tsx`.
+  - · covers FR-2, FR-3 · verify: `InstallPage.test.tsx`
+  - Done: `InstallPage` and `install/device.ts` (`isApple`); after installing it says "Installed. Open Xovê from your home screen."
+- [x] **T5** `App`: on a touch device outside the app, the install screen for every route; installed or on a desktop, the routes as today. `App.test.tsx`. · covers FR-1, FR-4, FR-5 · verify: `App.test.tsx`
+  - Done: `App` returns `InstallPage` on a touch device outside the app, before any route.
+- [x] **T6** The full-screen view:
+  - `Room` keeps `fullView`;
+  - the stage's layout is sideways when the phone is sideways, or upright with `fullView`;
+  - on a touch device, the stage's fullscreen button toggles `fullView` ("Full-screen view" or "Exit full-screen view") and is hidden sideways;
+  - on desktop, the player's fullscreen as today.
+
+  `RoomPage.test.tsx` (touch, upright):
+  - on and off;
+  - the same `<video>`;
+  - turning sideways and back returns to where it was;
+  - no button sideways.
+
+  Existing fullscreen tests pass.
+  - · covers FR-6, FR-7, FR-8 · verify: `cd web && npm test && npm run build`
+  - Done: `fullView` in `Room`; `Stage`'s `fullView` prop; `StageOverlay` with `view` and `hidden`. The sideways drag test no longer drags from the fullscreen button, which phones don't have there.
+
+## Docs and review
+
+- [x] **T7** Docs:
+  - `docs/architecture.md`: "Who gets in" and "On a phone or tablet" cover the install screen, the app and the full view;
+  - `docs/decisions.md`: decision 44;
+  - `CLAUDE.md`: test counts.
+  - Checked in the local Playwright harness: the install screen (Android, iPhone), and the full view upright.
+  - · verify: the pages describe the new behaviour; the harness matches the design
+  - Done: "Who gets in" and "Only from the home screen" in the architecture page, decision 44, web count 499. Harness: the install screen on Android and iPhone (matching the design), and the full view upright from the home-screen app.
+- [x] **T8** Review every AC (`/review`), then the PR with `Closes #171`. Henrique checks AC-5 on staging, with an Android phone and an iPhone. · verify: no gaps left; AC-5 written in the PR
+  - Done: review fixed: the prompt opens once and the next tap points to the menu; the menu line says "Install app" (a shortcut would open a tab); tablets held sideways keep the player's fullscreen (spec FR-6, FR-8 and docs say so); the maskable icon's margin (farthest mark pixel 191 px, safe radius 205); no repeated line after installing; an iPad test. AC-5 is in the PR.
+
+## Coverage
+
+| Requirement | Task |
+| --- | --- |
+| FR-1 | T2, T5 |
+| FR-2 | T4 |
+| FR-3 | T1, T4 |
+| FR-4 | T2, T3, T5 |
+| FR-5 | T5 |
+| FR-6, FR-7, FR-8 | T6 |
+| AC-1 | T2, T5 |
+| AC-2 | T1, T4 |
+| AC-3 | T6 |
+| AC-4 | T6 |
+| AC-5 | T8 (manual on staging) |
+
+Nothing uncovered.

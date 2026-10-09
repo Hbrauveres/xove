@@ -14,7 +14,7 @@ import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
-import { useRoomLayout } from "../hooks/useRoomLayout";
+import { TOUCH_QUERY, useRoomLayout } from "../hooks/useRoomLayout";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useStagePick } from "../hooks/useStagePick";
@@ -87,8 +87,13 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
   // A phone or tablet held upright (specs 0158 and 0160): the same room, laid out for it.
   const layout = useRoomLayout();
-  const phone = layout === "upright";
-  const sideways = layout === "sideways";
+  // The full-screen view (spec 0171): the sideways layout while the phone stays upright, by
+  // the fullscreen button. Turning doesn't change it, so turning back returns to where it was.
+  const [fullView, setFullView] = useState(false);
+  const phone = layout === "upright" && !fullView;
+  const sideways = layout === "sideways" || (layout === "upright" && fullView);
+  const touch = window.matchMedia?.(TOUCH_QUERY).matches ?? false;
+  const toggleFullView = useCallback(() => setFullView((on) => !on), []);
   // Either phone view: the bell, and the footer's items in my menu (specs 0158 and 0160).
   const handheld = phone || sideways;
   // For the phone's feed: who has each sharer on their stage, as under the stage.
@@ -175,6 +180,11 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
             others={others}
             layout={phone ? "phone" : sideways ? "sideways" : undefined}
             topRight={sideways ? myButtons : undefined}
+            fullView={
+              touch && layout !== "desktop"
+                ? { on: fullView, toggle: toggleFullView, hidden: layout === "sideways" }
+                : undefined
+            }
             watchersOf={watchersOf}
             people={people}
             meId={meId}
