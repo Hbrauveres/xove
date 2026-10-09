@@ -63,3 +63,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 | AC-10 | T9 |
 
 Nothing uncovered. The look and the easing (AC-10) and Chrome really staying on Xovê (AC-1) can only be seen in a real browser: staging, T9.
+
+## After release
+
+- **#176, fixed by #175 (2026-10-10):** on a 2K vertical monitor (Chrome on Windows), the browser sent "mouse left" to the player in fullscreen while the pointer was still over the picture, so the controls hid at once and never came back on a move. The player now ignores "mouse left" while it's fullscreen, and outside fullscreen while the pointer is still over it; the idle fade is unchanged. Test: `RoomPage.test.tsx`, "the controls don't vanish under a still mouse".
