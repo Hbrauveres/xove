@@ -19,7 +19,7 @@ on:
     branches-ignore: [main]
   workflow_call:
     secrets:
-      # For the Docker Hub login (.github/actions/dockerhub-login); without them the pulls stay anonymous.
+      # For the Docker Hub login (.github/actions/docker-pulls); without them the pulls stay anonymous.
       DOCKERHUB_USERNAME:
         required: false
       DOCKERHUB_TOKEN:
@@ -50,12 +50,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: ./.github/actions/dockerhub-login
+      - uses: ./.github/actions/docker-pulls
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          # The builder pulls base images through Google's Docker Hub mirror too,
+          # falling back to Docker Hub (logged in) by itself.
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
 
       - name: Today's date (the web image rebuilds Caddy from source once a day)
         id: date
@@ -100,7 +106,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: ./.github/actions/dockerhub-login
+      - uses: ./.github/actions/docker-pulls
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -142,7 +148,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: ./.github/actions/dockerhub-login
+      - uses: ./.github/actions/docker-pulls
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -193,7 +199,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: ./.github/actions/dockerhub-login
+      - uses: ./.github/actions/docker-pulls
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -245,7 +251,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: ./.github/actions/dockerhub-login
+      - uses: ./.github/actions/docker-pulls
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           token: ${{ secrets.DOCKERHUB_TOKEN }}
