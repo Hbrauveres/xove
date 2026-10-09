@@ -1,0 +1,66 @@
+/* Who's here, under the phone's empty stage (spec 0158): soft cards, no lines ("H3 · Cards"). */
+.here {
+  padding: 0 12px 16px;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 6px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.text {
+  min-width: 0;
+  flex: 1;
+}
+
+.name {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.since {
+  margin: 1px 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.waiting {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}

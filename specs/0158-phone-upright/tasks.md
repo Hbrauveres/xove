@@ -50,13 +50,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   `LiveFeed.test.tsx`.
   - · covers FR-11, FR-12, FR-13, FR-14 · verify: `LiveFeed.test.tsx`
   - Done: `LiveFeed`; its pictures join the video frames allowed pure black in `palette.test.ts`.
-- [ ] **T9** `HereCards`:
+- [x] **T9** `HereCards`:
   - "Here" with the count;
   - a soft card per person: avatar, name, and `hereFor` (ticking every 30 s);
   - me first as "Name (you)", the others with "WAITING".
 
   `HereCards.test.tsx`, with fake timers for the tick.
   - · covers FR-18, FR-19 · verify: `HereCards.test.tsx`
+  - Done: `HereCards`; no time shown for someone the API doesn't list yet.
 - [ ] **T10** The glowing colour bars:
   - `EmptyStage`'s colours in one exported list;
   - the line "Turn on your camera with the button below." when a screen can't be shared;
