@@ -6,7 +6,7 @@ import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureRequest
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, myLiveStream, someoneSharing } from "../test/fakeApi";
 import { FakeLocalScreenTrack, lastRoom } from "../test/fakeLiveKit";
-import { PHONE_QUERY } from "../hooks/usePhoneView";
+import { NARROW_UPRIGHT_QUERY } from "../hooks/useRoomLayout";
 import { RoomPage } from "./RoomPage";
 
 const member = aUser({ name: "Henrique Brauveres", status: "MEMBER" });
@@ -2061,7 +2061,7 @@ function phoneWindow(upright = true) {
   let phone = upright;
   window.matchMedia = ((query: string) => ({
     get matches() {
-      return query === PHONE_QUERY && phone;
+      return query === NARROW_UPRIGHT_QUERY && phone;
     },
     media: query,
     onchange: null,

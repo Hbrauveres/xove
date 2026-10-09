@@ -8,10 +8,11 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** `layoutFor({ touch, small, portrait, narrowUpright })` and `useRoomLayout()`, replacing `usePhoneView`:
+- [x] **T1** `layoutFor({ touch, small, portrait, narrowUpright })` and `useRoomLayout()`, replacing `usePhoneView`:
   - `useRoomLayout.test.ts`: a phone upright and sideways, a tablet upright and sideways, a desktop narrow and wide, and the hook following a change;
   - `Room` uses it; the upright view is unchanged (existing phone tests pass).
   - · covers FR-1, FR-2, FR-2a · verify: `useRoomLayout.test.ts`, `RoomPage.test.tsx`
+  - Done: `useRoomLayout` with `layoutFor` and four queries (`PHONE_QUERY` is now `NARROW_UPRIGHT_QUERY`); `Room` uses it, with the upright view unchanged.
 - [ ] **T2** `useStageSwipe` `axis: "vertical"`: up and down drags call `onOpen` / `onClose` (via `swipeOutcome` with the axes swapped), with no picture motion; left and right do nothing. `useStageSwipe.test.tsx`. · covers FR-10, FR-12 · verify: `useStageSwipe.test.tsx`
 
 ## Pieces

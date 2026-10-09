@@ -14,7 +14,7 @@ import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
-import { usePhoneView } from "../hooks/usePhoneView";
+import { useRoomLayout } from "../hooks/useRoomLayout";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useStagePick } from "../hooks/useStagePick";
@@ -85,8 +85,9 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [people, watchingOf, bigId],
   );
   const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
-  // A phone held upright (spec 0158): the same room, laid out for it.
-  const phone = usePhoneView();
+  // A phone or tablet held upright (specs 0158 and 0160): the same room, laid out for it.
+  const layout = useRoomLayout();
+  const phone = layout === "upright";
   // For the phone's feed: who has each sharer on their stage, as under the stage.
   const watchersOf = useCallback(
     (id: string) => people.filter((p) => p.id !== id && watchingOf[p.id]?.sharerId === id),
