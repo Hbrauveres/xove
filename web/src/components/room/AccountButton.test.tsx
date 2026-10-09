@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadAmbilight } from "../../media/preferences";
 import type { ConnectionState, Friend } from "../../types";
 import { AccountButton } from "./AccountButton";
+import { FooterItems } from "./RoomFooter";
 
 const me: Friend = { id: "me", name: "Henrique", hue: 36, online: true };
 
@@ -77,5 +78,27 @@ describe("account button (spec 0104)", () => {
     fireEvent.change(screen.getByRole("slider", { name: "Ambilight brightness" }), { target: { value: "0.85" } });
     expect(onAmbilightChange).toHaveBeenLastCalledWith({ on: true, brightness: 0.85 });
     expect(loadAmbilight().brightness).toBe(0.85);
+  });
+});
+
+describe("account button on the phone (spec 0158)", () => {
+  it("ends with the footer's items when given them", async () => {
+    const { user } = setup({ footer: <FooterItems /> });
+    await user.click(screen.getByRole("button", { name: /account/ }));
+    const menu = screen.getByRole("dialog");
+    const footer = within(menu).getByText(/Made by Hbrauveres/).closest("[data-footer]");
+    expect(footer).not.toBeNull();
+    expect(footer).toHaveTextContent("Buy me a coffee");
+    expect(footer).toHaveTextContent("GitHub");
+    expect(footer).toHaveTextContent("LinkedIn");
+    // The last thing in the menu.
+    const sections = menu.querySelectorAll("[data-footer], button, a");
+    expect(sections[sections.length - 1].closest("[data-footer]")).toBe(footer);
+  });
+
+  it("has no footer items on desktop", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /account/ }));
+    expect(within(screen.getByRole("dialog")).queryByText(/Made by Hbrauveres/)).toBeNull();
   });
 });

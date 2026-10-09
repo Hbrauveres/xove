@@ -182,3 +182,19 @@
     transition: none;
   }
 }
+
+/* On a phone, the footer's items close the menu (spec 0158): small, one line each. */
+.footer {
+  padding: 10px 16px 12px;
+}
+
+.footer [data-footer] {
+  display: grid;
+  gap: 6px;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.footer [data-footer] > span:last-child {
+  gap: 14px;
+}

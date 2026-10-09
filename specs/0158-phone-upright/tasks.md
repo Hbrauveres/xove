@@ -28,11 +28,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 - [x] **T5** `ActivityBell`: a round bell button opening the same dropdown and `ActivityList` as the pill, with no count, no dot and no unseen tracking. `ActivityBell.test.tsx`. · covers FR-4 · verify: `ActivityBell.test.tsx`
   - Done: `ActivityBell`, a round bell opening the same `ActivityList`, never counting.
-- [ ] **T6** The footer's items in the account menu:
+- [x] **T6** The footer's items in the account menu:
   - `RoomFooter` exports `FooterItems`;
   - `AccountButton` gets an optional `footer` slot, shown at the end of the menu;
   - `AccountButton.test.tsx`: the menu ends with "Made by Hbrauveres", Buy me a coffee, GitHub and LinkedIn when given.
   - · covers FR-6 · verify: `AccountButton.test.tsx`
+  - Done: `FooterItems` shared by the footer and the account menu's new `footer` slot.
 - [ ] **T7** `NowWatching` `compact`:
   - the 30 px avatar with its ring inside;
   - "Name · what" in bold;
