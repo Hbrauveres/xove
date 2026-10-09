@@ -26,7 +26,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Pieces
 
-- [ ] **T5** `ActivityBell`: a round bell button opening the same dropdown and `ActivityList` as the pill, with no count, no dot and no unseen tracking. `ActivityBell.test.tsx`. · covers FR-4 · verify: `ActivityBell.test.tsx`
+- [x] **T5** `ActivityBell`: a round bell button opening the same dropdown and `ActivityList` as the pill, with no count, no dot and no unseen tracking. `ActivityBell.test.tsx`. · covers FR-4 · verify: `ActivityBell.test.tsx`
+  - Done: `ActivityBell`, a round bell opening the same `ActivityList`, never counting.
 - [ ] **T6** The footer's items in the account menu:
   - `RoomFooter` exports `FooterItems`;
   - `AccountButton` gets an optional `footer` slot, shown at the end of the menu;

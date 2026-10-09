@@ -1,0 +1,28 @@
+/* The phone's bell (spec 0158): a round icon button, like the people button next to it. */
+.wrap {
+  position: relative;
+}
+
+.button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.button:hover,
+.button[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
