@@ -30,6 +30,8 @@ jobs:
   checks:
     name: Checks
     uses: ./.github/workflows/ci.yml
+    # The checks log in to Docker Hub with the 1Password token.
+    secrets: inherit
 
   # ---------------------------------------------------------------- stage 4
   publish:

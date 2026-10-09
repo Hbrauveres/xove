@@ -113,7 +113,7 @@ Dependabot (`.github/dependabot.yml`) opens weekly pull requests for Maven, npm,
 
 ## Secrets the pipeline uses
 
-Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only token of the `xove-ci` 1Password service account. The jobs that need secrets load them from the `Xove CI` vault with 1Password's `load-secrets-action` (pinned by SHA); values are masked in the logs. The references are in `stage.yml` and `release.yml`, so the workflow shows where every value comes from.
+Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only token of the `xove-ci` 1Password service account. The jobs that need secrets load them from the `Xove CI` vault with 1Password's `load-secrets-action` (pinned by SHA); values are masked in the logs. The references are in `stage.yml`, `release.yml` and `.github/actions/dockerhub-login`, so the workflow shows where every value comes from.
 
 | Value | Reference | Used by |
 | --- | --- | --- |
@@ -121,6 +121,7 @@ Only one secret is stored in GitHub: `OP_SERVICE_ACCOUNT_TOKEN`, the read-only t
 | Production's deploy key | `op://Xove CI/deploy-ssh-prod/private_key`, plus its `known-hosts`, `host`, `port`, `user` | Deploy production, Roll back production: a key that can only deploy production |
 | Server host key | `op://Xove CI/deploy-ssh/known-hosts` | Deploy stage: the runner checks it reaches the real server |
 | Host, port, user | `op://Xove CI/deploy-ssh/host`, `port`, `user` | Deploy stage |
+| Docker Hub login | `op://Xove CI/dockerhub/username`, `password` (a read-only access token) | Every check that pulls from Docker Hub (build, validate, api tests, vulnerability scan, SAST): logged in, the pulls count against our account, not the anonymous limit GitHub's shared runners run out of (`429 Too Many Requests`). Dependabot's runs have no token, so they pull anonymously |
 | Discord webhook | `op://Xove CI/discord-webhook/password` | Notify Discord: anyone with it can post in the channel |
 | `GITHUB_TOKEN` | created by GitHub for each run | Publish, deploy, cleanup: push and delete images; production: tag images, create the GitHub Release |
 
