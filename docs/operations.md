@@ -106,6 +106,7 @@ Nobody writes a `.env` by hand. Each environment's settings are built from two s
 | `postgres-dev`, `livekit-dev` | Xove App | as above | Local development only |
 | `deploy-ssh` | Xove CI | SSH private key, `host`, `port`, `user`, `known-hosts` | Stage release (can only deploy staging) |
 | `deploy-ssh-prod` | Xove CI | as above | Production release (can only deploy production) |
+| `dockerhub` | Xove CI | `username`, `password` (Docker Hub access token, public repos read-only) | The commit checks' Docker Hub login, copied by hand into the GitHub secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (decision 45) |
 | `discord-webhook` | Xove CI | `password` (the URL) | Stage and production releases |
 | `ghcr-read-token` | Xove App | `password` (GitHub token, `read:packages` only) | The server's `docker login ghcr.io`, to pull the app's images |
 | `op-token xove-server`, `op-token xove-ci` | Henrique's own vault | the service account tokens | In use on the server and in GitHub. Kept outside the Xove vaults on purpose: they're the keys to those vaults |
