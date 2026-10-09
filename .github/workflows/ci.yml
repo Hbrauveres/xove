@@ -18,6 +18,10 @@ on:
   push:
     branches-ignore: [main]
   workflow_call:
+    secrets:
+      # For the Docker Hub login (.github/actions/dockerhub-login); without it the pulls stay anonymous.
+      OP_SERVICE_ACCOUNT_TOKEN:
+        required: false
   workflow_dispatch:
 
 permissions:
