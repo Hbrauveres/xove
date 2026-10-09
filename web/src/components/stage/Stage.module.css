@@ -97,3 +97,40 @@
     gap: 12px;
   }
 }
+
+/*
+ * The phone (spec 0158): the stage runs edge to edge and still hugs the picture, never taller
+ * than 60% of the screen; the info row sits under it; only the feed or the cards scroll.
+ */
+.stage[data-layout="phone"] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage[data-layout="phone"] .box {
+  flex: none;
+  width: min(100cqw, 60dvh * var(--shape));
+  height: min(100cqw / var(--shape), 60dvh);
+}
+
+.stage[data-layout="phone"] .frame {
+  border-radius: 0;
+}
+
+.stage[data-layout="phone"] .info {
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  height: auto;
+  margin-top: 0;
+  padding: 12px;
+}
+
+.below {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

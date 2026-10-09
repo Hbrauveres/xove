@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthProvider";
 import { AccountButton } from "../components/room/AccountButton";
+import { ActivityBell } from "../components/room/ActivityBell";
 import { ActivityPill } from "../components/room/ActivityPill";
 import { PeopleButton } from "../components/room/PeopleButton";
-import { RoomFooter } from "../components/room/RoomFooter";
+import { FooterItems, RoomFooter } from "../components/room/RoomFooter";
 import { RoomHeader } from "../components/room/RoomHeader";
 import { WaitingRoom } from "../components/room/WaitingRoom";
 import { ShareSetup } from "../components/share/ShareSetup";
@@ -13,6 +14,7 @@ import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
+import { usePhoneView } from "../hooks/usePhoneView";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
 import { useStagePick } from "../hooks/useStagePick";
@@ -83,6 +85,14 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
     [people, watchingOf, bigId],
   );
   const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
+  // A phone held upright (spec 0158): the same room, laid out for it.
+  const phone = usePhoneView();
+  // For the phone's feed: who has each sharer on their stage, as under the stage.
+  const watchersOf = useCallback(
+    (id: string) => people.filter((p) => p.id !== id && watchingOf[p.id]?.sharerId === id),
+    [people, watchingOf],
+  );
+  const watching = stage.big && stage.mainKind ? { personId: stage.big.person.id, kind: stage.mainKind } : null;
 
   // The API forgot my seat (it restarted): ask again, with my video connection, which
   // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
@@ -96,18 +106,21 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   }, [seated, reenter, participantSid, pollMs]);
 
   return (
-    <div className={styles.theater}>
+    <div className={styles.theater} data-layout={phone ? "phone" : undefined}>
       <RoomHeader
         middle={
-          <ActivityPill
-            events={session.activity}
-            people={session.knownPeople}
-            meId={session.me.id}
-            connection={session.connection}
-            isLive={isLive}
-            watching={stage.big && stage.mainKind ? { personId: stage.big.person.id, kind: stage.mainKind } : null}
-            onWatch={stage.pick}
-          />
+          // On the phone the bell takes the pill's place, on the right (spec 0158).
+          !phone && (
+            <ActivityPill
+              events={session.activity}
+              people={session.knownPeople}
+              meId={session.me.id}
+              connection={session.connection}
+              isLive={isLive}
+              watching={watching}
+              onWatch={stage.pick}
+            />
+          )
         }
         right={
           <>
@@ -118,6 +131,17 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               watchingOf={session.watchingOf}
               seats={session.seats}
             />
+            {/* On the phone, by use: people, the bell, then me at the far right (spec 0158). */}
+            {phone && (
+              <ActivityBell
+                events={session.activity}
+                people={session.knownPeople}
+                meId={session.me.id}
+                isLive={isLive}
+                watching={watching}
+                onWatch={stage.pick}
+              />
+            )}
             <AccountButton
               me={session.me}
               isAdmin={me?.admin ?? false}
@@ -125,6 +149,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               ambilight={ambilight}
               onAmbilightChange={setAmbilight}
               onSignOut={onSignOut}
+              footer={phone ? <FooterItems /> : undefined}
             />
           </>
         }
@@ -139,6 +164,11 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
             ambilight={ambilight}
             watchers={watchers}
             others={others}
+            layout={phone ? "phone" : undefined}
+            watchersOf={watchersOf}
+            people={people}
+            meId={meId}
+            arrivedAt={session.arrivedAt}
             controls={{
               mine: session.mine,
               free: session.free,
@@ -164,7 +194,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
         )}
       </main>
 
-      <RoomFooter />
+      {!phone && <RoomFooter />}
 
       {fullscreen &&
         session.error &&

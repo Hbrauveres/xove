@@ -151,6 +151,7 @@ sequenceDiagram
     The page only stretches the canvas, so a 4K monitor costs the same.
   - **Timing:** it updates with the screen's refresh (`requestAnimationFrame`, at most 60 a second), every 500 ms with reduced motion, and only while the tab is visible, the video plays and it's on.
   - **Unreadable streams:** it reads no pixels, so a stream the page can't read is lit too.
+  - **Nobody live** ([spec 0158](../specs/0158-phone-upright/spec.md)): the empty stage's colour bars, at full colour, are lit too. They're a small still picture (`barsPicture()`), drawn once, with no loop.
   - **Settings:** on and brightness are saved in the browser (`xove.ambilight.*`).
 - **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
 - **Who watches what:** each browser reports what's on its stage (`PUT /api/streams/watching`), once it has been still for a second, and again when a poll shows the API lost it. The streams poll returns everyone's, for the people panel.
@@ -160,6 +161,12 @@ sequenceDiagram
   - **Right:** the other streams as previews, then a dashed box with "N of 6 live" and the places left, gone when all 6 are live. A preview shows their screen, or their camera when that's all they share.
   - **When room runs short:** the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
 - **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
+- **On a phone held upright** ([spec 0158](../specs/0158-phone-upright/spec.md), [its design](../specs/0158-phone-upright/design.html)):
+  - **When:** a window up to 760 px wide that's at least as tall as it is wide (`usePhoneView`), phone or not. Turning it switches layouts at once; the stage keeps its place in the page, so the video and a share go on.
+  - **The top bar:** the wordmark; then, by use, the people button, a bell (`ActivityBell`: the activity list, with no count or dot) and my account at the far right. No footer: its items end the account menu.
+  - **The stage:** still one screen, with the stage edge to edge under the top bar, hugging the picture but never taller than 60% of the screen. Its info row is the compact `NowWatching`: "Name · what", then LIVE, the time and "N watching".
+  - **Under it, the only part that scrolls:** "Live now · N of 6" and the other streams as a feed (`LiveFeed`: full-width pictures, then the same info row; silent, so their sound isn't downloaded; a tap puts one on the stage). With nobody live, "Nobody live · 0 of 6 · 6 free" and who's here as cards (`HereCards`), with how long each has been here, from the API's `here`.
+  - A sideways phone keeps the desktop layout for now (#160).
 - **Sound:** the big person's plays. Previews are muted, each with its own speaker and a horizontal volume slider; a muted preview's sound isn't downloaded at all. A preview without sound has no speaker.
 - **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so previews and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
 
@@ -257,7 +264,7 @@ Every schema change is a new Flyway migration. A migration that already ran is n
 | `POST /api/room/accept` | Member | Takes the seat offered: `{ status: "in" }`; 409 when there's no offer (it ran out) |
 | `POST /api/room/cancel` | Member | Leaves the queue, or turns the offer down; 204 |
 | `POST /api/room/leave` | Member | The waiting page is closing: the place is kept 30 seconds; 204 |
-| `GET /api/streams` | Member | `{ streams: [{ kind, userId, name, avatarUrl, since, settings: { quality, mode }, mine }], free, seated, seats: { total, taken, waiting }, watching: [{ userId, sharerId, kind, mine }] }`, streams oldest first; `watching` lists seated people watching live streams (spec 0104) |
+| `GET /api/streams` | Member | `{ streams: [{ kind, userId, name, avatarUrl, since, settings: { quality, mode }, mine }], free, seated, seats: { total, taken, waiting }, watching: [{ userId, sharerId, kind, mine }], here: [{ userId, since, mine }] }`, streams oldest first; `watching` lists seated people watching live streams (spec 0104); `here` lists everyone with a seat and when it was first given, kept through a reload (spec 0158) |
 | `PUT /api/streams/watching` | Member | What's on my stage (spec 0104). Body `{ sharerId, kind }`, or `{}` for an empty stage; 204, 400 for a bad kind. Kept in memory; leaving the room forgets it |
 | `POST /api/streams` | Member with a seat | Starts a stream. Body `{ kind, participantSid, trackSid, quality?, mode? }`: `screen` or `camera`, the LiveKit connection and track it comes from (never shown to anyone; 400 without them), and what it's sent with (a missing value is 1080p Smooth for a screen, 720p Smooth for a camera; a camera can't be 1080p). Starting the same kind again replaces your own. 409 when the 6 places are taken (with `reason: "full"`), or without a seat |
 | `POST /api/streams/{kind}/settings` | Its person | Changes what the stream is sent with. Body `{ quality, mode }`; 400 for an unknown value, 409 if you don't have that stream |

@@ -60,10 +60,15 @@ export type StreamsState = {
   seats?: RoomSeatsState;
   /** Who has which stream on their stage (spec 0104). Missing from an older API. */
   watching?: Watcher[];
+  /** Everyone with a seat, since when (spec 0158). Missing from an older API. */
+  here?: Arrival[];
 };
 
 /** The room's seats: in total, taken (kept ones too), and how many people wait. */
 export type RoomSeatsState = { total: number; taken: number; waiting: number };
+
+/** `userId` has had a seat since `since` (ISO timestamp); `mine` when that's me. */
+export type Arrival = { userId: number; since: string; mine: boolean };
 
 /** `userId` has `sharerId`'s `kind` on their stage; `mine` when that's me. */
 export type Watcher = { userId: number; sharerId: number; kind: StreamKind; mine: boolean };

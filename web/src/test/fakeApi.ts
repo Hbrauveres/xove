@@ -24,6 +24,8 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
     seatsInfo: { total: 20, taken: 1, waiting: 0 } as { total: number; taken: number; waiting: number } | undefined,
     /** Who watches what, besides me; undefined plays an older API. */
     watching: [] as { userId: number; sharerId: number; kind: StreamKind; mine: boolean }[] | undefined,
+    /** Who has a seat, since when (spec 0158); undefined for an older API. */
+    here: undefined as { userId: number; since: string; mine: boolean }[] | undefined,
     /** What I reported with PUT /api/streams/watching. */
     myWatch: null as { sharerId: number; kind: StreamKind } | null,
     /** What POST /api/room/enter answers: tests set "waiting" or "offered" to play a full room. */
@@ -55,6 +57,7 @@ export function installFakeApi(initial: { me?: Me | null; requests?: AccessReque
         free: 6 - server.streams.length,
         seated: server.seated,
         seats: server.seatsInfo,
+        here: server.here,
         watching:
           server.watching &&
           (server.myWatch

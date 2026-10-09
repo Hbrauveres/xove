@@ -4,7 +4,7 @@ import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
 import type { Friend, LiveFeed, Sharer } from "../../types";
-import { EmptyStage } from "./EmptyStage";
+import { barsPicture, EmptyStage } from "./EmptyStage";
 import { Facecam, type FacecamPlace } from "./Facecam";
 import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
@@ -14,7 +14,10 @@ import { VolumeButton } from "./VolumeButton";
 import { WatchSettings } from "./WatchSettings";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
-import { NowWatching } from "./NowWatching";
+import { NowWatching, STREAM_PLACES } from "./NowWatching";
+// The component, not the type of the same name from ../../types.
+import { LiveFeed as LiveNowFeed } from "./LiveFeed";
+import { HereCards } from "./HereCards";
 import { MUTED, type PreviewSound } from "./previewSound";
 import { useVideoShape } from "../../hooks/useVideoShape";
 import { gridFor } from "../../media/ambilight";
@@ -33,7 +36,19 @@ type Props = {
   watchers?: Friend[];
   /** The others in the room, for an empty stage's invitation (spec 0107). */
   others?: Friend[];
+  /** The phone's layout (spec 0158): the compact info row, then the feed, or who's here. */
+  layout?: "phone";
+  /** On the phone: who has this person's stream on their stage, for the feed's cards. */
+  watchersOf?: (personId: string) => Friend[];
+  /** On the phone, with nobody live: everyone in the room, me included, and when they arrived. */
+  people?: Friend[];
+  meId?: string;
+  arrivedAt?: Record<string, number>;
 };
+
+const NOBODY: Friend[] = [];
+const NO_ARRIVALS: Record<string, number> = {};
+const nobodyWatching = () => NOBODY;
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
 export const CHROME_IDLE_MS = 2500;
@@ -51,7 +66,20 @@ const gridKey = (shape: number) => {
 const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** Where the big stream plays: in a 16:9 box, with the picture's own shape (spec 0107). */
-export function Stage({ sharers, controls, stage, ambilight, watchers, others }: Props) {
+export function Stage({
+  sharers,
+  controls,
+  stage,
+  ambilight,
+  watchers,
+  others,
+  layout,
+  watchersOf = nobodyWatching,
+  people = NOBODY,
+  meId = "me",
+  arrivedAt = NO_ARRIVALS,
+}: Props) {
+  const phone = layout === "phone";
   const frameRef = useRef<HTMLDivElement>(null);
   const [watch, setWatch] = useState<WatchPrefs>(loadWatchPrefs);
 
@@ -117,9 +145,11 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
   useEffect(() => {
     for (const s of sharers) {
       if (s.isMe || !s.setSoundOn) continue;
-      s.setSoundOn(s.person.id === bigId || (thumbnailSound[s.person.id] ?? MUTED).muted === false);
+      // The phone's feed is silent (spec 0158): a preview unmuted on desktop isn't downloaded there.
+      const preview = !phone && (thumbnailSound[s.person.id] ?? MUTED).muted === false;
+      s.setSoundOn(s.person.id === bigId || preview);
     }
-  }, [sharers, bigId, thumbnailSound]);
+  }, [sharers, bigId, thumbnailSound, phone]);
 
   const changeWatch = (next: WatchPrefs) => {
     setWatch(next);
@@ -170,7 +200,7 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
   };
 
   const body = () => {
-    if (!big || !main) return <EmptyStage />;
+    if (!big || !main) return <EmptyStage canShareScreen={controls.canShareScreen} />;
 
     // My own stream as everyone sees it, without its sound (it would echo). Sharing
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
@@ -216,7 +246,7 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
   };
 
   return (
-    <section className={styles.stage} aria-label="Shared screen">
+    <section className={styles.stage} data-layout={layout} aria-label="Shared screen">
       <div
         className={styles.box}
         data-shape={shape.toFixed(4)}
@@ -227,6 +257,8 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
         <Ambilight
           key={big ? `${big.person.id}|${stage.mainKind}|${gridKey(shape)}` : "none"}
           video={big ? bigVideoEl : null}
+          // Nobody live: the colour bars glow too (spec 0158).
+          still={big ? null : barsPicture()}
           prefs={ambilight}
           shape={shape}
         />
@@ -278,19 +310,40 @@ export function Stage({ sharers, controls, stage, ambilight, watchers, others }:
         </div>
       </div>
 
-      {/* Under the stage, like YouTube's title row (spec 0104). */}
-      <div className={styles.info}>
-        <NowWatching sharer={big} watchers={watchers} others={others} />
-        <AlsoLive
-          others={sharers.filter((s) => s !== big)}
-          liveCount={6 - controls.free}
-          free={controls.free}
-          onPick={(id) => pick(id)}
-          sound={thumbnailSound}
-          onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
-          canSetVolume={canSetVolume()}
-        />
-      </div>
+      {phone ? (
+        <>
+          <div className={styles.info}>
+            <NowWatching compact sharer={big} watchers={watchers} free={controls.free} />
+          </div>
+          {/* Only this scrolls on the phone: the stage and its info row stay put (spec 0158). */}
+          <div className={styles.below}>
+            {big ? (
+              <LiveNowFeed
+                others={sharers.filter((s) => s !== big)}
+                liveCount={STREAM_PLACES - controls.free}
+                watchersOf={watchersOf}
+                onPick={(id) => pick(id)}
+              />
+            ) : (
+              <HereCards people={people} meId={meId} arrivedAt={arrivedAt} />
+            )}
+          </div>
+        </>
+      ) : (
+        /* Under the stage, like YouTube's title row (spec 0104). */
+        <div className={styles.info}>
+          <NowWatching sharer={big} watchers={watchers} others={others} />
+          <AlsoLive
+            others={sharers.filter((s) => s !== big)}
+            liveCount={6 - controls.free}
+            free={controls.free}
+            onPick={(id) => pick(id)}
+            sound={thumbnailSound}
+            onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
+            canSetVolume={canSetVolume()}
+          />
+        </div>
+      )}
     </section>
   );
 }

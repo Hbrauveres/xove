@@ -2,17 +2,18 @@
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  /* The line sits just above the round buttons, as in specs/0158-phone-upright/design.html. */
+  place-items: end center;
+  padding-bottom: max(52px, 20cqh);
   background: var(--surface);
 }
 
-/* Faded broadcast color bars: the "no signal" screen. */
+/* Broadcast colour bars at full colour, the "no signal" screen (spec 0158; faded before). */
 .test {
   position: absolute;
   inset: 0;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  opacity: 0.07;
 }
 
 .body {
@@ -32,8 +33,10 @@
   font-size: clamp(var(--text-lg), 3vw, var(--text-xl));
 }
 
+/* Over the bars, in the bottom third above the round buttons: white with a shadow to read. */
 .copy {
   margin: 0 0 8px;
-  color: var(--text-muted);
+  color: var(--text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 12px rgba(0, 0, 0, 0.5);
   font-size: var(--text-sm);
 }

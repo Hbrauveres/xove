@@ -41,6 +41,27 @@
   }
 }
 
+/*
+ * A phone held upright (spec 0158, specs/0158-phone-upright/design.html): still one screen, the
+ * stage edge to edge under the top bar; only what's under the stage's info row scrolls.
+ */
+.theater[data-layout="phone"] {
+  --room-edge: 12px;
+}
+
+.theater[data-layout="phone"] .middle {
+  container-type: normal;
+  flex-direction: column;
+  padding: 0;
+}
+
+.theater[data-layout="phone"] .column {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+}
+
 .error {
   margin: 0;
   padding: 10px 12px;

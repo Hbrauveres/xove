@@ -145,6 +145,51 @@
   }
 }
 
+/*
+ * The phone's info row (spec 0158): "Name · what" in bold at the body size, then the same LIVE
+ * badge, the time in mono, and "N watching" in words, the time as bright as the count.
+ */
+.compact {
+  gap: 10px;
+}
+
+.compact .name {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.compact .meta {
+  gap: 6px;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+}
+
+.compact .elapsed {
+  color: var(--text-muted);
+}
+
+.compact .watchers {
+  gap: 6px;
+}
+
+/* The dot before "N watching" stays on the phone, where the desktop's narrow row drops it. */
+.compact .watchers::before {
+  display: block;
+  margin-right: 0;
+}
+
+/* Nobody live: a quiet circle where the avatar goes. */
+.nobody {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live::before {
     animation: none;

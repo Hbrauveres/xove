@@ -6,6 +6,7 @@ import { cameraCaptureOptions, cameraPublishOptions, capOf, screenCaptureRequest
 import { AuthProvider } from "../auth/AuthProvider";
 import { aUser, installFakeApi, MY_USER_ID, myLiveStream, someoneSharing } from "../test/fakeApi";
 import { FakeLocalScreenTrack, lastRoom } from "../test/fakeLiveKit";
+import { PHONE_QUERY } from "../hooks/usePhoneView";
 import { RoomPage } from "./RoomPage";
 
 const member = aUser({ name: "Henrique Brauveres", status: "MEMBER" });
@@ -2051,5 +2052,202 @@ describe("room: under the stage (spec 0107)", () => {
 
     expect(screen.getByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
     expect(await screen.findByText("Ana and Bruno are here, waiting for someone to go live.")).toBeInTheDocument();
+  });
+});
+
+/** The window as a phone held upright (spec 0158), and turning it. */
+function phoneWindow(upright = true) {
+  const listeners = new Set<() => void>();
+  let phone = upright;
+  window.matchMedia = ((query: string) => ({
+    get matches() {
+      return query === PHONE_QUERY && phone;
+    },
+    media: query,
+    onchange: null,
+    addEventListener: (_: string, l: () => void) => listeners.add(l),
+    removeEventListener: (_: string, l: () => void) => listeners.delete(l),
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+  return {
+    turn(upright: boolean) {
+      phone = upright;
+      act(() => listeners.forEach((l) => l()));
+    },
+  };
+}
+
+describe("room: on a phone held upright (spec 0158)", () => {
+  const desktopMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = desktopMatchMedia;
+  });
+
+  it("has the wordmark, then people, the bell and my account at the far right, and no footer", async () => {
+    phoneWindow();
+    installFakeApi({ me: member });
+    const { container } = renderRoom();
+    await connected();
+
+    const header = container.querySelector("header")!;
+    const buttons = within(header).getAllByRole("button");
+    const names = buttons.map((b) => b.getAttribute("aria-label") ?? "");
+    const people = names.findIndex((n) => /people here|person here/.test(n));
+    const bell = names.indexOf("Activity");
+    const account = names.findIndex((n) => /: account,/.test(n));
+    expect(people).toBeGreaterThanOrEqual(0);
+    expect(bell).toBeGreaterThan(people);
+    expect(account).toBeGreaterThan(bell);
+    expect(within(header).getByRole("img", { name: "Xovê" })).toBeInTheDocument();
+    // The desktop's activity pill and footer aren't there; the footer's items are in my menu.
+    expect(within(header).queryByRole("button", { name: /^Activity:/ })).toBeNull();
+    expect(container.querySelector("footer")).toBeNull();
+  });
+
+  it("puts the footer's items at the end of my account menu", async () => {
+    phoneWindow();
+    installFakeApi({ me: member });
+    renderRoom();
+    const user = userEvent.setup();
+    await user.click(await connected());
+    expect(screen.getByText(/Made by Hbrauveres/)).toBeInTheDocument();
+  });
+
+  it("with nobody live, says so and lists who's here as cards", async () => {
+    phoneWindow();
+    const server = installFakeApi({ me: member });
+    server.here = [{ userId: MY_USER_ID, since: new Date(Date.now() - 5 * 60_000).toISOString(), mine: true }];
+    renderRoom();
+    await connected();
+
+    expect(screen.getByRole("heading", { name: "Nobody live" })).toBeInTheDocument();
+    expect(screen.getByText("0 of 6 · 6 free")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^Here/ })).toBeInTheDocument();
+    expect(await screen.findByText("here 5 min")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Live now/ })).toBeNull();
+  });
+
+  it("with someone live, shows them under the stage and the others in the feed, which stays silent", async () => {
+    phoneWindow();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7), someoneSharing("Ana Souza", 3)];
+    renderRoom();
+    await connected();
+    const room = lastRoom();
+    act(() => {
+      room.publishScreen("user-7", { withSound: true });
+      room.publishScreen("user-3", { withSound: true });
+    });
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Bruno · Screen" })).toBeInTheDocument();
+    const feed = screen.getByRole("region", { name: /Live now/ });
+    expect(within(feed).getByRole("heading", { level: 3, name: "Ana · Screen" })).toBeInTheDocument();
+    expect(within(feed).queryByRole("heading", { name: /Bruno/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /^Here/ })).toBeNull();
+    // Only the stage's sound is downloaded.
+    await waitFor(() => expect(room.soundPublication("user-3")!.isSubscribed).toBe(false));
+    expect(room.soundPublication("user-7")!.isSubscribed).toBe(true);
+
+    // A tap puts Ana on the stage.
+    await userEvent.setup().click(within(feed).getByRole("button", { name: "Watch Ana's screen" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Ana · Screen" })).toBeInTheDocument();
+  });
+
+  it("stops downloading a preview's sound unmuted on desktop when the phone turns upright", async () => {
+    const win = phoneWindow(false);
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7), someoneSharing("Ana Souza", 3)];
+    renderRoom();
+    await connected();
+    const room = lastRoom();
+    act(() => {
+      room.publishScreen("user-7", { withSound: true });
+      room.publishScreen("user-3", { withSound: true });
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Unmute Ana" }));
+    await waitFor(() => expect(room.soundPublication("user-3")!.isSubscribed).toBe(true));
+
+    win.turn(true);
+    await waitFor(() => expect(room.soundPublication("user-3")!.isSubscribed).toBe(false));
+    expect(room.soundPublication("user-7")!.isSubscribed).toBe(true);
+  });
+
+  it("has no LIVE badge over the stage: LIVE is in the line under it", async () => {
+    phoneWindow();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const video = await screen.findByLabelText("Bruno's shared screen");
+    const frame = video.closest("[data-chrome]") as HTMLElement;
+    expect(within(frame).queryByText("LIVE")).toBeNull();
+    const info = screen.getByRole("heading", { level: 2, name: "Bruno · Screen" }).closest("[data-compact]") as HTMLElement;
+    expect(within(info).getByText("LIVE")).toBeInTheDocument();
+  });
+
+  it("keeps the same video playing when the phone turns", async () => {
+    const win = phoneWindow();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const video = await screen.findByLabelText("Bruno's shared screen");
+
+    win.turn(false);
+    expect(await screen.findByRole("heading", { name: "Bruno" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Bruno's shared screen")).toBe(video);
+
+    win.turn(true);
+    expect(await screen.findByRole("heading", { name: "Bruno · Screen" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Bruno's shared screen")).toBe(video);
+  });
+});
+
+/** A canvas that draws nothing, so the ambilight runs in jsdom (which has no canvas). */
+function fakeCanvas() {
+  const ctx = {
+    fillRect: () => {},
+    drawImage: () => {},
+    createImageData: (w: number, h: number) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
+    putImageData: () => {},
+    set fillStyle(_: string) {},
+    set filter(_: string) {},
+    set globalAlpha(_: number) {},
+    set globalCompositeOperation(_: string) {},
+  };
+  return vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation((() => ctx) as never);
+}
+
+describe("room: the empty stage glows (spec 0158)", () => {
+  const desktopMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["on desktop", false],
+    ["on a phone", true],
+  ])("lights the colour bars with the ambilight %s", async (_, upright) => {
+    fakeCanvas();
+    if (upright) phoneWindow();
+    installFakeApi({ me: member });
+    const { container } = renderRoom();
+    await connected();
+    const light = await waitFor(() => {
+      const c = container.querySelector("canvas[data-on]") as HTMLCanvasElement | null;
+      expect(c).not.toBeNull();
+      return c!;
+    });
+    expect(Number(light.style.opacity)).toBeGreaterThan(0);
   });
 });
