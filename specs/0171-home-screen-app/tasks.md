@@ -18,11 +18,12 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `install/prompt.ts` (`listenForInstall`, `installPrompt`, `onInstalled`), started first in `main.tsx`.
 - [x] **T2** `useInstalled()`: true from the home screen (`display-mode` fullscreen or standalone, or `navigator.standalone`). `useInstalled.test.ts`. · covers FR-1, FR-4 · verify: `useInstalled.test.ts`
   - Done: `useInstalled` with `INSTALLED_QUERY` and `navigator.standalone`.
-- [ ] **T3** The manifest:
+- [x] **T3** The manifest:
   - `start_url`, `scope`, `id`;
   - a 512 px maskable icon, rendered from the phone icon and listed;
   - `brand.test.ts` checks the fields and that the icon is shipped.
   - · covers FR-4 · verify: `brand.test.ts`
+  - Done: `id`, `start_url`, `scope`; `icon-maskable-512.png` (`brand-icons.mjs --maskable`, the mark inside the 80% safe circle).
 
 ## Pieces and wiring
 
