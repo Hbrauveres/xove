@@ -42,13 +42,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `NowWatching.test.tsx`: both cases. The desktop's rendering is unchanged (existing tests).
   - · covers FR-10, FR-17 · verify: `NowWatching.test.tsx`
   - Done: `NowWatching` `compact` (and `level`, `free`); `STREAM_PLACES` = 6.
-- [ ] **T8** `LiveFeed`:
+- [x] **T8** `LiveFeed`:
   - "Live now" with "N of 6";
   - a card for every sharer except the one on the stage: a full-width 16:9 picture with nothing over it, then the compact `NowWatching` block;
   - no sound controls; a tap calls `pick`.
 
   `LiveFeed.test.tsx`.
   - · covers FR-11, FR-12, FR-13, FR-14 · verify: `LiveFeed.test.tsx`
+  - Done: `LiveFeed`; its pictures join the video frames allowed pure black in `palette.test.ts`.
 - [ ] **T9** `HereCards`:
   - "Here" with the count;
   - a soft card per person: avatar, name, and `hereFor` (ticking every 30 s);

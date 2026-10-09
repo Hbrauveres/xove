@@ -1,0 +1,69 @@
+/* The phone's feed (spec 0158): see specs/0158-phone-upright/design.html, "2 · Feed". */
+.feed {
+  padding: 0 12px 16px;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 6px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  min-width: 0;
+}
+
+.picture {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+}
+
+.picture video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.picture:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.info {
+  padding: 8px 0 2px;
+  cursor: pointer;
+}

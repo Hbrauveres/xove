@@ -82,7 +82,8 @@ describe("the palette: black, neutral greys, red accent (specs 0111 and 0113)", 
   });
 
   it("keeps pure black only behind the video, the picture's own frame (spec 0121)", () => {
-    const frames = ["Stage", "ScreenVideo", "Facecam", "AlsoLive", "ShareSetup"].map((n) => `/${n}.module.css`);
+    // The phone's feed pictures are video frames too (spec 0158).
+    const frames = ["Stage", "ScreenVideo", "Facecam", "AlsoLive", "LiveFeed", "ShareSetup"].map((n) => `/${n}.module.css`);
     for (const [path, css] of all) {
       // Comments may say "black"; only the rules count.
       const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
