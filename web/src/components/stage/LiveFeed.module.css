@@ -32,7 +32,9 @@
   min-width: 0;
 }
 
+/* The video fills this box: it's positioned inside it, never over the page (spec 0158). */
 .picture {
+  position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -45,8 +47,6 @@
 }
 
 .picture video {
-  width: 100%;
-  height: 100%;
   object-fit: cover;
 }
 
