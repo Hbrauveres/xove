@@ -25,7 +25,14 @@ export function StreamsRow({ others, liveCount, open, onOpen, onPick }: Props) {
   return (
     <>
       {!open && (
-        <button type="button" className={styles.tab} data-no-swipe aria-label="Show the other streams" onClick={onOpen} />
+        <button
+          type="button"
+          className={styles.tab}
+          data-no-swipe
+          data-fades
+          aria-label="Show the other streams"
+          onClick={onOpen}
+        />
       )}
       <section
         className={styles.row}

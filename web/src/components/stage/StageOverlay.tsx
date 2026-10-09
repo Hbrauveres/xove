@@ -12,7 +12,7 @@ type Props = {
  */
 export function StageOverlay({ fullscreen, onFullscreen }: Props) {
   return (
-    <div className={styles.overlay}>
+    <div className={styles.overlay} data-overlay>
       <div className={styles.top}>
         <button
           type="button"

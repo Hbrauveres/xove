@@ -32,7 +32,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Wiring
 
-- [ ] **T4** The sideways room:
+- [x] **T4** The sideways room:
   - `Room`: no header or footer sideways, and `topRight` (people, bell, account) handed to `Stage`;
   - `Stage` `layout="sideways"`:
     - the full-screen layer with the height-first box;
@@ -48,7 +48,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `layout.test.ts`: the box's size.
   - · covers FR-3, FR-4, FR-5, FR-6, FR-7 · verify: `cd web && npm test && npm run build`
-- [ ] **T5** Fading sideways:
+  - Done: `Room` without header or footer sideways, my buttons handed to `Stage` as `topRight`; `Stage` `layout="sideways"`: the full-screen layer, the height-first box, the top bar; the fullscreen button moves to the bottom right and the round buttons sit higher, clear of the tab (seen in the harness). The panels fit as they are, so `Dropdown` is unchanged.
+- [x] **T5** Fading sideways:
   - the stage layer listens for touches and carries `data-chrome`;
   - the top bar, buttons and tab fade with it;
   - an open row closes when the controls hide;
@@ -56,7 +57,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `RoomPage.test.tsx` (sideways) and `layout.test.ts`.
   - · covers FR-8 · verify: `cd web && npm test`
-- [ ] **T6** The row in the room:
+  - Done: the stage layer takes the touches and carries `data-chrome`; `[data-fades]` on the top bar and the tab; an open row closes when the controls hide.
+- [x] **T6** The row in the room:
   - `StreamsRow` sideways, starting closed (and again each time the phone turns sideways);
   - the vertical swipe opens and closes it;
   - a tap changes the stage;
@@ -66,7 +68,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `RoomPage.test.tsx` (sideways).
   - · covers FR-9–FR-12 · verify: `cd web && npm test && npm run build`
-- [ ] **T7** Tablets upright: the phone layout's info row and scrolling block in a centred column at most 640 px wide. `layout.test.ts`. · covers FR-2b · verify: `layout.test.ts`
+  - Done: `StreamsRow` sideways, closed at first and on each turn; the vertical swipe (a second `useStageSwipe`); 6 room tests.
+- [x] **T7** Tablets upright: the phone layout's info row and scrolling block in a centred column at most 640 px wide. `layout.test.ts`. · covers FR-2b · verify: `layout.test.ts`
+  - Done: the centred 640 px column for the info row and the block under it.
 
 ## Docs and review
 

@@ -162,3 +162,98 @@
     transition: none;
   }
 }
+
+/*
+ * A phone sideways (spec 0160, specs/0160-phone-sideways/design.html): the stage fills the
+ * screen height first and hugs the picture, centred, black at its sides where the light glows.
+ * A top bar and the streams row float over it, and fade with the controls.
+ */
+.stage[data-layout="sideways"] {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  touch-action: none;
+}
+
+.stage[data-layout="sideways"] .box {
+  flex: none;
+  width: min(100cqw, 100dvh * var(--shape));
+  height: min(100dvh, 100cqw / var(--shape));
+}
+
+.stage[data-layout="sideways"] .frame {
+  border-radius: 0;
+}
+
+.top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 26px
+    calc(14px + env(safe-area-inset-left, 0px));
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+.top > * {
+  pointer-events: auto;
+}
+
+.topRight {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Sideways the top belongs to the top bar: the fullscreen button moves to the bottom right. */
+.stage[data-layout="sideways"] [data-overlay] {
+  justify-content: flex-end;
+  padding-bottom: 26px;
+}
+
+/* The round buttons sit a little higher, clear of the streams row's tab. */
+.stage[data-layout="sideways"] .controls > * {
+  padding-bottom: 26px;
+}
+
+/* Fading sideways: the top bar and the row's tab go with the round buttons (FR-8). */
+.stage[data-layout="sideways"] [data-fades] {
+  transition: opacity 0.25s ease;
+}
+
+.stage[data-layout="sideways"][data-chrome="hidden"] [data-fades] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage[data-layout="sideways"][data-chrome="hidden"] [data-fades] * {
+  pointer-events: none;
+}
+
+/*
+ * A tablet held upright (spec 0160, FR-2b): the stage stays full width; what's under it sits
+ * in a centred column, so the feed's pictures don't grow huge.
+ */
+.stage[data-layout="phone"] .info,
+.below > * {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage[data-layout="sideways"] [data-fades] {
+    transition: none;
+  }
+}
