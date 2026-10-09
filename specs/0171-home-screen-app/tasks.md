@@ -16,7 +16,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   `prompt.test.ts`.
   - · covers FR-3 · verify: `prompt.test.ts`
   - Done: `install/prompt.ts` (`listenForInstall`, `installPrompt`, `onInstalled`), started first in `main.tsx`.
-- [ ] **T2** `useInstalled()`: true from the home screen (`display-mode` fullscreen or standalone, or `navigator.standalone`). `useInstalled.test.ts`. · covers FR-1, FR-4 · verify: `useInstalled.test.ts`
+- [x] **T2** `useInstalled()`: true from the home screen (`display-mode` fullscreen or standalone, or `navigator.standalone`). `useInstalled.test.ts`. · covers FR-1, FR-4 · verify: `useInstalled.test.ts`
+  - Done: `useInstalled` with `INSTALLED_QUERY` and `navigator.standalone`.
 - [ ] **T3** The manifest:
   - `start_url`, `scope`, `id`;
   - a 512 px maskable icon, rendered from the phone icon and listed;
