@@ -25,10 +25,16 @@ export const SLIDE_MS = 180;
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 type Options = {
-  /** On the phone with at least two people live (spec 0159). */
+  /** On the phone with at least two people live (spec 0159), or sideways (spec 0160). */
   enabled: boolean;
+  /** Left and right steps through the people (upright); up and down opens and closes the streams row (sideways). */
+  axis?: "horizontal" | "vertical";
   /** Puts the next (`1`) or previous (`-1`) person on the stage. */
-  onStep: (direction: 1 | -1) => void;
+  onStep?: (direction: 1 | -1) => void;
+  /** Sideways: a swipe up. */
+  onOpen?: () => void;
+  /** Sideways: a swipe down. */
+  onClose?: () => void;
 };
 
 /**
@@ -37,15 +43,16 @@ type Options = {
  * ("drag"), easing ("settle"), or still. A drag that starts inside `[data-no-swipe]` (the
  * facecam, the round buttons, a menu) is left alone.
  */
-export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, onStep }: Options) {
+export function useStageSwipe(slide: RefObject<HTMLElement | null>, options: Options) {
+  const { enabled, axis = "horizontal" } = options;
   const start = useRef<{ id: number; x: number; y: number; at: number } | null>(null);
   /** A slide out and in is running: a new drag waits until it's done. */
   const sliding = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   // The latest stage and order, when a slide finishes after a re-render (or the phone turned).
-  const latest = useRef({ enabled, onStep });
+  const latest = useRef(options);
   useEffect(() => {
-    latest.current = { enabled, onStep };
+    latest.current = options;
   });
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -74,6 +81,14 @@ export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, o
     const s = start.current;
     if (!s || s.id !== pointerId) return;
     start.current = null;
+    if (axis === "vertical") {
+      // Up opens, down closes; the picture doesn't move (spec 0160).
+      const height = slide.current?.getBoundingClientRect().height || 1;
+      const way = cancelled || !latest.current.enabled ? 0 : swipeOutcome(y - s.y, x - s.x, performance.now() - s.at, height);
+      if (way === 1) latest.current.onOpen?.();
+      if (way === -1) latest.current.onClose?.();
+      return;
+    }
     const width = slide.current?.getBoundingClientRect().width || 1;
     const direction =
       cancelled || !latest.current.enabled ? 0 : swipeOutcome(x - s.x, y - s.y, performance.now() - s.at, width);
@@ -85,13 +100,13 @@ export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, o
     if (reducedMotion()) {
       place(0);
       sliding.current = false;
-      latest.current.onStep(direction);
+      latest.current.onStep?.(direction);
       return;
     }
     // Out the way the finger went, then the next one in from the other side.
     place(-direction * width, "settle");
     later(SLIDE_MS, () => {
-      if (latest.current.enabled) latest.current.onStep(direction);
+      if (latest.current.enabled) latest.current.onStep?.(direction);
       place(direction * width);
       // Lay out the jump to the other side before easing back, so it slides rather than snaps.
       void slide.current?.getBoundingClientRect();
@@ -114,6 +129,7 @@ export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, o
         finish(e.pointerId, e.clientX, e.clientY, true);
         return;
       }
+      if (axis === "vertical") return;
       const dx = e.clientX - s.x;
       // Up and down is left to the page; only a sideways drag moves the picture.
       if (Math.abs(dx) > Math.abs(e.clientY - s.y)) place(dx, "drag");

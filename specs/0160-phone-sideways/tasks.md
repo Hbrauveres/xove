@@ -13,7 +13,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `Room` uses it; the upright view is unchanged (existing phone tests pass).
   - · covers FR-1, FR-2, FR-2a · verify: `useRoomLayout.test.ts`, `RoomPage.test.tsx`
   - Done: `useRoomLayout` with `layoutFor` and four queries (`PHONE_QUERY` is now `NARROW_UPRIGHT_QUERY`); `Room` uses it, with the upright view unchanged.
-- [ ] **T2** `useStageSwipe` `axis: "vertical"`: up and down drags call `onOpen` / `onClose` (via `swipeOutcome` with the axes swapped), with no picture motion; left and right do nothing. `useStageSwipe.test.tsx`. · covers FR-10, FR-12 · verify: `useStageSwipe.test.tsx`
+- [x] **T2** `useStageSwipe` `axis: "vertical"`: up and down drags call `onOpen` / `onClose` (via `swipeOutcome` with the axes swapped), with no picture motion; left and right do nothing. `useStageSwipe.test.tsx`. · covers FR-10, FR-12 · verify: `useStageSwipe.test.tsx`
+  - Done: `axis: "vertical"` with `onOpen` and `onClose`; `onStep` optional.
 
 ## Pieces
 
