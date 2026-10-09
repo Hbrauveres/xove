@@ -91,3 +91,13 @@ describe("no pull-to-refresh on phones", () => {
     expect(page).toMatch(/overscroll-behavior:\s*none/);
   });
 });
+
+describe("the fullscreen button in the full-screen view (spec 0171)", () => {
+  it("sits centred on the round buttons' row, at both of their sizes", () => {
+    const stage = sheet("components/stage/Stage.module.css");
+    const at = stage.indexOf('.stage[data-layout="sideways"] [data-overlay] {');
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(stage.slice(at, stage.indexOf("}", at))).toMatch(/padding-bottom:\s*calc\(12px \+ \(48px - 34px\) \/ 2\)/);
+    expect(stage).toMatch(/@media \(max-width: 520px\) \{\s*\.stage\[data-layout="sideways"\] \[data-overlay\] \{\s*padding-bottom:\s*calc\(12px \+ \(42px - 34px\) \/ 2\)/);
+  });
+});
