@@ -1,6 +1,8 @@
 import userEvent from "@testing-library/user-event";
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { INSTALLED_QUERY } from "./hooks/useInstalled";
+import { TOUCH_QUERY } from "./hooks/useRoomLayout";
 import { aUser, installFakeApi } from "./test/fakeApi";
 import { renderApp } from "./test/renderApp";
 
@@ -63,5 +65,41 @@ describe("who sees which screen", () => {
     renderApp("/request-access");
 
     expect(await screen.findByRole("button", { name: /(people|person) here/i })).toBeInTheDocument();
+  });
+});
+
+describe("phones and tablets use the home-screen app (spec 0171)", () => {
+  /** A touch-first device, opened from the home screen or in a browser tab. */
+  function touchDevice(installed: boolean) {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q === TOUCH_QUERY || (q === INSTALLED_QUERY && installed),
+      media: q,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each(["/", "/room", "/admin", "/request-access"])("shows only the install screen at %s in a browser tab", async (path) => {
+    touchDevice(false);
+    installFakeApi({ me: aUser({ status: "MEMBER", admin: true }) });
+    renderApp(path);
+    expect(await screen.findByRole("heading", { name: /works best from your home screen/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /continue with google/i })).toBeNull();
+  });
+
+  it("works as today from the home screen", async () => {
+    touchDevice(true);
+    installFakeApi({ me: null });
+    renderApp("/");
+    expect(await screen.findByRole("link", { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /works best from your home screen/ })).toBeNull();
+  });
+
+  it("never shows it on a desktop", async () => {
+    installFakeApi({ me: null });
+    renderApp("/");
+    expect(await screen.findByRole("link", { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /works best from your home screen/ })).toBeNull();
   });
 });

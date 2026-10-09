@@ -36,7 +36,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   `InstallPage.test.tsx`.
   - · covers FR-2, FR-3 · verify: `InstallPage.test.tsx`
   - Done: `InstallPage` and `install/device.ts` (`isApple`); after installing it says "Installed. Open Xovê from your home screen."
-- [ ] **T5** `App`: on a touch device outside the app, the install screen for every route; installed or on a desktop, the routes as today. `App.test.tsx`. · covers FR-1, FR-4, FR-5 · verify: `App.test.tsx`
+- [x] **T5** `App`: on a touch device outside the app, the install screen for every route; installed or on a desktop, the routes as today. `App.test.tsx`. · covers FR-1, FR-4, FR-5 · verify: `App.test.tsx`
+  - Done: `App` returns `InstallPage` on a touch device outside the app, before any route.
 - [ ] **T6** The full-screen view:
   - `Room` keeps `fullView`;
   - the stage's layout is sideways when the phone is sideways, or upright with `fullView`;
