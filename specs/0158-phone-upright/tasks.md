@@ -69,7 +69,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Wiring
 
-- [ ] **T11** The phone layout in the room:
+- [x] **T11** The phone layout in the room:
   - `Room` uses `usePhoneView` and sets `data-layout="phone"`;
   - on the phone:
     - the header's middle is empty, and its right side is people, `ActivityBell`, then `AccountButton` with the footer's items;
@@ -88,6 +88,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
     - `Stage.test.tsx` (phone): no LIVE badge, the feed's sharers get `setSoundOn(false)`, nobody live shows the bars, "Nobody live" and the cards;
     - `layout.test.ts` (reads the CSS): `100dvh`, the scrolling block, the 60dvh cap.
   - · covers FR-1, FR-2, FR-3, FR-5, FR-6, FR-7, FR-8, FR-9, FR-14a, FR-18a · verify: `cd web && npm test && npm run build`
+  - Done: `Room` follows `usePhoneView`; the phone's header, no footer, `Stage` `layout="phone"` with the compact row and the feed or the cards; the phone's CSS. The stage's checks live in `RoomPage.test.tsx` (phone: header order, footer items, nobody live, the silent feed, the same `<video>` when turning) and `layout.test.ts`. The stage never had a LIVE badge over it: it's in the info row.
 
 ## Docs and review
 
