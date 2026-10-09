@@ -38,7 +38,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - Done: `InstallPage` and `install/device.ts` (`isApple`); after installing it says "Installed. Open Xovê from your home screen."
 - [x] **T5** `App`: on a touch device outside the app, the install screen for every route; installed or on a desktop, the routes as today. `App.test.tsx`. · covers FR-1, FR-4, FR-5 · verify: `App.test.tsx`
   - Done: `App` returns `InstallPage` on a touch device outside the app, before any route.
-- [ ] **T6** The full-screen view:
+- [x] **T6** The full-screen view:
   - `Room` keeps `fullView`;
   - the stage's layout is sideways when the phone is sideways, or upright with `fullView`;
   - on a touch device, the stage's fullscreen button toggles `fullView` ("Full-screen view" or "Exit full-screen view") and is hidden sideways;
@@ -52,6 +52,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   Existing fullscreen tests pass.
   - · covers FR-6, FR-7, FR-8 · verify: `cd web && npm test && npm run build`
+  - Done: `fullView` in `Room`; `Stage`'s `fullView` prop; `StageOverlay` with `view` and `hidden`. The sideways drag test no longer drags from the fullscreen button, which phones don't have there.
 
 ## Docs and review
 

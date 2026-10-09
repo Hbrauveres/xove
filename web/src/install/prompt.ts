@@ -26,7 +26,9 @@ export const installPrompt = () => kept;
 /** Calls `f` when the app gets installed; returns how to stop. */
 export function onInstalled(f: () => void) {
   installed.add(f);
-  return () => installed.delete(f);
+  return () => {
+    installed.delete(f);
+  };
 }
 
 /** Only for tests. */

@@ -48,6 +48,11 @@ type Props = {
   layout?: "phone" | "sideways";
   /** Sideways: the people button, the bell and my account, on the right of the top bar. */
   topRight?: ReactNode;
+  /**
+   * On a phone or tablet (spec 0171): the fullscreen button opens and leaves the full-screen
+   * view instead of the player's fullscreen; `hidden` sideways, where the room is already in it.
+   */
+  fullView?: { on: boolean; toggle: () => void; hidden: boolean };
   /** On the phone: who has this person's stream on their stage, for the feed's cards. */
   watchersOf?: (personId: string) => Friend[];
   /** On the phone, with nobody live: everyone in the room, me included, and when they arrived. */
@@ -89,6 +94,7 @@ export function Stage({
   meId = "me",
   arrivedAt = NO_ARRIVALS,
   topRight,
+  fullView,
 }: Props) {
   const phone = layout === "phone";
   const sideways = layout === "sideways";
@@ -322,7 +328,11 @@ export function Stage({
             />
           )}
         </div>
-        <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+        {fullView ? (
+          <StageOverlay view fullscreen={fullView.on} onFullscreen={fullView.toggle} hidden={fullView.hidden} />
+        ) : (
+          <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+        )}
       </>
     );
   };
