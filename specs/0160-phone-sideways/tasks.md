@@ -91,6 +91,16 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
     Tests for each, and the panel checked at 667 × 375 in the harness. AC-7 is in the PR.
 
+## After the first check on a phone
+
+- [x] **T10** FR-13 to FR-15 (added 2026-10-09):
+  - `usePageFullscreen`: the first lifted tap on a phone or tablet, upright or sideways, asks for the page's fullscreen, again after a turn if it was left;
+  - `useFullscreenElement` ignores the page's fullscreen, and the stage's button enlarges the player from it;
+  - the manifest's display is `fullscreen`, with Apple's meta tags;
+  - the setup window, sideways, shows its preview left and settings right.
+
+  Tests: `usePageFullscreen.test.ts`, `useFullscreenElement.test.ts`, `brand.test.ts`, `layout.test.ts`, `RoomPage.test.tsx`. Checked in the harness at 915 × 412 and 667 × 375: no scroll. · covers FR-13, FR-14, FR-15, AC-8, AC-9, AC-10 · verify: `cd web && npm test && npm run build`
+
 ## Coverage
 
 | Requirement | Task |

@@ -883,6 +883,35 @@ describe("room: fullscreen (spec 0098)", () => {
   });
 });
 
+describe("room: the player's fullscreen while the whole page is fullscreen (spec 0160)", () => {
+  it("puts the player fullscreen instead of leaving the page's", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const frame = (await screen.findByLabelText("Bruno's shared screen")).closest("[data-chrome]") as HTMLElement;
+    let current: Element | null = document.documentElement;
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => current });
+    const enter = vi.fn(async () => {
+      current = frame;
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    const exit = vi.fn(async () => {});
+    frame.requestFullscreen = enter;
+    document.exitFullscreen = exit;
+    try {
+      await userEvent.setup().click(within(stage()).getByRole("button", { name: "Fullscreen" }));
+      expect(enter).toHaveBeenCalled();
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+    }
+  });
+});
+
 describe("room: the setup window's texts (spec 0101)", () => {
   it("points to the button's menu, and gives today's sound hint", async () => {
     installFakeApi({ me: member });

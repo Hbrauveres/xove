@@ -58,3 +58,34 @@
   gap: 8px;
   justify-content: flex-end;
 }
+
+/*
+ * A short, wide screen (a phone sideways, spec 0160): a smaller preview on the left, the title,
+ * settings and buttons on the right, so it fits without scrolling.
+ */
+@media (orientation: landscape) and (max-height: 500px) {
+  .backdrop {
+    padding: 12px;
+  }
+
+  .window {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-content: center;
+    column-gap: 20px;
+    row-gap: 10px;
+    width: min(760px, 100%);
+    padding: 16px;
+  }
+
+  .window > * {
+    grid-column: 2;
+  }
+
+  .preview {
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    align-self: center;
+    max-height: calc(100dvh - 56px);
+  }
+}

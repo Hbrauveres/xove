@@ -1,13 +1,20 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 
+/** What's fullscreen, unless it's the whole page (spec 0160): then the page is still the page. */
+const playerFullscreen = () => {
+  const element = document.fullscreenElement ?? null;
+  return element === document.documentElement ? null : element;
+};
+
 /**
  * The element shown fullscreen, or null (spec 0101). While there is one, only it and
- * what's inside it can be seen, so windows meant for the page go inside it.
+ * what's inside it can be seen, so windows meant for the page go inside it. The whole page
+ * fullscreen on a phone (spec 0160) doesn't count: everything is still in view.
  */
 export function useFullscreenElement(): Element | null {
-  const [element, setElement] = useState<Element | null>(() => document.fullscreenElement ?? null);
+  const [element, setElement] = useState<Element | null>(playerFullscreen);
   useEffect(() => {
-    const follow = () => setElement(document.fullscreenElement ?? null);
+    const follow = () => setElement(playerFullscreen());
     document.addEventListener("fullscreenchange", follow);
     return () => document.removeEventListener("fullscreenchange", follow);
   }, []);

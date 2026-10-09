@@ -206,7 +206,8 @@ export function Stage({
     return () => document.removeEventListener("fullscreenchange", follow);
   }, []);
   const toggleFullscreen = () => {
-    if (document.fullscreenElement) {
+    // The whole page may be fullscreen on a phone (spec 0160): only the player's own leaves.
+    if (document.fullscreenElement && document.fullscreenElement === frameRef.current) {
       void document.exitFullscreen?.().catch(() => {
         /* Already left. */
       });

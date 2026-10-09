@@ -14,6 +14,11 @@ const links = new Map(
   [...html.matchAll(/<link\b[^>]*>/g)].map(([tag]) => [/rel="([^"]+)"/.exec(tag)?.[1], /href="([^"]+)"/.exec(tag)?.[1]]),
 );
 const href = (rel: string) => links.get(rel);
+/** The page's <meta name> tags, as name → content. */
+const metas = new Map(
+  [...html.matchAll(/<meta\b[^>]*>/g)].map(([tag]) => [/name="([^"]+)"/.exec(tag)?.[1], /content="([^"]+)"/.exec(tag)?.[1]]),
+);
+const meta = (name: string) => metas.get(name);
 
 describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
   it("links the favicon, the home-screen icon and the manifest from the page", () => {
@@ -37,6 +42,12 @@ describe("Xovê's icon in the browser and on phones (spec 0111, FR-4)", () => {
       "/icon-192.png 192x192",
       "/icon-512.png 512x512",
     ]);
+  });
+
+  it("opens from the home screen with no browser bar, on Android and iPhone (spec 0160)", () => {
+    expect(JSON.parse(manifestText).display).toBe("fullscreen");
+    expect(meta("apple-mobile-web-app-capable")).toBe("yes");
+    expect(meta("mobile-web-app-capable")).toBe("yes");
   });
 
   it("keeps the favicon in step with the mark's geometry", () => {
