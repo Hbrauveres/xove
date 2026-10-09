@@ -2614,6 +2614,14 @@ describe("room: on a phone sideways (spec 0160)", () => {
     expect(screen.queryByRole("button", { name: "Show the other streams" })).toBeNull();
   });
 
+  it("shows the dots too, one per person live, and a tap on one changes the stage", async () => {
+    await sidewaysWith(["Marina", "Rafa"]);
+    await screen.findByLabelText("Marina's shared screen");
+    expect(within(stageLayer()).getByRole("button", { name: "Watch Marina" })).toHaveAttribute("aria-current", "true");
+    await userEvent.setup().click(within(stageLayer()).getByRole("button", { name: "Watch Rafa" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Rafa · Screen" })).toBeInTheDocument();
+  });
+
   it("changes the stream on a left or right drag, as upright, and drags on the buttons don't open the row", async () => {
     await sidewaysWith(["Marina", "Rafa"]);
     await screen.findByLabelText("Marina's shared screen");
