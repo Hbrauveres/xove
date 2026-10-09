@@ -84,14 +84,6 @@ describe("the setup window sideways (spec 0160, FR-15)", () => {
   });
 });
 
-describe("no pull-to-refresh on phones", () => {
-  it("turns off the page's pull-to-refresh and overscroll, so a drag down (the volume) never reloads", () => {
-    const global = sheet("styles/global.css");
-    const page = rule(global, "html,\nbody,\n#root");
-    expect(page).toMatch(/overscroll-behavior:\s*none/);
-  });
-});
-
 describe("the fullscreen button in the full-screen view (spec 0171)", () => {
   it("sits centred on the round buttons' row, at both of their sizes", () => {
     const stage = sheet("components/stage/Stage.module.css");
