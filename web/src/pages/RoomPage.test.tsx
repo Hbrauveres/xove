@@ -2614,12 +2614,15 @@ describe("room: on a phone sideways (spec 0160)", () => {
     expect(screen.queryByRole("button", { name: "Show the other streams" })).toBeNull();
   });
 
-  it("doesn't change the stream on a left or right drag, and drags on the buttons don't open the row", async () => {
+  it("changes the stream on a left or right drag, as upright, and drags on the buttons don't open the row", async () => {
     await sidewaysWith(["Marina", "Rafa"]);
     await screen.findByLabelText("Marina's shared screen");
     drag(-300, 0);
+    expect(await screen.findByRole("heading", { level: 2, name: "Rafa · Screen" })).toBeInTheDocument();
+    expect(row()).toBeNull();
     await new Promise((r) => setTimeout(r, 450));
-    expect(screen.getByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+    drag(300, 0);
+    expect(await screen.findByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
     drag(0, -150, within(stageLayer()).getByRole("button", { name: "Fullscreen" }));
     drag(0, -150, stageLayer().querySelector("[data-no-swipe] button[aria-label*=camera i]")!);
     await new Promise((r) => setTimeout(r, 100));

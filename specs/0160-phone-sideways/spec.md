@@ -41,9 +41,9 @@ Everyone watching on a phone turned sideways, and on a tablet.
 **The streams row**
 
 - **FR-9** The other live streams (everyone but the one on the stage) sit in one row of small pictures along the bottom, floating over the stage on a black gradient fading upward, with "Live now · N of 6" above them. Each picture shows the person's name over it. The row scrolls sideways when they don't fit. It's silent, as the upright feed is (spec 0158, FR-13).
-- **FR-10** The row starts closed. A swipe up on the stage opens it; a swipe down closes it. While it's closed and the controls show, a small tab at the bottom edge opens it on a tap.
+- **FR-10** The row starts closed. A swipe up on the stage opens it; a swipe down closes it. A round button at the bottom left does the same: an arrow up while the row is closed (it shows and fades with the other controls), an arrow down on the row's line while it's open. (Changed after the phone check, 2026-10-09: a small tab at the bottom edge before.)
 - **FR-11** Tapping a picture in the row puts that person on the stage, as a feed card does.
-- **FR-12** Swipes start on the picture only, as in spec 0159: dragging the facecam, the round buttons or a menu works as before. A sideways drag on the stage does nothing here (changing stream sideways is the row's job).
+- **FR-12** Swipes start on the picture only, as in spec 0159: dragging the facecam, the round buttons or a menu works as before. A left or right swipe changes the stream as upright (spec 0159); up and down opens and closes the row. (Changed after the phone check, 2026-10-09: left and right did nothing sideways before.)
 
 **After the first check on a phone (2026-10-09)**
 
@@ -59,7 +59,7 @@ Everyone watching on a phone turned sideways, and on a tablet.
 - **AC-3** With nobody live: the bars, "Nobody live" and "0 of 6 · 6 free", and the camera button (automated test).
 - **AC-4** While a stream plays, after about 2.5 s without a touch the top line, the round buttons and the row's tab fade, and an open row closes; a touch brings the controls back. Over the empty stage nothing fades (automated test).
 - **AC-5** The row starts closed; a swipe up opens it, a swipe down closes it, the tab opens it; it lists every live stream but the stage's with names and "N of 6"; tapping one puts it on the stage; its sound isn't downloaded (automated test).
-- **AC-6** A sideways drag on the sideways stage doesn't change the stream; drags starting on the facecam or the buttons don't open or close the row (automated test).
+- **AC-6** A left or right drag on the sideways stage changes the stream, as upright; drags starting on the facecam, the buttons or the black sides don't swipe or open the row (automated test).
 - **AC-7** On staging, on Android Chrome and iPhone Safari, sideways: the stage fills the screen with the glow at its sides, the top gradient and the buttons fade and come back on a touch, the row opens and closes with a swipe and the tab, a tap in the row changes the stage, and turning the phone back and forth keeps the video playing (manual, written in the PR). On a tablet (or a browser's tablet emulation): upright, the upright view with the centred column; sideways, the desktop layout (manual).
 
 - **AC-8** On a phone or tablet, upright or sideways, the first tap (when the finger lifts) asks for fullscreen of the whole page, once until the next turn; turning keeps it; a desktop window doesn't ask; the page's fullscreen doesn't count as the player's (windows and errors stay where they were) (automated test). On Android, a tap hides the address bar, upright and sideways (manual).
@@ -69,7 +69,6 @@ Everyone watching on a phone turned sideways, and on a tablet.
 ## Out of scope
 
 - Multi-view on phones (#162).
-- Swiping left or right to change stream sideways (the row does that).
 - The desktop layout.
 
 ## Decisions

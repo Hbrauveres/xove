@@ -83,3 +83,11 @@ describe("the setup window sideways (spec 0160, FR-15)", () => {
     expect(block).toMatch(/\.window > \* \{[^}]*grid-column:\s*2/);
   });
 });
+
+describe("no pull-to-refresh on phones", () => {
+  it("turns off the page's pull-to-refresh and overscroll, so a drag down (the volume) never reloads", () => {
+    const global = sheet("styles/global.css");
+    const page = rule(global, "html,\nbody,\n#root");
+    expect(page).toMatch(/overscroll-behavior:\s*none/);
+  });
+});

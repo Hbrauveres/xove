@@ -222,7 +222,8 @@ export function Stage({
   const slideRef = useRef<HTMLDivElement>(null);
   const order = sharers.map((s) => s.person.id);
   const swipe = useStageSwipe(slideRef, {
-    enabled: phone && order.length > 1,
+    // Upright and sideways alike (spec 0160): left and right always changes the stream.
+    enabled: (phone || sideways) && order.length > 1,
     onStep: (direction) => {
       const next = stepOnStage(order, bigId, direction);
       if (next) pick(next);
@@ -260,9 +261,10 @@ export function Stage({
     },
     onPointerDown: (e: React.PointerEvent) => {
       showChrome();
+      // Sideways the whole screen listens, but only a drag that starts on the picture swipes (FR-12).
+      if (sideways && !slideRef.current?.contains(e.target as Node)) return;
       swipe.onPointerDown(e);
-      // Only a drag that starts on the picture opens or closes the row (FR-12).
-      if (slideRef.current?.contains(e.target as Node)) rowSwipe.onPointerDown(e);
+      rowSwipe.onPointerDown(e);
     },
     onPointerUp: (e: React.PointerEvent) => {
       swipe.onPointerUp(e);
@@ -420,6 +422,7 @@ export function Stage({
                 setRowOpen(true);
                 showChrome();
               }}
+              onClose={() => setRowOpen(false)}
               onPick={(id) => pick(id)}
             />
           )}

@@ -278,6 +278,22 @@ export function useLiveKitRoom(): LiveKitRoom {
     };
   }, [sync]);
 
+  // Phones block sound that starts without a tap on the page: a viewer who came in from the
+  // login never tapped, so the first tap or key in the room unlocks it (LiveKit plays the
+  // sound it attached). Desktop browsers usually allow it already, and then nothing is asked.
+  useEffect(() => {
+    const unlock = () => {
+      const room = roomRef.current;
+      if (room && room.canPlaybackAudio !== true) void room.startAudio().catch(() => {});
+    };
+    document.addEventListener("pointerup", unlock);
+    document.addEventListener("keydown", unlock);
+    return () => {
+      document.removeEventListener("pointerup", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
   const capture = useCallback(async (kind: StreamKind, mode: ShareMode): Promise<Capture | null> => {
     const room = roomRef.current;
     if (!room) {
