@@ -26,16 +26,16 @@ Everyone on a phone or tablet.
   - under it, "Start watching and sharing moments with your friends.";
   - the one action for the device, and at the end "Already added? Open Xovê from your home screen."
 - **FR-3** The one action:
-  - **Android:** a single button, "Get Xovê", that opens the browser's own install prompt. Under it, one small line for when the browser offers no prompt: "No prompt? Open the menu ⋮ and choose Add to Home screen."
+  - **Android:** a single button, "Get Xovê", that opens the browser's own install prompt. Under it, one small line for when the browser offers no prompt, or after it was used once (a browser offers its prompt only once): "No prompt? In the browser's menu, choose Install app." ("Create shortcut" would open a plain tab, which shows this screen again.)
   - **iPhone and iPad:** three steps, "Tap Share in Safari's bar", "Choose Add to Home Screen", "Open Xovê from your home screen", with Safari's icons (there's no prompt to open there).
 - **FR-4** Opened from the home screen, Xovê works as today, with no browser bar (the manifest, from spec 0160): sign-in, the request for access, the room (upright and sideways), the admin page.
 - **FR-5** Desktops and laptops are unchanged: no install screen.
 
 **The full-screen view**
 
-- **FR-6** On a phone or tablet, the stage's fullscreen button opens the full-screen view: the sideways layout of spec 0160 (the stage filling the screen, the top bar, the round buttons, the dots, the streams row, the light, fading, swipes), in whatever direction the phone is held. Nothing locks or turns the screen.
+- **FR-6** On a phone, and on a tablet held upright, the stage's fullscreen button opens the full-screen view: the sideways layout of spec 0160 (the stage filling the screen, the top bar, the round buttons, the dots, the streams row, the light, fading, swipes), in whatever direction the phone is held. Nothing locks or turns the screen.
 - **FR-7** The same button leaves it, back to the upright view. Turned sideways, the room always shows the sideways layout (as today); turned upright again, it returns to the full-screen view or the upright view, whichever it was in before.
-- **FR-8** On desktop, the fullscreen button keeps today's player fullscreen.
+- **FR-8** On desktop, and on a tablet held sideways (which uses the desktop layout, spec 0160), the fullscreen button keeps today's player fullscreen.
 
 ## Acceptance criteria
 

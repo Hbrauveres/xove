@@ -105,7 +105,7 @@ const perks = `<ul class="perks"><li><span>●</span>Full screen, no browser bar
 const head = `${WM}<div class="appicon">${IC}</div><h2 class="h">Xovê works best from your <em>home screen</em><button class="info" type="button" aria-expanded="false" aria-label="Why the home screen?">i</button></h2><p class="why" hidden>Opened from your home screen, Xovê fills the whole screen: no address bar or browser buttons in the way, just the stage.</p><p class="sub">Start watching and sharing moments with your friends.</p>`;
 const foot = `<p class="done">Already added? Open Xovê from your home screen.</p>`;
 function android() {
-  return chromeTop + `<div class="screen center">${head}<div class="how"><button class="install">${DL} Get Xovê</button><p class="alt">No prompt? Open the menu <b>⋮</b> and choose <b>Add to Home screen</b>.</p></div>${foot}</div>`;
+  return chromeTop + `<div class="screen center">${head}<div class="how"><button class="install">${DL} Get Xovê</button><p class="alt">No prompt? In the browser's menu, choose <b>Install app</b>.</p></div>${foot}</div>`;
 }
 function iphone() {
   return `<div class="screen center">${head}<div class="how"><ol class="steps"><li><span>Tap <span class="k">${SHARE}</span> <b>Share</b> in Safari's bar</span></li><li><span>Choose <span class="k">${ADD}</span> <b>Add to Home Screen</b></span></li><li><span>Open <b>Xovê</b> from your home screen</span></li></ol></div>${foot}</div>` + safariBottom(false);

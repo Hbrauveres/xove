@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { XoveIcon } from "../components/brand/XoveIcon";
 import { XoveMark } from "../components/brand/XoveMark";
 import { isApple } from "../install/device";
-import { installPrompt, onInstalled } from "../install/prompt";
+import { onInstalled, openInstallPrompt } from "../install/prompt";
 import styles from "./InstallPage.module.css";
 
 function ShareIcon() {
@@ -35,10 +35,9 @@ export function InstallPage() {
   useEffect(() => onInstalled(() => setInstalled(true)), []);
   const apple = isApple();
 
+  // The browser's prompt, once; after it, or without one, the menu line is the way.
   const get = () => {
-    const prompt = installPrompt();
-    if (prompt) void prompt.prompt();
-    else setPointToMenu(true);
+    if (!openInstallPrompt()) setPointToMenu(true);
   };
 
   return (
@@ -98,12 +97,12 @@ export function InstallPage() {
               Get Xovê
             </button>
             <p className={styles.menu} data-highlight={pointToMenu || undefined}>
-              No prompt? Open the menu <b>⋮</b> and choose <b>Add to Home screen</b>.
+              No prompt? In the browser's menu, choose <b>Install app</b>.
             </p>
           </div>
         )}
 
-        <p className={styles.note}>Already added? Open Xovê from your home screen.</p>
+        {!installed && <p className={styles.note}>Already added? Open Xovê from your home screen.</p>}
       </section>
     </main>
   );

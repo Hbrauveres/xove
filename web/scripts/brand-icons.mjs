@@ -13,7 +13,7 @@ import { iconSvg } from "../src/brand/iconSvg.ts";
 /** The phone icon in a wider frame: the mark fits the maskable safe circle (40% radius). */
 function maskable(svg) {
   const [x, y, w, h] = /viewBox="([^"]+)"/.exec(svg)[1].split(" ").map(Number);
-  const side = Math.max(w, h) * 1.22;
+  const side = Math.max(w, h) * 1.3;
   const cx = x + w / 2;
   const cy = y + h / 2;
   const box = [cx - side / 2, cy - side / 2, side, side].map((n) => +n.toFixed(2)).join(" ");

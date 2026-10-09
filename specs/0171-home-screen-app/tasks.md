@@ -62,8 +62,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `CLAUDE.md`: test counts.
   - Checked in the local Playwright harness: the install screen (Android, iPhone), and the full view upright.
   - · verify: the pages describe the new behaviour; the harness matches the design
-  - Done: "Who gets in" and "Only from the home screen" in the architecture page, decision 44, web count 495. Harness: the install screen on Android and iPhone (matching the design), and the full view upright from the home-screen app.
-- [ ] **T8** Review every AC (`/review`), then the PR with `Closes #171`. Henrique checks AC-5 on staging, with an Android phone and an iPhone. · verify: no gaps left; AC-5 written in the PR
+  - Done: "Who gets in" and "Only from the home screen" in the architecture page, decision 44, web count 497. Harness: the install screen on Android and iPhone (matching the design), and the full view upright from the home-screen app.
+- [x] **T8** Review every AC (`/review`), then the PR with `Closes #171`. Henrique checks AC-5 on staging, with an Android phone and an iPhone. · verify: no gaps left; AC-5 written in the PR
+  - Done: review fixed: the prompt opens once and the next tap points to the menu; the menu line says "Install app" (a shortcut would open a tab); tablets held sideways keep the player's fullscreen (spec FR-6, FR-8 and docs say so); the maskable icon's margin (farthest mark pixel 191 px, safe radius 205); no repeated line after installing; an iPad test. AC-5 is in the PR.
 
 ## Coverage
 

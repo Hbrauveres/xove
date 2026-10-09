@@ -53,14 +53,34 @@ describe("the install screen (spec 0171)", () => {
     render(<InstallPage />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Get Xovê" }));
     expect(prompt.prompt).toHaveBeenCalled();
-    expect(screen.getByText(/No prompt\? Open the menu/)).toBeInTheDocument();
+    expect(screen.getByText(/No prompt\? In the browser/)).toBeInTheDocument();
+  });
+
+  it("opens the prompt only once: a second tap points to the menu line", async () => {
+    on(ANDROID);
+    const prompt = offerPrompt();
+    render(<InstallPage />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Get Xovê" }));
+    await user.click(screen.getByRole("button", { name: "Get Xovê" }));
+    expect(prompt.prompt).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/No prompt\? In the browser/)).toHaveAttribute("data-highlight");
+  });
+
+  it("on an iPad that says it's a Mac, shows the Share steps", () => {
+    on("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15");
+    vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel");
+    Object.defineProperty(navigator, "maxTouchPoints", { configurable: true, get: () => 5 });
+    render(<InstallPage />);
+    expect(screen.getByText(/Safari's bar/)).toBeInTheDocument();
+    Object.defineProperty(navigator, "maxTouchPoints", { configurable: true, get: () => 0 });
   });
 
   it("without a prompt, Get Xovê points to the menu line instead", async () => {
     on(ANDROID);
     render(<InstallPage />);
     await userEvent.setup().click(screen.getByRole("button", { name: "Get Xovê" }));
-    expect(screen.getByText(/No prompt\? Open the menu/)).toHaveAttribute("data-highlight");
+    expect(screen.getByText(/No prompt\? In the browser/)).toHaveAttribute("data-highlight");
   });
 
   it("once installed, says to open it from the home screen", () => {
@@ -71,6 +91,7 @@ describe("the install screen (spec 0171)", () => {
       window.dispatchEvent(new Event("appinstalled"));
     });
     expect(screen.getByText("Installed. Open Xovê from your home screen.")).toBeInTheDocument();
+    expect(screen.queryByText("Already added? Open Xovê from your home screen.")).toBeNull();
     expect(screen.queryByRole("button", { name: "Get Xovê" })).toBeNull();
   });
 });

@@ -23,6 +23,21 @@ export function listenForInstall() {
 /** The prompt the browser offered, if any. */
 export const installPrompt = () => kept;
 
+/**
+ * Opens the kept prompt. A browser's prompt can be shown only once: after that (installed or
+ * dismissed) there's none, and the screen points to the browser's menu instead. False when
+ * there was none to open.
+ */
+export function openInstallPrompt(): boolean {
+  const prompt = kept;
+  if (!prompt) return false;
+  kept = null;
+  prompt.prompt().catch(() => {
+    /* Already used, or refused: the menu is the way. */
+  });
+  return true;
+}
+
 /** Calls `f` when the app gets installed; returns how to stop. */
 export function onInstalled(f: () => void) {
   installed.add(f);
