@@ -55,7 +55,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T6** `docs/architecture.md` ("On a phone held upright"): the swipe and the dots. `CLAUDE.md`: test counts. · verify: the page describes the new behaviour
+- [x] **T6** `docs/architecture.md` ("On a phone held upright"): the swipe and the dots. `CLAUDE.md`: test counts. · verify: the page describes the new behaviour
+  - Done: "Swiping the stage" in "On a phone held upright"; web count 439.
 - [ ] **T7** Review every AC (`/review`), then the PR with `Closes #159`. Henrique checks AC-6 on staging, on Android Chrome and iPhone Safari. · verify: no gaps left; AC-6 written in the PR
 
 ## Coverage
