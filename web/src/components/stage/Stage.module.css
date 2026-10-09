@@ -8,12 +8,18 @@
  * The stage's box: the light behind, the frame on top (spec 0104). It takes the picture's
  * shape inside the 16:9 box (spec 0107): a wider picture keeps the full width and gets
  * shorter, a taller one keeps the full height and gets narrower, centred. No black bars.
+ *
+ * On a window taller than 16:9 (a vertical monitor), the box may also be as tall as the
+ * height that's free above the info row, so a portrait picture fills it instead of staying
+ * in a short 16:9 band. Wider windows don't change: there the 16:9 box already reaches it.
+ * (100cqh is the room's middle, the nearest container with a height.)
  */
 .box {
   --shape: 1.7778;
+  --free-h: max(100cqw * 9 / 16, 100cqh - var(--info-h, 104px) - var(--info-gap, 14px));
   position: relative;
-  width: min(100cqw, 100cqw * 9 / 16 * var(--shape));
-  height: min(100cqw / var(--shape), 100cqw * 9 / 16);
+  width: min(100cqw, var(--free-h) * var(--shape));
+  height: min(100cqw / var(--shape), var(--free-h));
   margin-inline: auto;
   transition:
     width 0.35s ease,
