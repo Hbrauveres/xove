@@ -60,3 +60,27 @@ describe("the room session: the connection in the activity (spec 0104)", () => {
     );
   });
 });
+
+describe("the room session: when each person arrived (spec 0158)", () => {
+  it("has no arrivals from an API without them", async () => {
+    const { hook } = await session();
+    expect(hook.result.current.arrivedAt).toEqual({});
+  });
+
+  it("gives, per person, when they arrived", async () => {
+    const { server, hook } = await session();
+    act(() => {
+      server.here = [
+        { userId: MY_USER_ID, since: "2026-10-09T10:00:00Z", mine: true },
+        { userId: 7, since: "2026-10-09T10:05:00Z", mine: false },
+      ];
+    });
+
+    await waitFor(() =>
+      expect(hook.result.current.arrivedAt).toEqual({
+        me: Date.parse("2026-10-09T10:00:00Z"),
+        "user-7": Date.parse("2026-10-09T10:05:00Z"),
+      }),
+    );
+  });
+});

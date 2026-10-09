@@ -17,7 +17,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `StreamsControllerTest`: `GET /api/streams` has `here: [{ userId, since, mine }]` for everyone seated;
   - then `Seat.since`, `RoomSeats.arrivals()`, and `StreamsView.here`.
   - · covers FR-19 · verify: `cd api && ./mvnw test`
-- [ ] **T2** The web reads it: `here` in `api/types.ts` (optional, for an older API); `useRoomSession` exposes `arrivedAt` by person id ("me", "user-42"). `useRoomSession.test.ts`: mapped by id, and empty without `here`. · covers FR-19 · verify: `useRoomSession.test.ts`
+- [x] **T2** The web reads it: `here` in `api/types.ts` (optional, for an older API); `useRoomSession` exposes `arrivedAt` by person id ("me", "user-42"). `useRoomSession.test.ts`: mapped by id, and empty without `here`. · covers FR-19 · verify: `useRoomSession.test.ts`
+  - Done: `here` in the streams state (optional); `arrivedAt` by person id in the session.
 - [ ] **T3** `hereFor(sinceMs, nowMs)`: "just arrived" under a minute, "here N min", "here 1 h 5 min". `hereFor.test.ts`. · covers FR-18, FR-19 · verify: `hereFor.test.ts`
 - [ ] **T4** `usePhoneView`: true for a window up to 760 px wide that is at least as tall as it is wide, following changes. `usePhoneView.test.ts` with a mocked `matchMedia`: 390×844 and 760×1000 true; 800×1000 and 844×390 false; a change re-renders. · covers FR-1 · verify: `usePhoneView.test.ts`
 

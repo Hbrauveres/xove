@@ -52,6 +52,8 @@ export type RoomSession = {
   seats: RoomSeatsState | null;
   /** Per person (by their id in the room): whose stream is on their stage (spec 0104). */
   watchingOf: Record<string, { sharerId: string; kind: StreamKind }>;
+  /** Per person (by their id in the room): when they arrived, in ms (spec 0158). Empty from an older API. */
+  arrivedAt: Record<string, number>;
   /** What's on my stage, for everyone's people panel (spec 0104); null for an empty stage. */
   watchStage: (target: { personId: string; kind: StreamKind } | null) => void;
   connection: ConnectionState;
@@ -213,6 +215,14 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     }
     return byPerson;
   }, [watchers, live, me.id]);
+
+  // When each person arrived (spec 0158), in the room's ids.
+  const here = api.state?.here;
+  const arrivedAt = useMemo(() => {
+    const byPerson: Record<string, number> = {};
+    for (const h of here ?? []) byPerson[h.mine ? me.id : identityOf(h.userId)] = Date.parse(h.since);
+    return byPerson;
+  }, [here, me.id]);
 
   // What's on my stage, reported to the API after 1 s of stillness (quick clicks send one
   // report), and again when the API lost it (a restart). Undefined until the room says.
@@ -445,6 +455,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     activity,
     seats: api.state?.seats ?? null,
     watchingOf,
+    arrivedAt,
     watchStage,
     connection: lk.connection,
     error: api.error ?? lk.error,
