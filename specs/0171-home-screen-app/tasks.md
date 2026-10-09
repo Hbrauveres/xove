@@ -27,7 +27,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Pieces and wiring
 
-- [ ] **T4** `InstallPage`, following the design:
+- [x] **T4** `InstallPage`, following the design:
   - the wordmark, the icon tile, the headline with its "i" (showing and hiding why), the line under it, "Already added? …";
   - Apple devices get the three Share steps;
   - others get "Get Xovê" (opening the kept prompt, or highlighting the menu line without one) and the menu line;
@@ -35,6 +35,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `InstallPage.test.tsx`.
   - · covers FR-2, FR-3 · verify: `InstallPage.test.tsx`
+  - Done: `InstallPage` and `install/device.ts` (`isApple`); after installing it says "Installed. Open Xovê from your home screen."
 - [ ] **T5** `App`: on a touch device outside the app, the install screen for every route; installed or on a desktop, the routes as today. `App.test.tsx`. · covers FR-1, FR-4, FR-5 · verify: `App.test.tsx`
 - [ ] **T6** The full-screen view:
   - `Room` keeps `fullView`;
