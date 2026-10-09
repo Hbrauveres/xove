@@ -147,7 +147,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   );
 
   return (
-    <div className={styles.theater} data-layout={phone ? "phone" : sideways ? "sideways" : undefined}>
+    <div className={styles.theater} data-room data-layout={phone ? "phone" : sideways ? "sideways" : undefined}>
       {/* Sideways there's no header: my buttons sit in the stage's top bar (spec 0160). */}
       {!sideways && (
         <RoomHeader

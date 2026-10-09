@@ -56,6 +56,12 @@ body,
   height: 100%;
 }
 
+/* No pull-to-refresh in the room only: dragging the volume down near the top reloaded the page. */
+html:has([data-room]),
+html:has([data-room]) body {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   background: var(--ground);
