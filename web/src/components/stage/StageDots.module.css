@@ -6,7 +6,6 @@
   transform: translateX(-50%);
   display: flex;
   gap: 2px;
-  pointer-events: auto;
 }
 
 /* A comfortable target around a small dot. */
@@ -19,6 +18,8 @@
   border: 0;
   background: transparent;
   cursor: pointer;
+  /* Only the dots take taps; the strip between them lets a swipe through. */
+  pointer-events: auto;
 }
 
 .dot::before {

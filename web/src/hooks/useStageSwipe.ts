@@ -39,11 +39,15 @@ type Options = {
  */
 export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, onStep }: Options) {
   const start = useRef<{ id: number; x: number; y: number; at: number } | null>(null);
-  const timers = useRef<number[]>([]);
+  /** A slide out and in is running: a new drag waits until it's done. */
+  const sliding = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+  // The latest stage and order, when a slide finishes after a re-render (or the phone turned).
+  const latest = useRef({ enabled, onStep });
   useEffect(() => {
-    const pending = timers.current;
-    return () => pending.forEach((t) => window.clearTimeout(t));
-  }, []);
+    latest.current = { enabled, onStep };
+  });
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   /** Where the picture is, and how it gets there. */
   const place = (px: number, phase?: "drag" | "settle") => {
@@ -53,49 +57,68 @@ export function useStageSwipe(slide: RefObject<HTMLElement | null>, { enabled, o
     if (phase) el.setAttribute("data-phase", phase);
     else el.removeAttribute("data-phase");
   };
-  const later = (ms: number, then: () => void) => timers.current.push(window.setTimeout(then, ms));
+  const later = (ms: number, then: () => void) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(then, ms);
+  };
+  const settle = (then?: () => void) => {
+    place(0, "settle");
+    later(SLIDE_MS, () => {
+      place(0);
+      sliding.current = false;
+      then?.();
+    });
+  };
 
-  const finish = (e: React.PointerEvent, cancelled: boolean) => {
+  const finish = (pointerId: number, x: number, y: number, cancelled: boolean) => {
     const s = start.current;
-    if (!s || s.id !== e.pointerId) return;
+    if (!s || s.id !== pointerId) return;
     start.current = null;
     const width = slide.current?.getBoundingClientRect().width || 1;
-    const direction = cancelled ? 0 : swipeOutcome(e.clientX - s.x, e.clientY - s.y, performance.now() - s.at, width);
+    const direction =
+      cancelled || !latest.current.enabled ? 0 : swipeOutcome(x - s.x, y - s.y, performance.now() - s.at, width);
+    sliding.current = true;
     if (direction === 0) {
-      place(0, "settle");
-      later(SLIDE_MS, () => place(0));
+      settle();
       return;
     }
     if (reducedMotion()) {
       place(0);
-      onStep(direction);
+      sliding.current = false;
+      latest.current.onStep(direction);
       return;
     }
     // Out the way the finger went, then the next one in from the other side.
     place(-direction * width, "settle");
     later(SLIDE_MS, () => {
-      onStep(direction);
+      if (latest.current.enabled) latest.current.onStep(direction);
       place(direction * width);
-      later(16, () => {
-        place(0, "settle");
-        later(SLIDE_MS, () => place(0));
-      });
+      // Lay out the jump to the other side before easing back, so it slides rather than snaps.
+      void slide.current?.getBoundingClientRect();
+      settle();
     });
   };
 
   return {
     onPointerDown: (e: React.PointerEvent) => {
-      if (!enabled || e.button !== 0 || (e.target as Element).closest("[data-no-swipe]")) return;
+      if (!enabled || sliding.current || e.button !== 0 || (e.target as Element).closest("[data-no-swipe]")) return;
       start.current = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now() };
+      // The drag keeps coming here even when it leaves the stage (a mouse in a narrow window).
+      e.currentTarget.setPointerCapture?.(e.pointerId);
     },
     onPointerMove: (e: React.PointerEvent) => {
       const s = start.current;
       if (!s || s.id !== e.pointerId) return;
+      // A mouse let go somewhere we didn't hear about: no drag any more.
+      if (e.pointerType === "mouse" && e.buttons === 0) {
+        finish(e.pointerId, e.clientX, e.clientY, true);
+        return;
+      }
       const dx = e.clientX - s.x;
       // Up and down is left to the page; only a sideways drag moves the picture.
       if (Math.abs(dx) > Math.abs(e.clientY - s.y)) place(dx, "drag");
     },
-    onPointerUp: (e: React.PointerEvent) => finish(e, false),
-    onPointerCancel: (e: React.PointerEvent) => finish(e, true),
+    onPointerUp: (e: React.PointerEvent) => finish(e.pointerId, e.clientX, e.clientY, false),
+    onPointerCancel: (e: React.PointerEvent) => finish(e.pointerId, e.clientX, e.clientY, true),
   };
 }

@@ -117,6 +117,39 @@ describe("the stage's swipe gesture (spec 0159)", () => {
     expect(screen.getByTestId("slide").style.getPropertyValue("--swipe")).toBe("0px");
   });
 
+  it("lets go of a mouse drag released outside the stage", () => {
+    const onStep = vi.fn();
+    render(<Harness onStep={onStep} />);
+    const frame = screen.getByTestId("frame");
+    fireEvent.pointerDown(frame, { pointerId: 1, clientX: 200, clientY: 100, button: 0, pointerType: "mouse" });
+    fireEvent.pointerMove(frame, { pointerId: 1, clientX: 100, clientY: 100, buttons: 1, pointerType: "mouse" });
+    // Back over the stage with no button held: the drag is over, nothing follows the mouse.
+    fireEvent.pointerMove(frame, { pointerId: 1, clientX: 60, clientY: 100, buttons: 0, pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(SLIDE_MS * 2);
+    });
+    fireEvent.pointerMove(frame, { pointerId: 1, clientX: 20, clientY: 100, buttons: 0, pointerType: "mouse" });
+    expect(screen.getByTestId("slide").style.getPropertyValue("--swipe")).toBe("0px");
+    expect(onStep).not.toHaveBeenCalled();
+  });
+
+  it("ignores a new swipe while the last one is still sliding", () => {
+    const onStep = vi.fn();
+    render(<Harness onStep={onStep} />);
+    drag(screen.getByTestId("frame"), -150, 0, 0);
+    drag(screen.getByTestId("frame"), -150, 0, 0);
+    act(() => {
+      vi.advanceTimersByTime(SLIDE_MS * 4);
+    });
+    expect(onStep).toHaveBeenCalledTimes(1);
+    // Once it's done, the next swipe works.
+    drag(screen.getByTestId("frame"), -150, 0, 0);
+    act(() => {
+      vi.advanceTimersByTime(SLIDE_MS * 4);
+    });
+    expect(onStep).toHaveBeenCalledTimes(2);
+  });
+
   it("does nothing when it's off", () => {
     const onStep = vi.fn();
     render(<Harness onStep={onStep} enabled={false} />);

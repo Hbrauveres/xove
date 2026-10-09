@@ -2291,12 +2291,17 @@ describe("room: swiping the phone's stage (spec 0159)", () => {
 
   it("goes to the next person on a swipe left, the previous on a swipe right, wrapping around", async () => {
     await threeLive();
+    // Each swipe slides the next one in; the next swipe waits until it's in place.
+    const slidIn = () => new Promise((r) => setTimeout(r, 250));
     swipe(-200);
     await onStage("Rafa");
+    await slidIn();
     swipe(-200);
     await onStage("Duda");
+    await slidIn();
     swipe(-200);
     await onStage("Marina");
+    await slidIn();
     swipe(200);
     await onStage("Duda");
   });
@@ -2359,6 +2364,33 @@ describe("room: swiping the phone's stage (spec 0159)", () => {
         }),
       { timeout: 3000 },
     );
+  });
+
+  it("ignores a mostly up-and-down drag", async () => {
+    await threeLive();
+    const video = screen.getByRole("region", { name: /shared screen/i }).querySelector("video")!;
+    fireEvent.pointerDown(video, { pointerId: 1, clientX: 200, clientY: 100, button: 0 });
+    fireEvent.pointerMove(video, { pointerId: 1, clientX: 140, clientY: 220 });
+    fireEvent.pointerUp(video, { pointerId: 1, clientX: 140, clientY: 220 });
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { level: 2, name: "Marina · Screen" })).toBeInTheDocument();
+  });
+
+  it("doesn't swipe on the desktop layout", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 400, height: 225 } as DOMRect);
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Marina", 2, "screen", undefined, new Date(Date.now() - 300_000)), someoneSharing("Rafa", 3)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-2");
+      lastRoom().publishScreen("user-3");
+    });
+    await screen.findByRole("heading", { name: "Marina" });
+    swipe(-200);
+    await new Promise((r) => setTimeout(r, 450));
+    expect(screen.getByRole("heading", { name: "Marina" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch Rafa" })).toBeNull();
   });
 
   it("has a dot per person live, and a tap on one puts them on the stage", async () => {

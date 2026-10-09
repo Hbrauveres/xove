@@ -142,6 +142,10 @@
 .slide {
   position: absolute;
   inset: 0;
+}
+
+/* Only on the phone: a transform would put the desktop's facecam under the fullscreen button. */
+.stage[data-layout="phone"] .slide {
   transform: translateX(var(--swipe, 0px));
 }
 
