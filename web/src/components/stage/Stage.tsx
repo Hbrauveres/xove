@@ -139,6 +139,14 @@ export function Stage({
   // A finger lifting off fires pointerleave at once: on touch, only the timer hides.
   const leaveChrome = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === "touch" || focusInside()) return;
+    // Fullscreen, there's nothing outside the player to leave to. Some browsers still send
+    // "left" while the mouse moves over it (Chrome on Windows, on a tall monitor), which hid
+    // the controls for good: only the idle timer hides them there.
+    const frame = frameRef.current;
+    if (frame && document.fullscreenElement === frame) return;
+    // And a "left" while the pointer is still over the player is ignored too.
+    const r = frame?.getBoundingClientRect();
+    if (r && e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom) return;
     window.clearTimeout(idleTimer.current);
     setChromeShown(false);
   }, []);
