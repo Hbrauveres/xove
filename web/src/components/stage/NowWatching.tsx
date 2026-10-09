@@ -10,12 +10,21 @@ const whatOf = (s: Sharer) => (s.screen && s.camera ? "Screen with camera" : s.s
 /** The most avatars in a row: the count covers the rest. */
 const MAX_AVATARS = 4;
 
+/** Live streams at once (spec 0060). */
+export const STREAM_PLACES = 6;
+
 type Props = {
   sharer: Sharer | null;
   /** Everyone with this stream on their stage, me included, never the sharer (spec 0107). */
   watchers?: Friend[];
   /** The others in the room, for an empty stage. */
   others?: Friend[];
+  /** The phone's layout (spec 0158): "Name · what" on one line, "N watching" in words, "Nobody live". */
+  compact?: boolean;
+  /** Places left of the 6, for the phone's empty stage. */
+  free?: number;
+  /** The heading's level: 3 under a feed's pictures. */
+  level?: 2 | 3;
 };
 
 /**
@@ -23,8 +32,38 @@ type Props = {
  * for how long and who's watching, like YouTube's title row. Or, with nobody live, an
  * invitation with who's here.
  */
-export function NowWatching({ sharer, watchers = [], others = [] }: Props) {
+export function NowWatching({ sharer, watchers = [], others = [], compact = false, free = STREAM_PLACES, level = 2 }: Props) {
   const elapsed = useElapsed(sharer?.since ?? null);
+  const Heading = level === 3 ? "h3" : "h2";
+  if (compact) {
+    return (
+      <div className={`${styles.now} ${styles.compact}`} data-compact>
+        {sharer ? (
+          <Avatar person={sharer.person} size={30} onAir ring="inside" />
+        ) : (
+          <span className={styles.nobody} aria-hidden="true" />
+        )}
+        <div className={styles.text}>
+          <Heading className={styles.name}>
+            {sharer ? `${sharer.isMe ? "You" : sharer.person.name} · ${whatOf(sharer)}` : "Nobody live"}
+          </Heading>
+          <p className={styles.meta}>
+            {sharer ? (
+              <>
+                <span className={styles.live}>LIVE</span>
+                <span className={styles.elapsed}>{elapsed}</span>
+                {watchers.length > 0 && <span className={styles.watchers}>{watchers.length} watching</span>}
+              </>
+            ) : (
+              <span>
+                {STREAM_PLACES - free} of {STREAM_PLACES} · {free} free
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
   if (!sharer) {
     return (
       <div className={styles.now}>

@@ -34,13 +34,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
   - `AccountButton.test.tsx`: the menu ends with "Made by Hbrauveres", Buy me a coffee, GitHub and LinkedIn when given.
   - · covers FR-6 · verify: `AccountButton.test.tsx`
   - Done: `FooterItems` shared by the footer and the account menu's new `footer` slot.
-- [ ] **T7** `NowWatching` `compact`:
+- [x] **T7** `NowWatching` `compact`:
   - the 30 px avatar with its ring inside;
   - "Name · what" in bold;
   - the filled LIVE badge, the time in mono (muted grey), and "N watching" in words;
   - with no sharer, "Nobody live" and "0 of 6 · 6 free".
   - `NowWatching.test.tsx`: both cases. The desktop's rendering is unchanged (existing tests).
   - · covers FR-10, FR-17 · verify: `NowWatching.test.tsx`
+  - Done: `NowWatching` `compact` (and `level`, `free`); `STREAM_PLACES` = 6.
 - [ ] **T8** `LiveFeed`:
   - "Live now" with "N of 6";
   - a card for every sharer except the one on the stage: a full-width 16:9 picture with nothing over it, then the compact `NowWatching` block;
