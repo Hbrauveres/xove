@@ -30,6 +30,10 @@ jobs:
   checks:
     name: Checks
     uses: ./.github/workflows/ci.yml
+    # Only the Docker Hub login, never the 1Password token.
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   # ---------------------------------------------------------------- stage 4
   publish:

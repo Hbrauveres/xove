@@ -1,7 +1,11 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 import { fakeCameras, rooms } from "./fakeLiveKit";
+
+// findBy and waitFor wait up to 3 s, not 1 s: CI's runners are slower than a laptop,
+// and a room test waiting on a few polls ran out there.
+configure({ asyncUtilTimeout: 3000 });
 
 // No WebRTC in jsdom: every test gets the fake LiveKit instead of the real package.
 vi.mock("livekit-client", () => import("./fakeLiveKit"));
