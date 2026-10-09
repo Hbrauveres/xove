@@ -84,10 +84,21 @@ describe("the setup window sideways (spec 0160, FR-15)", () => {
   });
 });
 
-describe("no pull-to-refresh on phones", () => {
-  it("turns off the page's pull-to-refresh and overscroll, so a drag down (the volume) never reloads", () => {
-    const global = sheet("styles/global.css");
-    const page = rule(global, "html,\nbody,\n#root");
-    expect(page).toMatch(/overscroll-behavior:\s*none/);
+describe("the fullscreen button in the full-screen view (spec 0171)", () => {
+  it("sits centred on the round buttons' row, at both of their sizes", () => {
+    const stage = sheet("components/stage/Stage.module.css");
+    const at = stage.indexOf('.stage[data-layout="sideways"] [data-overlay] {');
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(stage.slice(at, stage.indexOf("}", at))).toMatch(/padding-bottom:\s*calc\(12px \+ \(48px - 34px\) \/ 2\)/);
+    expect(stage).toMatch(/@media \(max-width: 520px\) \{\s*\.stage\[data-layout="sideways"\] \[data-overlay\] \{\s*padding-bottom:\s*calc\(12px \+ \(42px - 34px\) \/ 2\)/);
+  });
+});
+
+describe("the stage on a tall desktop window", () => {
+  it("may be as tall as the free height above the info row, never less than the 16:9 box", () => {
+    const box = rule(sheet("components/stage/Stage.module.css"), ".box");
+    expect(box).toMatch(/--free-h:\s*max\(100cqw \* 9 \/ 16, 100cqh - var\(--info-h, 104px\) - var\(--info-gap, 14px\)\)/);
+    expect(box).toMatch(/width:\s*min\(100cqw, var\(--free-h\) \* var\(--shape\)\)/);
+    expect(box).toMatch(/height:\s*min\(100cqw \/ var\(--shape\), var\(--free-h\)\)/);
   });
 });

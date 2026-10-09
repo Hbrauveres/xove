@@ -103,7 +103,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 - [x] **T11** After the second phone check (2026-10-09):
   - sound unlocks on the first tap or key (`room.startAudio()`);
-  - no pull-to-refresh (`overscroll-behavior: none`);
+  - no pull-to-refresh (`overscroll-behavior: none`), restored with spec 0171 (phones use the home-screen app);
   - the row's tab replaced by an arrow button at the bottom left (up opens, down on the row closes);
   - left and right swipes change the stream sideways too.
 

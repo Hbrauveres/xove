@@ -71,8 +71,10 @@ describe("volume button (spec 0101)", () => {
     expect(onChange).toHaveBeenLastCalledWith({ quality: "auto", volume: 0.3, muted: false });
 
     await user.unhover(screen.getByRole("button", { name: "Mute" }));
-    await waitFor(() => expect(sliderShown()).toBe(false));
-    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    await waitFor(() => {
+      expect(sliderShown()).toBe(false);
+      expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    });
   });
 
   it("opens on keyboard focus, and the slider is the next stop", async () => {
