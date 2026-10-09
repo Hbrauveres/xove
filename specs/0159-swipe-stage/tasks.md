@@ -8,7 +8,8 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** `stepOnStage(order, current, direction)` in `media/stagePick.ts`: next and previous in the feed's order, wrapping both ways; null with fewer than two people. `stagePick.test.ts`. · covers FR-1, FR-2 · verify: `stagePick.test.ts`
+- [x] **T1** `stepOnStage(order, current, direction)` in `media/stagePick.ts`: next and previous in the feed's order, wrapping both ways; null with fewer than two people. `stagePick.test.ts`. · covers FR-1, FR-2 · verify: `stagePick.test.ts`
+  - Done: `stepOnStage`; with nobody on the stage it starts from the first.
 - [ ] **T2** `swipeOutcome(dx, dy, ms, width)`: next, previous, or nothing.
   - Next or previous for at least 25% of the width, or a flick faster than 0.5 px/ms over at least 30 px.
   - Nothing when shorter, or mostly up and down.

@@ -10,3 +10,14 @@ export function stagePick(sharing: readonly string[], picked: string | null): st
   if (picked !== null && sharing.includes(picked)) return picked;
   return sharing[0] ?? null;
 }
+
+/**
+ * The next (`1`) or previous (`-1`) person for the stage (spec 0159), in the feed's order
+ * (the longest sharing first), wrapping around at both ends. Null with fewer than two people.
+ */
+export function stepOnStage(order: readonly string[], current: string | null, direction: 1 | -1): string | null {
+  if (order.length < 2) return null;
+  const at = current === null ? -1 : order.indexOf(current);
+  if (at === -1) return order[0];
+  return order[(at + direction + order.length) % order.length];
+}
