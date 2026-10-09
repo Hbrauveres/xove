@@ -8,13 +8,14 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Core
 
-- [ ] **T1** `install/prompt.ts`, imported first in `main.tsx`:
+- [x] **T1** `install/prompt.ts`, imported first in `main.tsx`:
   - it keeps `beforeinstallprompt` (with its default prevented) and notes `appinstalled`;
   - `installPrompt()` returns the kept prompt;
   - `onInstalled()` notifies when the app is installed.
 
   `prompt.test.ts`.
   - · covers FR-3 · verify: `prompt.test.ts`
+  - Done: `install/prompt.ts` (`listenForInstall`, `installPrompt`, `onInstalled`), started first in `main.tsx`.
 - [ ] **T2** `useInstalled()`: true from the home screen (`display-mode` fullscreen or standalone, or `navigator.standalone`). `useInstalled.test.ts`. · covers FR-1, FR-4 · verify: `useInstalled.test.ts`
 - [ ] **T3** The manifest:
   - `start_url`, `scope`, `id`;
