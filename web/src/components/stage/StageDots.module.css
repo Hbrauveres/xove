@@ -1,0 +1,49 @@
+/* The dots over the phone's stage (spec 0159): just above the round buttons, centred. */
+.dots {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  pointer-events: auto;
+}
+
+/* A comfortable target around a small dot. */
+.dot {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: width 0.18s ease, background 0.18s ease;
+}
+
+.dot[aria-current="true"]::before {
+  width: 14px;
+  background: #ffffff;
+}
+
+.dot:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot::before {
+    transition: none;
+  }
+}

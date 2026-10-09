@@ -28,7 +28,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Pieces and wiring
 
-- [ ] **T4** `StageDots`:
+- [x] **T4** `StageDots`:
   - one button per person live, in the feed's order, with `aria-label="Watch <name>"` and `aria-current` on the stage's;
   - a tap calls `pick`;
   - nothing with fewer than two people;
@@ -36,6 +36,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `StageDots.test.tsx`.
   - · covers FR-4 · verify: `StageDots.test.tsx`
+  - Done: `StageDots`; mine is "Watch yourself".
 - [ ] **T5** The stage on the phone:
   - the `.slide` wrapper around the picture, with its transitions and `--swipe`;
   - `useStageSwipe` on the frame, enabled on the phone with at least two people live, stepping with `stepOnStage` and `pick`;
