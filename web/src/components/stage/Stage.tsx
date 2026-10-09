@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  loadWatchPrefs,
-  saveWatchPrefs,
-  type WatchPrefs,
-} from "../../media/preferences";
+import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
@@ -52,14 +48,14 @@ type Props = {
 
 const NOBODY: Friend[] = [];
 const NO_ARRIVALS: Record<string, number> = {};
+const nobodyWatching = () => NOBODY;
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
 export const CHROME_IDLE_MS = 2500;
 
 /** iPhones and iPads ignore a page's volume (only their buttons change it). */
 const canSetVolume = () =>
-  !/iPad|iPhone|iPod/.test(navigator.userAgent) &&
-  !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  !/iPad|iPhone|iPod/.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 /** The light's grid for a shape: a new grid starts a fresh light (spec 0107). */
 const gridKey = (shape: number) => {
@@ -67,8 +63,7 @@ const gridKey = (shape: number) => {
   return `${cols}x${rows}`;
 };
 
-const what = (feed: LiveFeed) =>
-  feed.kind === "camera" ? "camera" : "shared screen";
+const what = (feed: LiveFeed) => (feed.kind === "camera" ? "camera" : "shared screen");
 
 /** Where the big stream plays: in a 16:9 box, with the picture's own shape (spec 0107). */
 export function Stage({
@@ -79,7 +74,7 @@ export function Stage({
   watchers,
   others,
   layout,
-  watchersOf = () => NOBODY,
+  watchersOf = nobodyWatching,
   people = NOBODY,
   meId = "me",
   arrivedAt = NO_ARRIVALS,
@@ -95,15 +90,10 @@ export function Stage({
   // Screen and camera together: the screen big, the camera in the facecam over it,
   // unless the viewer swapped them (for that person). Remembered for this visit only.
   const swapped = big ? Boolean(swappedFor[big.person.id]) : false;
-  const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>({
-    x: 0.74,
-    y: 0.72,
-  });
+  const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>({ x: 0.74, y: 0.72 });
   const [facecamCollapsed, setFacecamCollapsed] = useState(false);
   const both = Boolean(big?.screen && big?.camera);
-  const main = big
-    ? ((both && swapped ? big.camera : big.screen) ?? big.camera ?? null)
-    : null;
+  const main = big ? ((both && swapped ? big.camera : big.screen) ?? big.camera ?? null) : null;
   const small = both && big ? (swapped ? big.screen : big.camera) : undefined;
 
   // The LIVE label, the name and the bars show while the mouse moves over the player
@@ -112,15 +102,12 @@ export function Stage({
   const idleTimer = useRef<number | undefined>(undefined);
   // Nothing fades while a control has the keyboard focus, or a menu or the volume slider is open.
   const held = useRef(new Set<string>());
-  const focusInside = () =>
-    held.current.size > 0 ||
-    (frameRef.current?.contains(document.activeElement) ?? false);
+  const focusInside = () => held.current.size > 0 || (frameRef.current?.contains(document.activeElement) ?? false);
   const showChrome = useCallback(() => {
     setChromeShown(true);
     window.clearTimeout(idleTimer.current);
     const fade = () => {
-      if (focusInside())
-        idleTimer.current = window.setTimeout(fade, CHROME_IDLE_MS);
+      if (focusInside()) idleTimer.current = window.setTimeout(fade, CHROME_IDLE_MS);
       else setChromeShown(false);
     };
     idleTimer.current = window.setTimeout(fade, CHROME_IDLE_MS);
@@ -142,26 +129,15 @@ export function Stage({
     },
     [showChrome],
   );
-  const onMenuChange = useCallback(
-    (open: boolean) => hold("menu", open),
-    [hold],
-  );
-  const onVolumeOpen = useCallback(
-    (open: boolean) => hold("volume", open),
-    [hold],
-  );
-  const onSettingsOpen = useCallback(
-    (open: boolean) => hold("settings", open),
-    [hold],
-  );
+  const onMenuChange = useCallback((open: boolean) => hold("menu", open), [hold]);
+  const onVolumeOpen = useCallback((open: boolean) => hold("volume", open), [hold]);
+  const onSettingsOpen = useCallback((open: boolean) => hold("settings", open), [hold]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
   // Only the big person's sound plays, plus any thumbnail this viewer unmuted. The
   // others aren't downloaded at all.
-  const [thumbnailSound, setThumbnailSound] = useState<
-    Record<string, PreviewSound>
-  >({});
+  const [thumbnailSound, setThumbnailSound] = useState<Record<string, PreviewSound>>({});
   // The big video, for the ambilight to read.
   const [bigVideoEl, setBigVideoEl] = useState<HTMLVideoElement | null>(null);
   // The stage hugs the picture: no bars (spec 0107). 16:9 while empty or loading.
@@ -169,12 +145,11 @@ export function Stage({
   useEffect(() => {
     for (const s of sharers) {
       if (s.isMe || !s.setSoundOn) continue;
-      s.setSoundOn(
-        s.person.id === bigId ||
-          (thumbnailSound[s.person.id] ?? MUTED).muted === false,
-      );
+      // The phone's feed is silent (spec 0158): a preview unmuted on desktop isn't downloaded there.
+      const preview = !phone && (thumbnailSound[s.person.id] ?? MUTED).muted === false;
+      s.setSoundOn(s.person.id === bigId || preview);
     }
-  }, [sharers, bigId, thumbnailSound]);
+  }, [sharers, bigId, thumbnailSound, phone]);
 
   const changeWatch = (next: WatchPrefs) => {
     setWatch(next);
@@ -195,8 +170,7 @@ export function Stage({
   const cap = main?.settings.quality;
   const offered = viewerQualities(remote?.height ?? 0, remote?.layers, cap);
   const chosen = effectiveQuality(watch.quality, offered);
-  const request =
-    chosen === "auto" && cap && cap !== "1080p" ? offered[0] : chosen;
+  const request = chosen === "auto" && cap && cap !== "1080p" ? offered[0] : chosen;
   useEffect(() => {
     const set = setQuality.current;
     if (!bigVideo || !set) return;
@@ -209,10 +183,7 @@ export function Stage({
   const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
     const follow = () =>
-      setFullscreen(
-        document.fullscreenElement != null &&
-          document.fullscreenElement === frameRef.current,
-      );
+      setFullscreen(document.fullscreenElement != null && document.fullscreenElement === frameRef.current);
     document.addEventListener("fullscreenchange", follow);
     return () => document.removeEventListener("fullscreenchange", follow);
   }, []);
@@ -229,25 +200,16 @@ export function Stage({
   };
 
   const body = () => {
-    if (!big || !main)
-      return <EmptyStage canShareScreen={controls.canShareScreen} />;
+    if (!big || !main) return <EmptyStage canShareScreen={controls.canShareScreen} />;
 
     // My own stream as everyone sees it, without its sound (it would echo). Sharing
     // the whole screen shows the page inside itself: sharing a tab or window avoids it.
     const content = big.isMe ? (
       main.local ? (
         // My quality and mode are in my buttons' menus (spec 0098).
-        <ScreenVideo
-          video={main.local}
-          label={`Your ${what(main)}`}
-          onVideo={setBigVideoEl}
-        />
+        <ScreenVideo video={main.local} label={`Your ${what(main)}`} onVideo={setBigVideoEl} />
       ) : (
-        <StageNotice
-          spinner
-          title="Starting your share…"
-          text="Your screen shows here in a moment."
-        />
+        <StageNotice spinner title="Starting your share…" text="Your screen shows here in a moment." />
       )
     ) : main.remote ? (
       <>
@@ -261,11 +223,7 @@ export function Stage({
         />
       </>
     ) : (
-      <StageNotice
-        spinner
-        title={`Loading ${big.person.name}'s ${main.kind}…`}
-        text="The video starts in a moment."
-      />
+      <StageNotice spinner title={`Loading ${big.person.name}'s ${main.kind}…`} text="The video starts in a moment." />
     );
 
     return (
@@ -274,11 +232,7 @@ export function Stage({
         {small && (
           <Facecam
             video={big.isMe ? small.local : small.remote?.video}
-            label={
-              big.isMe
-                ? `Your ${what(small)}`
-                : `${big.person.name}'s ${what(small)}`
-            }
+            label={big.isMe ? `Your ${what(small)}` : `${big.person.name}'s ${what(small)}`}
             place={facecamPlace}
             collapsed={facecamCollapsed}
             onSwap={() => toggleSwap(big.person.id)}
@@ -292,11 +246,7 @@ export function Stage({
   };
 
   return (
-    <section
-      className={styles.stage}
-      data-layout={layout}
-      aria-label="Shared screen"
-    >
+    <section className={styles.stage} data-layout={layout} aria-label="Shared screen">
       <div
         className={styles.box}
         data-shape={shape.toFixed(4)}
@@ -305,11 +255,7 @@ export function Stage({
         {/* Behind the frame, outside it: the frame clips what's inside it. */}
         {/* One per stream: a stream the browser won't let it read doesn't darken the next one. */}
         <Ambilight
-          key={
-            big
-              ? `${big.person.id}|${stage.mainKind}|${gridKey(shape)}`
-              : "none"
-          }
+          key={big ? `${big.person.id}|${stage.mainKind}|${gridKey(shape)}` : "none"}
           video={big ? bigVideoEl : null}
           // Nobody live: the colour bars glow too (spec 0158).
           still={big ? null : barsPicture()}
@@ -364,16 +310,10 @@ export function Stage({
         </div>
       </div>
 
-      {/* Under the stage, like YouTube's title row (spec 0104). */}
       {phone ? (
         <>
           <div className={styles.info}>
-            <NowWatching
-              compact
-              sharer={big}
-              watchers={watchers}
-              free={controls.free}
-            />
+            <NowWatching compact sharer={big} watchers={watchers} free={controls.free} />
           </div>
           {/* Only this scrolls on the phone: the stage and its info row stay put (spec 0158). */}
           <div className={styles.below}>
@@ -390,6 +330,7 @@ export function Stage({
           </div>
         </>
       ) : (
+        /* Under the stage, like YouTube's title row (spec 0104). */
         <div className={styles.info}>
           <NowWatching sharer={big} watchers={watchers} others={others} />
           <AlsoLive
@@ -398,9 +339,7 @@ export function Stage({
             free={controls.free}
             onPick={(id) => pick(id)}
             sound={thumbnailSound}
-            onSoundChange={(id, sound) =>
-              setThumbnailSound((prev) => ({ ...prev, [id]: sound }))
-            }
+            onSoundChange={(id, sound) => setThumbnailSound((prev) => ({ ...prev, [id]: sound }))}
             canSetVolume={canSetVolume()}
           />
         </div>

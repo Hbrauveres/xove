@@ -13,10 +13,7 @@ import { ShareSetup } from "../components/share/ShareSetup";
 import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
-import {
-  useFullscreenElement,
-  useFullscreenHost,
-} from "../hooks/useFullscreenElement";
+import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
 import { usePhoneView } from "../hooks/usePhoneView";
 import { SEAT_POLL_MS, useRoomSeat, type RoomSeat } from "../hooks/useRoomSeat";
 import { useRoomSession } from "../hooks/useRoomSession";
@@ -44,26 +41,16 @@ export function RoomPage({ pollMs }: Props = {}) {
   };
 
   // The video room only with a seat: the API hands out LiveKit tokens to seated people only.
-  if (seat.status?.status !== "in")
-    return <WaitingRoom seat={seat} onSignOut={handleSignOut} />;
+  if (seat.status?.status !== "in") return <WaitingRoom seat={seat} onSignOut={handleSignOut} />;
   return <Room pollMs={pollMs} seat={seat} onSignOut={handleSignOut} />;
 }
 
-function Room({
-  pollMs,
-  seat,
-  onSignOut,
-}: Props & { seat: RoomSeat; onSignOut: () => void }) {
+function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: () => void }) {
   const { state } = useAuth();
   const me = state.status === "signedIn" ? state.me : null;
 
   const meAsFriend = useMemo<Friend>(
-    () => ({
-      id: "me",
-      name: me?.name?.split(" ")[0] ?? me?.email ?? "You",
-      hue: 36,
-      online: true,
-    }),
+    () => ({ id: "me", name: me?.name?.split(" ")[0] ?? me?.email ?? "You", hue: 36, online: true }),
     [me?.name, me?.email],
   );
   const session = useRoomSession(meAsFriend, pollMs);
@@ -73,11 +60,7 @@ function Room({
   // A stream still loading counts as nothing watched yet ("In the room").
   const stagePersonId = stage.playing ? (stage.big?.person.id ?? null) : null;
   useEffect(() => {
-    watchStage(
-      stagePersonId && stage.mainKind
-        ? { personId: stagePersonId, kind: stage.mainKind }
-        : null,
-    );
+    watchStage(stagePersonId && stage.mainKind ? { personId: stagePersonId, kind: stage.mainKind } : null);
   }, [watchStage, stagePersonId, stage.mainKind]);
   // In fullscreen only the player can be seen: the setup window and errors go inside it (spec 0101).
   const fullscreen = useFullscreenElement();
@@ -87,41 +70,29 @@ function Room({
   const sharing = useMemo(
     () =>
       Object.fromEntries(
-        session.sharers.map((s) => [
-          s.person.id,
-          { screen: Boolean(s.screen), camera: Boolean(s.camera) },
-        ]),
+        session.sharers.map((s) => [s.person.id, { screen: Boolean(s.screen), camera: Boolean(s.camera) }]),
       ),
     [session.sharers],
   );
-  const isLive = (personId: string, kind: StreamKind) =>
-    Boolean(sharing[personId]?.[kind]);
+  const isLive = (personId: string, kind: StreamKind) => Boolean(sharing[personId]?.[kind]);
   // Under the stage (spec 0107): who has its person on their stage (me included, never that
   // person), and, for an empty stage, the others in the room.
   const bigId = stage.big?.person.id;
   const { people, watchingOf } = session;
   const meId = session.me.id;
   const watchers = useMemo(
-    () =>
-      bigId
-        ? people.filter(
-            (p) => p.id !== bigId && watchingOf[p.id]?.sharerId === bigId,
-          )
-        : [],
+    () => (bigId ? people.filter((p) => p.id !== bigId && watchingOf[p.id]?.sharerId === bigId) : []),
     [people, watchingOf, bigId],
   );
-  const others = useMemo(
-    () => people.filter((p) => p.id !== meId),
-    [people, meId],
-  );
+  const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
   // A phone held upright (spec 0158): the same room, laid out for it.
   const phone = usePhoneView();
   // For the phone's feed: who has each sharer on their stage, as under the stage.
   const watchersOf = useCallback(
-    (id: string) =>
-      people.filter((p) => p.id !== id && watchingOf[p.id]?.sharerId === id),
+    (id: string) => people.filter((p) => p.id !== id && watchingOf[p.id]?.sharerId === id),
     [people, watchingOf],
   );
+  const watching = stage.big && stage.mainKind ? { personId: stage.big.person.id, kind: stage.mainKind } : null;
 
   // The API forgot my seat (it restarted): ask again, with my video connection, which
   // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
@@ -130,10 +101,7 @@ function Room({
   useEffect(() => {
     if (seated !== false) return;
     reenter(participantSid());
-    const timer = window.setInterval(
-      () => reenter(participantSid()),
-      pollMs ?? SEAT_POLL_MS,
-    );
+    const timer = window.setInterval(() => reenter(participantSid()), pollMs ?? SEAT_POLL_MS);
     return () => window.clearInterval(timer);
   }, [seated, reenter, participantSid, pollMs]);
 
@@ -141,6 +109,7 @@ function Room({
     <div className={styles.theater} data-layout={phone ? "phone" : undefined}>
       <RoomHeader
         middle={
+          // On the phone the bell takes the pill's place, on the right (spec 0158).
           !phone && (
             <ActivityPill
               events={session.activity}
@@ -148,11 +117,7 @@ function Room({
               meId={session.me.id}
               connection={session.connection}
               isLive={isLive}
-              watching={
-                stage.big && stage.mainKind
-                  ? { personId: stage.big.person.id, kind: stage.mainKind }
-                  : null
-              }
+              watching={watching}
               onWatch={stage.pick}
             />
           )
@@ -173,11 +138,7 @@ function Room({
                 people={session.knownPeople}
                 meId={session.me.id}
                 isLive={isLive}
-                watching={
-                  stage.big && stage.mainKind
-                    ? { personId: stage.big.person.id, kind: stage.mainKind }
-                    : null
-                }
+                watching={watching}
                 onWatch={stage.pick}
               />
             )}

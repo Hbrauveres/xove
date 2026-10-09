@@ -2155,6 +2155,42 @@ describe("room: on a phone held upright (spec 0158)", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Ana · Screen" })).toBeInTheDocument();
   });
 
+  it("stops downloading a preview's sound unmuted on desktop when the phone turns upright", async () => {
+    const win = phoneWindow(false);
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7), someoneSharing("Ana Souza", 3)];
+    renderRoom();
+    await connected();
+    const room = lastRoom();
+    act(() => {
+      room.publishScreen("user-7", { withSound: true });
+      room.publishScreen("user-3", { withSound: true });
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Unmute Ana" }));
+    await waitFor(() => expect(room.soundPublication("user-3")!.isSubscribed).toBe(true));
+
+    win.turn(true);
+    await waitFor(() => expect(room.soundPublication("user-3")!.isSubscribed).toBe(false));
+    expect(room.soundPublication("user-7")!.isSubscribed).toBe(true);
+  });
+
+  it("has no LIVE badge over the stage: LIVE is in the line under it", async () => {
+    phoneWindow();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const video = await screen.findByLabelText("Bruno's shared screen");
+    const frame = video.closest("[data-chrome]") as HTMLElement;
+    expect(within(frame).queryByText("LIVE")).toBeNull();
+    const info = screen.getByRole("heading", { level: 2, name: "Bruno · Screen" }).closest("[data-compact]") as HTMLElement;
+    expect(within(info).getByText("LIVE")).toBeInTheDocument();
+  });
+
   it("keeps the same video playing when the phone turns", async () => {
     const win = phoneWindow();
     const server = installFakeApi({ me: member });
@@ -2173,5 +2209,45 @@ describe("room: on a phone held upright (spec 0158)", () => {
     win.turn(true);
     expect(await screen.findByRole("heading", { name: "Bruno · Screen" })).toBeInTheDocument();
     expect(screen.getByLabelText("Bruno's shared screen")).toBe(video);
+  });
+});
+
+/** A canvas that draws nothing, so the ambilight runs in jsdom (which has no canvas). */
+function fakeCanvas() {
+  const ctx = {
+    fillRect: () => {},
+    drawImage: () => {},
+    createImageData: (w: number, h: number) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
+    putImageData: () => {},
+    set fillStyle(_: string) {},
+    set filter(_: string) {},
+    set globalAlpha(_: number) {},
+    set globalCompositeOperation(_: string) {},
+  };
+  return vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation((() => ctx) as never);
+}
+
+describe("room: the empty stage glows (spec 0158)", () => {
+  const desktopMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["on desktop", false],
+    ["on a phone", true],
+  ])("lights the colour bars with the ambilight %s", async (_, upright) => {
+    fakeCanvas();
+    if (upright) phoneWindow();
+    installFakeApi({ me: member });
+    const { container } = renderRoom();
+    await connected();
+    const light = await waitFor(() => {
+      const c = container.querySelector("canvas[data-on]") as HTMLCanvasElement | null;
+      expect(c).not.toBeNull();
+      return c!;
+    });
+    expect(Number(light.style.opacity)).toBeGreaterThan(0);
   });
 });

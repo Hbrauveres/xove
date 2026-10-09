@@ -7,7 +7,7 @@ describe("the empty stage (spec 0158)", () => {
     const { container } = render(<EmptyStage />);
     const bars = container.querySelectorAll("[data-bar]");
     expect(bars).toHaveLength(BARS.length);
-    expect(container.querySelector("[data-bars]")).not.toHaveAttribute("data-faded");
+    // Full colour: their stylesheet no longer fades them (checked in styles/layout.test.ts).
   });
 
   it("asks to share a screen or turn on a camera, or only the camera where a screen can't be shared", () => {

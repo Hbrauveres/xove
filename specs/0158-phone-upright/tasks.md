@@ -99,8 +99,9 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
     - "API": `here` in the streams state;
   - `CLAUDE.md`: test counts.
   - · verify: the pages describe the new behaviour
-  - Done: "Watching" has the phone view and the lit bars; the API table has `here`; decision 42; test counts (API 168, web 409).
-- [ ] **T13** Review every AC (`/review`), then the PR with `Closes #158`. Henrique checks AC-10 on staging, on Android Chrome and iPhone Safari. · verify: no gaps left; AC-10 written in the PR
+  - Done: "Watching" has the phone view and the lit bars; the API table has `here`; decision 42; test counts (API 168, web 415).
+- [x] **T13** Review every AC (`/review`), then the PR with `Closes #158`. Henrique checks AC-10 on staging, on Android Chrome and iPhone Safari. · verify: no gaps left; AC-10 written in the PR
+  - Done: review fixed: the feed stays silent after turning (a preview unmuted on desktop), tests for the full-colour bars, the lit empty stage (desktop and phone) and no LIVE badge on the stage, `here` only for seated members, formatting churn reverted. AC-10 is in the PR for Henrique.
 
 ## Coverage
 

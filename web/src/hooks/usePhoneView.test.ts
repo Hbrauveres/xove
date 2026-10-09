@@ -26,6 +26,10 @@ function windowOf(width: number, height: number) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("the phone view applies to a narrow, upright window (spec 0158)", () => {
+  it("asks the browser for a window up to 760 px wide, held upright", () => {
+    expect(PHONE_QUERY).toBe("(max-width: 760px) and (orientation: portrait)");
+  });
+
   it("is on for a phone held upright and a narrow upright window", () => {
     windowOf(390, 844);
     expect(renderHook(() => usePhoneView()).result.current).toBe(true);

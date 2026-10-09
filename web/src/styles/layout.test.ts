@@ -36,3 +36,10 @@ describe("the room on a phone held upright (spec 0158)", () => {
     expect(below).toMatch(/overflow-y:\s*auto/);
   });
 });
+
+describe("the empty stage's colour bars (spec 0158)", () => {
+  it("are at full colour, on desktop and phone", () => {
+    const empty = sheet("components/stage/EmptyStage.module.css");
+    expect(rule(empty, ".test")).not.toMatch(/opacity/);
+  });
+});

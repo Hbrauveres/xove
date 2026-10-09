@@ -86,10 +86,11 @@ class StreamsControllerTest {
 
     @Test
     void listsEveryoneSeatedWithWhenTheyArrived() throws Exception {
+        mvc.perform(post("/api/room/enter").with(as("sub-m1")).with(csrf()));
+        // Not in the room yet: nothing about who's here.
         mvc.perform(get("/api/streams").with(as("sub-friend"))).andExpect(jsonPath("$.here").isEmpty());
 
         mvc.perform(post("/api/room/enter").with(as("sub-friend")).with(csrf()));
-        mvc.perform(post("/api/room/enter").with(as("sub-m1")).with(csrf()));
 
         mvc.perform(get("/api/streams").with(as("sub-friend")))
                 .andExpect(jsonPath("$.here.length()").value(2))
