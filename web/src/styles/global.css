@@ -54,6 +54,8 @@ html,
 body,
 #root {
   height: 100%;
+  /* No pull-to-refresh on phones: dragging the volume down near the top reloaded the page. */
+  overscroll-behavior: none;
 }
 
 body {

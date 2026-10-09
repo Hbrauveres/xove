@@ -275,3 +275,24 @@ describe("pick a camera (spec 0098)", () => {
     await waitFor(() => expect(lastRoom().localParticipant.camera).toBeNull());
   });
 });
+
+describe("sound on phones (a tap unlocks it)", () => {
+  it("unlocks the page's sound on the first tap or key, as mobile browsers require", async () => {
+    await connected();
+    const room = lastRoom();
+    room.startAudio.mockClear();
+    document.dispatchEvent(new Event("pointerup"));
+    expect(room.startAudio).toHaveBeenCalledTimes(1);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
+    expect(room.startAudio).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops asking once the browser plays sound", async () => {
+    await connected();
+    const room = lastRoom() as unknown as { startAudio: ReturnType<typeof vi.fn>; canPlaybackAudio?: boolean };
+    room.startAudio.mockClear();
+    room.canPlaybackAudio = true;
+    document.dispatchEvent(new Event("pointerup"));
+    expect(room.startAudio).not.toHaveBeenCalled();
+  });
+});
