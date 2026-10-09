@@ -18,7 +18,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Pieces
 
-- [ ] **T3** `StreamsRow`:
+- [x] **T3** `StreamsRow`:
   - "Live now · N of 6", then one row of small pictures with names, scrolling sideways;
   - silent;
   - a tap calls `pick`;
@@ -28,6 +28,7 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
   `StreamsRow.test.tsx`.
   - · covers FR-9, FR-10, FR-11 · verify: `StreamsRow.test.tsx`
+  - Done: `StreamsRow`; closed, it's `inert` and hidden from screen readers; its pictures join the video frames allowed pure black.
 
 ## Wiring
 
