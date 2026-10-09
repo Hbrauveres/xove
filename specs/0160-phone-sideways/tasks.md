@@ -74,12 +74,13 @@ Nothing to do outside the repo before starting. Henrique's part: merging the PR,
 
 ## Docs and review
 
-- [ ] **T8** Docs:
+- [x] **T8** Docs:
   - `docs/architecture.md`: "On a phone or tablet", covering the rule, sideways, the row and tablets;
   - `docs/decisions.md`: decision 43;
   - `CLAUDE.md`: test counts.
   - Checked in the local Playwright harness against the design: phone upright, phone sideways (live, nobody live, row open), tablet upright and sideways.
   - · verify: the pages describe the new behaviour; the harness screenshots match the design
+  - Done: "On a phone or tablet" in the architecture page, decision 43, web count 462. Harness (Playwright, real `RoomPage` with fakes): phone upright, sideways live, nobody live, a portrait camera, the row opened by a swipe up and closed after idling, tablet upright (640 px column) and sideways (desktop).
 - [ ] **T9** Review every AC (`/review`), then the PR with `Closes #160`, `Closes #161`, `Closes #163`. Henrique checks AC-7 on staging: Android Chrome and iPhone Safari sideways, and a tablet. · verify: no gaps left; AC-7 written in the PR
 
 ## Coverage
