@@ -1,0 +1,124 @@
+<title>Xovê Install Screen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a control bar, then the install screen in a phone's browser, Android and iPhone side by side. Xovê's soft black palette. */
+:root {
+  color-scheme: dark;
+  --ground: #0c0c0d; --surface: #161617; --raised: #1b1b1d; --line: #2c2c2f;
+  --text: #ebebec; --muted: #9a9a9f; --faint: #66666b; --accent: #ef4b4b; --ink: #3a0808; --page: #070708;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+html, body { background: var(--page); color: var(--text); }
+body { font-family: var(--body); padding-inline: 16px; padding-block: 24px 48px; }
+.wrap { max-width: 1000px; margin: 0 auto; display: grid; gap: 18px; }
+h1.page { font-family: var(--display); font-weight: 800; font-size: 26px; margin: 0; }
+.lede { color: var(--muted); margin: 4px 0 0; max-width: 70ch; line-height: 1.5; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding-block: 10px; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: 500 13px var(--body); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--ground); }
+.seg button:focus-visible, .phone button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.opt h2 { font-family: var(--display); font-size: 19px; margin: 0 0 4px; }
+.opt p { margin: 0; color: var(--muted); max-width: 72ch; line-height: 1.5; }
+.phones { display: flex; flex-wrap: wrap; gap: 28px; }
+.cap { font: 12px var(--mono); color: var(--faint); margin-bottom: 8px; }
+
+.phone { position: relative; width: 320px; height: 680px; max-width: 100%; border: 8px solid #1f1f22; border-radius: 34px; overflow: hidden; background: var(--ground); box-shadow: 0 0 0 1px #2a2a2e, 0 20px 50px rgba(0,0,0,.6); display: flex; flex-direction: column; }
+/* The browser around the page. */
+.chrome { flex: none; background: #1c1c1f; color: #c8c8cc; font: 12px var(--body); display: flex; align-items: center; gap: 8px; padding: 26px 12px 8px; }
+.chrome .url { flex: 1; background: #2a2a2e; border-radius: 999px; padding: 6px 12px; color: #dcdce0; }
+.chrome .dots { width: 18px; text-align: center; font-weight: 700; }
+.safari { flex: none; background: #1c1c1f; border-top: 1px solid #2c2c2f; display: grid; grid-template-columns: repeat(5, 1fr); place-items: center; padding: 8px 8px 18px; color: #3d8bfd; position: relative; }
+.safari svg { width: 20px; height: 20px; }
+.safari .url { position: absolute; left: 12px; right: 12px; top: -38px; background: #2a2a2e; border-radius: 12px; padding: 7px 12px; color: #dcdce0; font: 12px var(--body); text-align: center; }
+.share { position: relative; }
+.share.hint::after { content: ""; position: absolute; inset: -8px; border-radius: 12px; box-shadow: 0 0 0 2px var(--accent); animation: ping 1.6s ease-out infinite; }
+@keyframes ping { 0% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+
+.screen { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; padding: 22px 22px 18px; gap: 16px; }
+.wm { height: 26px; width: auto; color: var(--text); display: block; }
+.appicon { width: 76px; height: 76px; border-radius: 20px; background: var(--ground); box-shadow: 0 0 0 1px var(--line), 0 10px 30px rgba(239,75,75,.18); display: grid; place-items: center; color: var(--text); }
+.appicon .ic { width: 64px; height: 64px; }
+.h { font: 700 24px var(--display); line-height: 1.15; margin: 0; text-wrap: balance; }
+.h em { font-style: normal; color: var(--accent); }
+.sub { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.perks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.perks li { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--text); }
+.perks li span { width: 22px; height: 22px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; color: var(--accent); font-size: 12px; flex: none; }
+.install { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 0; border-radius: 12px; padding: 14px; background: var(--accent); color: var(--ink); font: 600 15px var(--body); cursor: pointer; }
+.install svg { width: 18px; height: 18px; }
+.alt { font-size: 12px; color: var(--faint); text-align: center; margin: 0; }
+.steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { display: flex; gap: 12px; align-items: center; background: var(--surface); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.35; }
+.steps li::before { counter-increment: s; content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--raised); color: var(--text); display: grid; place-items: center; font: 600 12px var(--mono); flex: none; }
+.steps b { font-weight: 600; }
+.steps .k { display: inline-flex; vertical-align: -4px; color: #3d8bfd; }
+.steps .k svg { width: 18px; height: 18px; }
+/* The "i", small, raised at the top right of "screen" like a superscript; a larger invisible target for the finger. */
+.info { position: relative; display: inline-grid; place-items: center; width: 12px; height: 12px; margin-left: 3px; vertical-align: 0.85em; padding: 0; border-radius: 50%; border: 0; background: var(--muted); color: var(--ground); font: 700 8.5px/1 var(--mono); cursor: pointer; }
+.info::after { content: ""; position: absolute; inset: -12px; }
+.info[aria-expanded="true"] { background: var(--text); }
+.why { margin: -6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--raised); color: var(--muted); font-size: 12.5px; line-height: 1.5; text-align: left; }
+.how { display: grid; gap: 10px; width: 100%; text-align: left; }
+.done { margin-top: auto; padding-bottom: 8px; font-size: 12px; color: var(--faint); text-align: center; }
+.center { align-items: center; text-align: center; }
+/* Safari's address bar floats above its toolbar: keep the last line clear of it. */
+#iphone .screen { padding-bottom: 52px; }
+.center .perks { justify-items: start; text-align: left; }
+.homegrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 14px; border-radius: 18px; background: linear-gradient(160deg, #2a1f3d, #14141a); }
+.homegrid i { aspect-ratio: 1; border-radius: 12px; background: rgba(255,255,255,.08); display: grid; place-items: center; font-style: normal; }
+.homegrid i.x { background: var(--ground); box-shadow: 0 0 0 2px var(--accent); }
+.homegrid i.x .ic { width: 80%; height: 80%; color: var(--text); }
+.arrow { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); color: var(--accent); font: 600 12px var(--body); display: flex; flex-direction: column; align-items: center; gap: 2px; animation: bob 1.4s ease-in-out infinite; }
+.arrow svg { width: 22px; height: 22px; }
+.arrow.top { bottom: auto; top: 58px; left: auto; right: 6px; transform: none; }
+@keyframes bob { 50% { translate: 0 5px; } }
+@media (prefers-reduced-motion: reduce) { .arrow, .share.hint::after { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 class="page">Install screen</h1>
+    <p class="lede"><b>Decided:</b> the card. What a phone or tablet sees in a browser tab, on every page, until Xovê is opened from the home screen. Everything is the same on both; only the action differs: on Android one button, on iPhone Safari's three Share steps.</p>
+  </header>
+  <div class="phones">
+    <div><div class="cap">Android · Chrome</div><div class="phone" id="android"></div></div>
+    <div><div class="cap">iPhone · Safari</div><div class="phone" id="iphone"></div></div>
+  </div>
+</div>
+
+<script>
+const WM = `<svg class="wm" viewBox="0 -33 472 166" style="overflow:visible" role="img" aria-label="Xovê"><defs><clipPath id="xm-V"><rect x="261" y="0" width="90" height="100"/></clipPath></defs><polyline points="29,-28 5,-28 5,-4" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="miter"/><polyline points="29,128 5,128 5,104" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="miter"/><polyline points="443,128 467,128 467,104" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="miter"/><polyline points="443,-28 467,-28 467,-4" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linejoin="miter"/><g><polyline points="36.75,3.3 117.25,96.7" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/><polyline points="36.75,96.7 117.25,3.3" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/></g><circle cx="191" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="10"/><circle cx="191" cy="50" r="29.4" fill="var(--accent)"/><g clip-path="url(#xm-V)"><polyline points="259,-30 306,112 353,-30" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/></g><g><polyline points="439,5 376,5 376,95 439,95" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/><polyline points="376,50 432,50" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/></g></svg>`;
+const IC = `<svg class="ic" viewBox="-34.78571428571429 -31.285714285714292 208.57142857142858 208.57142857142858" role="img" aria-label="Xovê"><polyline points="31,5 5,5 5,31" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="miter"/><polyline points="31,141 5,141 5,115" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="miter"/><polyline points="108,141 134,141 134,115" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="miter"/><polyline points="108,5 134,5 134,31" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linejoin="miter"/><circle cx="70" cy="73" r="45" fill="none" stroke="currentColor" stroke-width="10"/><circle cx="70" cy="73" r="29.4" fill="var(--accent)"/></svg>`;
+const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg>';
+const ADD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M6 13l6 6 6-6"/></svg>';
+const UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5M6 11l6-6 6 6"/></svg>';
+const DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+const chromeTop = '<div class="chrome"><span>⌂</span><span class="url">stage.xove.app</span><span class="dots">⋮</span></div>';
+const safariBottom = (hint) => `<div class="safari"><span class="url">stage.xove.app</span><span>‹</span><span>›</span><span class="share${hint ? ' hint' : ''}">${SHARE}</span><span>▢</span><span>⧉</span></div>`;
+const perks = `<ul class="perks"><li><span>●</span>Full screen, no browser bars</li><li><span>●</span>Sound on, the stage turns with your phone</li><li><span>●</span>One tap from your home screen</li></ul>`;
+
+// The same card on both; only the "how" block differs (decided 2026-10-10: style A, the rest equal).
+const head = `${WM}<div class="appicon">${IC}</div><h2 class="h">Xovê works best from your <em>home screen</em><button class="info" type="button" aria-expanded="false" aria-label="Why the home screen?">i</button></h2><p class="why" hidden>Opened from your home screen, Xovê fills the whole screen: no address bar or browser buttons in the way, just the stage.</p><p class="sub">Start watching and sharing moments with your friends.</p>`;
+const foot = `<p class="done">Already added? Open Xovê from your home screen.</p>`;
+function android() {
+  return chromeTop + `<div class="screen center">${head}<div class="how"><button class="install">${DL} Get Xovê</button><p class="alt">No prompt? Open the menu <b>⋮</b> and choose <b>Add to Home screen</b>.</p></div>${foot}</div>`;
+}
+function iphone() {
+  return `<div class="screen center">${head}<div class="how"><ol class="steps"><li><span>Tap <span class="k">${SHARE}</span> <b>Share</b> in Safari's bar</span></li><li><span>Choose <span class="k">${ADD}</span> <b>Add to Home Screen</b></span></li><li><span>Open <b>Xovê</b> from your home screen</span></li></ol></div>${foot}</div>` + safariBottom(false);
+}
+// The info bubble: tap the i to show or hide why.
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".info");
+  if (!b) return;
+  const why = b.closest(".screen").querySelector(".why");
+  const open = b.getAttribute("aria-expanded") !== "true";
+  b.setAttribute("aria-expanded", open);
+  why.hidden = !open;
+});
+document.getElementById("android").innerHTML = android();
+document.getElementById("iphone").innerHTML = iphone();
+</script>
