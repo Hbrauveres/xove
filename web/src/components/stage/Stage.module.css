@@ -220,10 +220,20 @@
   gap: 4px;
 }
 
-/* Sideways the top belongs to the top bar: the fullscreen button moves to the bottom right. */
+/*
+ * Sideways the top belongs to the top bar: the fullscreen button moves to the bottom right,
+ * centred on the round buttons' row (12 px from the bottom, buttons 48 px; 42 px on a narrow
+ * screen), so the two line up.
+ */
 .stage[data-layout="sideways"] [data-overlay] {
   justify-content: flex-end;
-  padding-bottom: 26px;
+  padding-bottom: calc(12px + (48px - 34px) / 2);
+}
+
+@media (max-width: 520px) {
+  .stage[data-layout="sideways"] [data-overlay] {
+    padding-bottom: calc(12px + (42px - 34px) / 2);
+  }
 }
 
 /* Fading sideways: the top bar and the row's arrow button go with the round buttons (FR-8). */
