@@ -1,18 +1,20 @@
 /* The install screen (spec 0171): see specs/0171-home-screen-app/design.html. */
+/* As in the design: the card from the top, on the plain ground; "Already added?" at the bottom edge. */
 .wrap {
   min-height: 100%;
-  display: grid;
-  place-items: center;
-  padding-block: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-block: calc(28px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-bottom, 0px));
   padding-inline: var(--gutter);
-  background:
-    radial-gradient(60% 50% at 50% 0%, var(--accent-soft), transparent 70%),
-    var(--ground);
+  background: var(--ground);
 }
 
 .card {
   width: 100%;
   max-width: 380px;
+  /* Fills the screen's height, so the last line can sit at the bottom. */
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -191,7 +193,8 @@
 }
 
 .note {
-  margin: 0;
+  margin: auto 0 0;
+  padding-top: 16px;
   color: var(--text-faint);
   font-size: var(--text-xs);
 }
