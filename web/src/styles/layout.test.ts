@@ -84,6 +84,14 @@ describe("the setup window sideways (spec 0160, FR-15)", () => {
   });
 });
 
+describe("no pull-to-refresh in the room", () => {
+  it("turns it off only while the room is on the page, so a drag down (the volume) never reloads", () => {
+    const global = sheet("styles/global.css");
+    expect(rule(global, "html:has([data-room]),\nhtml:has([data-room]) body")).toMatch(/overscroll-behavior:\s*none/);
+    expect(rule(global, "html,\nbody,\n#root")).not.toMatch(/overscroll-behavior/);
+  });
+});
+
 describe("the fullscreen button in the full-screen view (spec 0171)", () => {
   it("sits centred on the round buttons' row, at both of their sizes", () => {
     const stage = sheet("components/stage/Stage.module.css");

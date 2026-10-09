@@ -84,6 +84,14 @@ describe("room: watching", () => {
     expect(await screen.findByRole("heading", { name: "The stage is yours." })).toBeInTheDocument();
   });
 
+  it("marks the page as the room, which turns off pull-to-refresh only here", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+
+    await screen.findByRole("heading", { name: "The stage is yours." });
+    expect(document.querySelector("[data-room]")).not.toBeNull();
+  });
+
   it("plays the sharer's screen once their video arrives", async () => {
     const server = installFakeApi({ me: member });
     server.streams = [someoneSharing("Bruno Lima", 7)];
