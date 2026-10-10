@@ -3,9 +3,9 @@
 A private room where invited friends share their screens and cameras and watch each other live: up to 6 streams at once, 20 people in the room, with a queue when it's full. Live at [xove.app](https://xove.app), by invitation.
 
 <p align="center">
-  <img src="docs/images/room-desktop.png" alt="The room on a desktop: one screen big on the stage with ambilight, the other live streams as previews" width="72%">
+  <img src="docs/images/design/room-desktop.png" alt="The room on a desktop: one screen big on the stage with ambilight, the other live streams as previews" width="72%">
   &nbsp;
-  <img src="docs/images/room-phone.png" alt="The room on a phone held upright: the stage on top, the other streams as a feed" width="20%">
+  <img src="docs/images/design/room-phone-upright.png" alt="The room on a phone held upright: the stage on top, the other streams as a feed" width="20%">
 </p>
 
 ## What it does
@@ -33,7 +33,7 @@ flowchart LR
   B -.->|video over WebRTC| L[LiveKit]
 ```
 
-More in [docs/architecture.md](docs/architecture.md) and the endpoints in [docs/api.md](docs/api.md).
+More in [docs/architecture.md](docs/architecture.md), the endpoints in [docs/api.md](docs/api.md), and the whole look (the mark, colours, type, controls, every screen) in the [design sheet](docs/design.md).
 
 ## Run it and test it
 

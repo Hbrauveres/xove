@@ -10,3 +10,4 @@ Specific to this repo:
 - Never push to `main`; PRs are squash-merged with a conventional-commit title.
 - Never edit a Flyway migration that already ran.
 - Never read `.env` files or print a secret.
+- **The look is in `docs/design.md`** (the design sheet): use its tokens and components for any UI work, and update it (text and pictures) in the same PR when the look changes.
