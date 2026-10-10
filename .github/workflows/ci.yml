@@ -10,7 +10,7 @@
 # commit, before and after a pull request exists. A pull request's required checks
 # are these same runs (GitHub matches checks by commit). The stage release
 # (stage.yml) calls this workflow first on main.
-# Full explanation: docs/pipeline.md
+# Full explanation: docs/pipeline.md in the xove-workspace repo
 
 name: Commit checks
 

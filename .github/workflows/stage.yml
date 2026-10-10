@@ -6,7 +6,7 @@
 #   6 · Remove failed images   only when the new version ran on the VPS and wasn't healthy
 #   Notify Discord          posts every result (success, failure, cancelled) to a Discord channel
 #
-# Full explanation: docs/pipeline.md
+# Full explanation: docs/pipeline.md in the xove-workspace repo
 
 name: Stage release
 
