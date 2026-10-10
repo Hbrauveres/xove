@@ -1,8 +1,8 @@
 <!-- Title: a conventional commit, e.g. "feat(api): free the screen when the sharer leaves". It becomes the commit message on main (squash merge). -->
 
-Closes #
+**Issue:** Hbrauveres/xove-workspace#
 
-**Spec:** `specs/<folder>/spec.md`
+**Spec:** `xove-workspace/specs/<folder>/spec.md`
 
 ## What changed
 
@@ -20,7 +20,7 @@ Closes #
 - [ ] Every task in `tasks.md` is ticked
 - [ ] Commit checks are green
 - [ ] Database changes are new migrations, compatible with the previous code
-- [ ] `docs/` updated (or nothing to update)
+- [ ] The workspace PR updates `docs/` and ADRs (or nothing to update)
 - [ ] No secrets, server details or personal data in the diff
 
 ## After merge

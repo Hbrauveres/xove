@@ -9,7 +9,7 @@
 #   6 · GitHub Release           notes of what changed (a pre-release for v0.0.x)
 #   Notify Discord               every result
 #
-# Full explanation: docs/pipeline.md
+# Full explanation: docs/pipeline.md in the xove-workspace repo
 
 name: Production release
 
