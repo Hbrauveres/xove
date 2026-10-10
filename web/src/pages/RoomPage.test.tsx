@@ -722,16 +722,20 @@ describe("room: viewers follow the sharer's changes", () => {
       server.streams[0].settings = { quality: "720p", mode: "smooth" };
     });
 
-    await waitFor(() => expect(offered()).toEqual(["auto", "720p", "480p"]));
-    expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
+    await waitFor(() => {
+      expect(offered()).toEqual(["auto", "720p", "480p"]);
+      expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
+    });
 
     // And raises it back.
     act(() => {
       server.streams[0].settings = { quality: "1080p", mode: "smooth" };
     });
 
-    await waitFor(() => expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]));
-    expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
+    await waitFor(() => {
+      expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]);
+      expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
+    });
   });
 
   it("keeps a viewer's own lower choice when the sharer lowers theirs", async () => {
