@@ -15,6 +15,10 @@
 - [ ] AC-1 … — proven by `…Test#…`
 - [ ] AC-2 … — manual check on staging after merge
 
+## Docs
+
+<!-- What `scripts/docs-check` (in the workspace) asked for, and what changed: e.g. "docs/api.md: the new endpoint". If an area needs no doc change, say why. -->
+
 ## Definition of Done
 
 - [ ] Every task in `tasks.md` is ticked
