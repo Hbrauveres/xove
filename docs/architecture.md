@@ -29,6 +29,8 @@ The database is only reachable by the API, on a private Docker network. Only the
 
 ## Repository layout
 
+The API and the web app are moving to their own repositories, [`xove-api`](https://github.com/Hbrauveres/xove-api) and `xove-web` (this one, renamed), so each can be built, released and deployed on its own. Until then, both live here:
+
 ```
 api/                  Spring Boot application
   src/main/java/dev/hbrauveres/xove/
@@ -50,6 +52,8 @@ web/                  React application
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
 compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the infra repo
+                      (planned: on the servers, the database will run outside this repo,
+                      like LiveKit; this file keeps one for local dev and CI)
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml)
 ```
 
