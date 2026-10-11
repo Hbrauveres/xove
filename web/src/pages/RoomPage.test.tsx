@@ -115,7 +115,8 @@ describe("room: watching", () => {
     renderRoom();
     expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
     // "0 of 6 live" shows before the first answer too; the feed only logs changes
-    // after it, so wait until it's in (a second poll means the first one answered).
+    // after it, so wait until it's in. The fake answers at once, so by the second
+    // poll the first answer has arrived, and act() below renders it first.
     await waitFor(() =>
       expect(server.calls.filter((c) => c.method === "GET" && c.path === "/api/streams").length).toBeGreaterThan(1),
     );
