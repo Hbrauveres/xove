@@ -29,6 +29,8 @@ The database is only reachable by the API, on a private Docker network. Only the
 
 ## Repository layout
 
+The API and the web app are moving to their own repositories, [`xove-api`](https://github.com/Hbrauveres/xove-api) and `xove-web` (this one, renamed), so each can be built, released and deployed on its own. Until then, both live here:
+
 ```
 api/                  Spring Boot application
   src/main/java/dev/hbrauveres/xove/

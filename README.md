@@ -24,6 +24,8 @@ A private room where invited friends share their screens and cameras and watch e
 | Video | A self-hosted [LiveKit](https://livekit.io) server (a WebRTC SFU): each stream is uploaded once and forwarded to every viewer |
 | Delivery | GitHub Actions: build the images, start the stack and check it's healthy, unit tests, Trivy and Semgrep, publish to GHCR, deploy to staging on every merge and to production on a version tag, with automatic rollback |
 
+The API and the web app are moving to their own repositories, [`xove-api`](https://github.com/Hbrauveres/xove-api) and `xove-web` (this one, renamed), so each can be built, released and deployed on its own.
+
 ```mermaid
 flowchart LR
   B[Browser<br/>React app] -->|HTTPS| P[Reverse proxy]
