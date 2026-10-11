@@ -114,6 +114,11 @@ describe("room: watching", () => {
     const server = installFakeApi({ me: member });
     renderRoom();
     expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
+    // "0 of 6 live" shows before the first answer too; the feed only logs changes
+    // after it, so wait until it's in (a second poll means the first one answered).
+    await waitFor(() =>
+      expect(server.calls.filter((c) => c.method === "GET" && c.path === "/api/streams").length).toBeGreaterThan(1),
+    );
 
     act(() => {
       server.streams = [someoneSharing("Duda", 9)];
@@ -1262,7 +1267,7 @@ describe("room: waiting for a seat", () => {
 
     const offer = await screen.findByRole("dialog", { name: /it's your turn/i });
     expect(offer).toHaveTextContent("60 seconds");
-    expect(document.title).toBe("Your turn — Xovê");
+    await waitFor(() => expect(document.title).toBe("Your turn — Xovê"));
     expect(within(offer).getByRole("button", { name: /enter room/i })).toHaveFocus();
 
     await userEvent.setup().click(within(offer).getByRole("button", { name: /enter room/i }));
