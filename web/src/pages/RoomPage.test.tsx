@@ -114,6 +114,12 @@ describe("room: watching", () => {
     const server = installFakeApi({ me: member });
     renderRoom();
     expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
+    // "0 of 6 live" shows before the first answer too; the feed only logs changes
+    // after it, so wait until it's in. The fake answers at once, so by the second
+    // poll the first answer has arrived, and act() below renders it first.
+    await waitFor(() =>
+      expect(server.calls.filter((c) => c.method === "GET" && c.path === "/api/streams").length).toBeGreaterThan(1),
+    );
 
     act(() => {
       server.streams = [someoneSharing("Duda", 9)];
@@ -522,8 +528,10 @@ describe("room: changing the stream while sharing", () => {
 
     await pickInMenu(user, "480p");
 
-    await waitFor(() => expect(myLiveStream(server)?.settings).toEqual({ quality: "480p", mode: "smooth" }));
-    expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    await waitFor(() => {
+      expect(myLiveStream(server)?.settings).toEqual({ quality: "480p", mode: "smooth" });
+      expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    });
     // No new track and no reload for viewers.
     expect(local.publishTrack).toHaveBeenCalledTimes(2);
     expect(local.unpublishTrack).not.toHaveBeenCalled();
@@ -540,8 +548,10 @@ describe("room: changing the stream while sharing", () => {
 
     await pickInMenu(user, "1080p");
 
-    await waitFor(() => expect(myLiveStream(server)?.settings.quality).toBe("1080p"));
-    expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+    await waitFor(() => {
+      expect(myLiveStream(server)?.settings.quality).toBe("1080p");
+      expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+    });
   });
 
   it("changes the mode live: marked for detail, keeping sharpness", async () => {
@@ -570,8 +580,10 @@ describe("room: changing the stream while sharing", () => {
     await pickInMenu(user, "480p");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/only the person sharing/i);
-    await waitFor(() => expect(tickedQuality()).toBe("1080p"));
-    expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+    await waitFor(() => {
+      expect(tickedQuality()).toBe("1080p");
+      expect(video.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+    });
     expect(localStorage.getItem("xove.share.quality")).not.toBe("480p");
   });
 
@@ -722,16 +734,20 @@ describe("room: viewers follow the sharer's changes", () => {
       server.streams[0].settings = { quality: "720p", mode: "smooth" };
     });
 
-    await waitFor(() => expect(offered()).toEqual(["auto", "720p", "480p"]));
-    expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
+    await waitFor(() => {
+      expect(offered()).toEqual(["auto", "720p", "480p"]);
+      expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
+    });
 
     // And raises it back.
     act(() => {
       server.streams[0].settings = { quality: "1080p", mode: "smooth" };
     });
 
-    await waitFor(() => expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]));
-    expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
+    await waitFor(() => {
+      expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]);
+      expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
+    });
   });
 
   it("keeps a viewer's own lower choice when the sharer lowers theirs", async () => {
@@ -750,8 +766,10 @@ describe("room: viewers follow the sharer's changes", () => {
       server.streams[0].settings = { quality: "720p", mode: "sharp" };
     });
 
-    await waitFor(() => expect(watchedQuality()).toBe("480p"));
-    expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
+    await waitFor(() => {
+      expect(watchedQuality()).toBe("480p");
+      expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
+    });
   });
 });
 
@@ -1053,8 +1071,10 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     local.nextPickerAudio = true;
     await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
 
-    await waitFor(() => expect(video.replaceTrack).toHaveBeenCalled());
-    expect(local.getDisplayMedia).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(video.replaceTrack).toHaveBeenCalled();
+      expect(local.getDisplayMedia).toHaveBeenCalledTimes(2);
+    });
     // No setup window, no new stream: the API's stream is the same one.
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(myLiveStream(server)).toEqual(started);
@@ -1248,7 +1268,7 @@ describe("room: waiting for a seat", () => {
 
     const offer = await screen.findByRole("dialog", { name: /it's your turn/i });
     expect(offer).toHaveTextContent("60 seconds");
-    expect(document.title).toBe("Your turn — Xovê");
+    await waitFor(() => expect(document.title).toBe("Your turn — Xovê"));
     expect(within(offer).getByRole("button", { name: /enter room/i })).toHaveFocus();
 
     await userEvent.setup().click(within(offer).getByRole("button", { name: /enter room/i }));
@@ -1421,8 +1441,10 @@ describe("room: my camera", () => {
 
     await user.click(within(controls()).getByRole("button", { name: /turn off camera/i }));
 
-    await waitFor(() => expect(myLiveStream(server, "camera")).toBeUndefined());
-    expect(local.unpublishTrack).toHaveBeenCalledWith(camera, true);
+    await waitFor(() => {
+      expect(myLiveStream(server, "camera")).toBeUndefined();
+      expect(local.unpublishTrack).toHaveBeenCalledWith(camera, true);
+    });
     expect(camera.stopped).toBe(true);
     expect(myLiveStream(server, "screen")).toBeDefined();
   });
@@ -1907,8 +1929,10 @@ describe("room: whose sound plays", () => {
 
     await user.click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
 
-    await waitFor(() => expect(sound("user-7").attached).toHaveLength(1));
-    expect(room.soundPublication("user-3")!.setSubscribed).toHaveBeenLastCalledWith(false);
+    await waitFor(() => {
+      expect(sound("user-7").attached).toHaveLength(1);
+      expect(room.soundPublication("user-3")!.setSubscribed).toHaveBeenLastCalledWith(false);
+    });
   });
 });
 
@@ -1929,8 +1953,10 @@ describe("room: my settings for each of my streams", () => {
     expect(menu.queryByRole("menuitemradio", { name: "1080p" })).not.toBeInTheDocument();
     await pickInMenu(user, "480p", "Camera");
 
-    await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
-    expect(camera.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    await waitFor(() => {
+      expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p");
+      expect(camera.setPublishingQuality).toHaveBeenLastCalledWith(capOf("480p"));
+    });
     expect(myLiveStream(server, "screen")?.settings.quality).toBe("1080p");
     await openMenu(user, "Screen");
     expect(tickedQuality()).toBe("1080p");
@@ -1999,8 +2025,10 @@ describe("room: after the review", () => {
 
     await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
     await openMenu(user, "Screen");
-    await waitFor(() => expect(tickedQuality()).toBe("1080p"));
-    expect(lastRoom().localParticipant.screens[0].track.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+    await waitFor(() => {
+      expect(tickedQuality()).toBe("1080p");
+      expect(lastRoom().localParticipant.screens[0].track.setPublishingQuality).toHaveBeenLastCalledWith(capOf("1080p"));
+    });
   });
 
   it("forgets a viewer's pick once that person stops, even if they share again later", async () => {

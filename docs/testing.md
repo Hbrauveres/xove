@@ -52,6 +52,7 @@ The room page accepts a short poll interval in tests, so nothing waits 2 seconds
 - Arrange, act, assert, separated by blank lines.
 - Asserts on what a user or client sees (text, status codes, JSON), not on internals.
 - No sleeps: inject a clock, use `findBy…` and `waitFor` for async UI.
+- A call the app makes after a render (a fake's `toHaveBeenCalled…`) is checked inside the `waitFor`, next to what it waits for, not once right after it: on a slow CI runner the call can land a moment later.
 
 ## Before opening a pull request
 
