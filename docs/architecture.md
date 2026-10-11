@@ -52,6 +52,8 @@ web/                  React application
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
 compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the infra repo
+                      (planned: on the servers, the database will run outside this repo,
+                      like LiveKit; this file keeps one for local dev and CI)
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml)
 ```
 
