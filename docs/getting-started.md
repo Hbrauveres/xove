@@ -82,6 +82,8 @@ docker compose -f compose.yaml -f compose.local.yaml up -d --build
 docker compose -f compose.yaml -f compose.local.yaml ps
 ```
 
+Its database is named `xove-${APP_ENV}-db`, like the one `docker run` started under "Run the API" when `APP_ENV` is `dev`: stop that one first (`docker stop xove-dev-db`), or use another `APP_ENV`.
+
 Locally there's no reverse proxy in front, so this is mainly useful to check that the images build and start. For day-to-day work, run the API and the web app directly as above.
 
 ## Environment variables
@@ -90,7 +92,7 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | --- | --- | --- |
 | `APP_ENV` | Compose | `stage`, `prod`, or anything locally; goes into container names |
 | `IMAGE_TAG` | Compose | Which published image version to run; set by the deploy script. Unset means "build locally" |
-| `POSTGRES_HOST` | api | Where the database is: on servers its container (`xove-<env>-db`), in the whole stack `db`, with the API run directly `localhost` |
+| `POSTGRES_HOST` | Compose | Where the database is, for the API's `SPRING_DATASOURCE_URL`: on servers its container (`xove-<env>-db`), in the whole stack `db`. Run directly, the API reads `SPRING_DATASOURCE_URL` itself |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | db, api | Database name and credentials |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | api | Google OAuth client |
 | `ADMIN_EMAILS` | api | Comma-separated admin emails |
