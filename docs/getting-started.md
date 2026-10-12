@@ -73,12 +73,13 @@ Restart the API after starting it. Without LiveKit everything works except video
 
 ## Run the whole stack in Docker
 
-The same `compose.yaml` the servers use, with the variables exported above:
+The same `compose.yaml` the servers use, plus `compose.local.yaml`, which adds a throwaway database (on servers the database runs outside this repo). With the variables exported above, and `POSTGRES_HOST=db`:
 
 ```bash
-docker network create web       # once; shared with the reverse proxy on servers
-docker compose up -d --build
-docker compose ps
+docker network create web                  # once; shared with the reverse proxy on servers
+docker network create "xove-${APP_ENV}-db"  # once; the database's private network
+docker compose -f compose.yaml -f compose.local.yaml up -d --build
+docker compose -f compose.yaml -f compose.local.yaml ps
 ```
 
 Locally there's no reverse proxy in front, so this is mainly useful to check that the images build and start. For day-to-day work, run the API and the web app directly as above.
@@ -89,6 +90,7 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | --- | --- | --- |
 | `APP_ENV` | Compose | `stage`, `prod`, or anything locally; goes into container names |
 | `IMAGE_TAG` | Compose | Which published image version to run; set by the deploy script. Unset means "build locally" |
+| `POSTGRES_HOST` | api | Where the database is: on servers its container (`xove-<env>-db`), in the whole stack `db`, with the API run directly `localhost` |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | db, api | Database name and credentials |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | api | Google OAuth client |
 | `ADMIN_EMAILS` | api | Comma-separated admin emails |

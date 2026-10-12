@@ -22,7 +22,9 @@ services:
     # ${VAR:?…} marks a setting the app can't run without: Compose stops with an
     # error instead of starting it empty. LiveKit and ADMIN_EMAILS are optional.
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:?is required (built by shared-infra/ops/build-env)}
+      # The database runs outside this file (on servers, from the private xove-ops repo;
+      # locally and in CI, from compose.local.yaml): the API knows it only by POSTGRES_HOST.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST:?is required (built by shared-infra/ops/build-env)}:5432/${POSTGRES_DB:?is required (built by shared-infra/ops/build-env)}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?is required (built by shared-infra/ops/build-env)}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?is required (built by shared-infra/ops/build-env)}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?is required (built by shared-infra/ops/build-env)}
@@ -42,36 +44,15 @@ services:
       timeout: 3s
       retries: 5
       start_period: 90s
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - web
-      - internal
-
-  db:
-    image: postgres:17-alpine
-    container_name: xove-${APP_ENV:-prod}-db
-    restart: unless-stopped
-    mem_limit: 256m
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:?is required (built by shared-infra/ops/build-env)}
-      POSTGRES_USER: ${POSTGRES_USER:?is required (built by shared-infra/ops/build-env)}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?is required (built by shared-infra/ops/build-env)}
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    networks:
-      - internal
+      - db
 
 networks:
   web:
     external: true
-  internal: {}
-
-volumes:
-  db_data:
+  # The environment's private database network: only the API and its database
+  # join it (spec 0062).
+  db:
+    external: true
+    name: xove-${APP_ENV:-prod}-db

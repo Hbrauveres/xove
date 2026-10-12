@@ -42,7 +42,7 @@ More in [docs/architecture.md](docs/architecture.md), the endpoints in [docs/api
 ```bash
 cd web && npm install && npm run dev      # the web app on its own
 cd api && ./mvnw spring-boot:run          # the API (needs its settings, see Getting started)
-docker compose up                         # the whole stack
+docker compose -f compose.yaml -f compose.local.yaml up   # the whole stack (see Getting started)
 
 cd api && ./mvnw test                     # JUnit, MockMvc, Testcontainers (needs Docker)
 cd web && npm test && npm run build       # Vitest + Testing Library, then a type-checked build

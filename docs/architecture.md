@@ -19,11 +19,11 @@ flowchart LR
 | --- | --- | --- |
 | **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
 | **api** | Login, sessions, access requests, admin actions, the room's seats and live streams, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
-| **db** | Users, access requests, sessions | PostgreSQL 17, schema managed by Flyway |
+| **db** | Users, access requests, sessions | PostgreSQL 17. The schema is the app's (Flyway, run by the API on start); the server runs outside this repo: on servers from the private `xove-ops` repo, one per environment; locally and in CI from `compose.local.yaml` |
 | **livekit** | Receives each screen and camera once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `xove-ops` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
 | **reverse proxy** | HTTPS certificates, routing by hostname and path | Caddy, shared by every app on the server; configured in a separate private repository |
 
-The database is only reachable by the API, on a private Docker network. Only the proxy and LiveKit's media ports face the internet.
+The database is only reachable by the API, on a private Docker network per environment (`xove-<env>-db`), and the API knows it only by `POSTGRES_HOST`. Only the proxy and LiveKit's media ports face the internet.
 
 **Signaling vs media.** Joining the room, knowing who's there and which tracks exist happens over a WebSocket that goes through the proxy. The video itself travels over UDP straight to LiveKit (with a TCP fallback for networks that block UDP). The API never touches media.
 
@@ -51,9 +51,9 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the xove-ops repo
-                      (planned: on the servers, the database will run outside this repo,
-                      like LiveKit; this file keeps one for local dev and CI)
+compose.yaml          the app's services (web, api) and the networks they join; the database and
+                      LiveKit run from the xove-ops repo
+compose.local.yaml    adds a throwaway database, for the whole stack locally and in CI
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml)
 ```
 
