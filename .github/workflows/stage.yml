@@ -40,7 +40,7 @@ jobs:
     name: 4 · Publish images
     needs: checks
     # Only main is released: the server refuses commits that aren't on main
-    # (infra's ops/deploy.sh), so a manual run from a branch stops after the checks.
+    # (shared-infra's ops/deploy.sh), so a manual run from a branch stops after the checks.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -122,7 +122,7 @@ jobs:
           DEPLOY_HOST: ${{ steps.vault.outputs.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ steps.vault.outputs.DEPLOY_PORT }}
           DEPLOY_USER: ${{ steps.vault.outputs.DEPLOY_USER }}
-        # The key only runs infra's ops/deploy.sh for xove on staging (a forced command);
+        # The key only runs shared-infra's ops/deploy.sh for xove on staging (a forced command);
         # "deploy <sha>" is its argument. It checks health on the VPS and rolls back by itself; there's
         # no second check from outside (it would need the staging gate's cookie).
         run: |
@@ -168,7 +168,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Delete this commit's images from the registry
-        # Staging already rolled back to the previous version (infra's ops/deploy.sh);
+        # Staging already rolled back to the previous version (shared-infra's ops/deploy.sh);
         # this removes the images that failed, so nobody deploys them by mistake.
         # GHCR deletes whole versions, not single tags. A commit that didn't change
         # an image (docs only) shares its version with earlier tags, so a version
