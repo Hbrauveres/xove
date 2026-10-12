@@ -30,10 +30,10 @@ Vite forwards every `/api` request to `http://localhost:8080`, so the web app ta
 
 ## Settings
 
-The API reads its settings from environment variables (the table at the end). For the maintainers, they come from the private `infra` repo (`config/dev.yaml`) and 1Password, the same way the servers get theirs; in every new terminal:
+The API reads its settings from environment variables (the table at the end). For the maintainers, they come from the private `infra` repo (`config/dev.yaml`) and 1Password, built by the private `shared-infra` repo's tool, the same way the servers get theirs; in every new terminal:
 
 ```bash
-eval "$(../infra/ops/build-env dev --export)"
+eval "$(../shared-infra/ops/build-env dev --export --project ../infra)"
 ```
 
 It exports every variable into that terminal only; nothing is written to disk. Anyone else sets the same variables by hand: a Google OAuth client, a local PostgreSQL and a LiveKit server (`livekit-server --dev`).

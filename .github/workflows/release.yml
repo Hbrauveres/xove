@@ -3,7 +3,7 @@
 #
 #   1 · Check the release        the tag is vX.Y.Z on main; the commit's stage release was green; its images exist
 #   2 · Tag the images           the commit's sha-<12> images also get vX.Y.Z (the same images, no rebuild)
-#   3 · Deploy production        the VPS runs them (infra's ops/deploy.sh xove prod) and rolls back by itself if unhealthy
+#   3 · Deploy production        the VPS runs them (shared-infra's ops/deploy.sh xove prod) and rolls back by itself if unhealthy
 #   4 · Check production         https://xove.app and its API answer from the internet
 #   5 · Roll back production     only when the check fails; the "Run workflow" button runs this stage alone
 #   6 · GitHub Release           notes of what changed (a pre-release for v0.0.x)
@@ -117,7 +117,7 @@ jobs:
     timeout-minutes: 20
     steps:
       # Production's own key (spec 0046), from the 1Password vault "Xove CI". On the VPS it
-      # can only run infra's ops/deploy.sh for xove on production (a forced command).
+      # can only run shared-infra's ops/deploy.sh for xove on production (a forced command).
       - name: Load production's deploy key from 1Password
         id: vault
         uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
