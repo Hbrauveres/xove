@@ -98,7 +98,8 @@ jobs:
       POSTGRES_DB: xove
       POSTGRES_USER: xove
       POSTGRES_PASSWORD: ci-only-password
-      # compose.yaml (the servers' file) plus compose.local.yaml (a throwaway database).
+      # compose.yaml (the whole stack: the API's and the web app's files, as the servers
+      # deploy them) plus compose.local.yaml (a throwaway database).
       COMPOSE_FILE: compose.yaml:compose.local.yaml
       GOOGLE_CLIENT_ID: ci-placeholder
       GOOGLE_CLIENT_SECRET: ci-placeholder
@@ -124,7 +125,7 @@ jobs:
         run: for f in "$RUNNER_TEMP"/images/*.tar; do docker load -i "$f"; done
 
       - name: Start db, api and web, and wait until healthy
-        # "Healthy" is defined in compose.yaml, the same checks the server's deploy waits for.
+        # "Healthy" is defined in api/compose.yaml and web/compose.yaml, the same checks the server's deploy waits for.
         run: |
           docker network create web
           docker network create xove-ci-db

@@ -73,7 +73,7 @@ Restart the API after starting it. Without LiveKit everything works except video
 
 ## Run the whole stack in Docker
 
-The same `compose.yaml` the servers use, plus `compose.local.yaml`, which adds a throwaway database (on servers the database runs outside this repo). With the variables exported above, and `POSTGRES_HOST=db`:
+`compose.yaml` includes the two files the servers deploy, `api/compose.yaml` and `web/compose.yaml`; `compose.local.yaml` adds a throwaway database (on servers the database runs outside this repo). With the variables exported above, and `POSTGRES_HOST=db`:
 
 ```bash
 docker network create web                  # once; shared with the reverse proxy on servers
@@ -91,7 +91,7 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | Name | Used by | Meaning |
 | --- | --- | --- |
 | `APP_ENV` | Compose | `stage`, `prod`, or anything locally; goes into container names |
-| `IMAGE_TAG` | Compose | Which published image version to run; set by the deploy script. Unset means "build locally" |
+| `IMAGE_TAG` | Compose | Which published image version to run; set by the deploy script, per app. Unset means "build locally" |
 | `POSTGRES_HOST` | Compose | Where the database is, for the API's `SPRING_DATASOURCE_URL`: on servers its container (`xove-<env>-db`), in the whole stack `db`. Run directly, the API reads `SPRING_DATASOURCE_URL` itself |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | db, api | Database name and credentials |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | api | Google OAuth client |

@@ -3,9 +3,11 @@
 #
 #   1 · Check the release        the tag is vX.Y.Z on main; the commit's stage release was green; its images exist
 #   2 · Tag the images           the commit's sha-<12> images also get vX.Y.Z (the same images, no rebuild)
-#   3 · Deploy production        the VPS runs them (shared-infra's ops/deploy.sh xove prod) and rolls back by itself if unhealthy
+#   3 · Deploy production        the API, then the web app, each through its own key (shared-infra's
+#                                ops/deploy.sh xove-api prod, xove-web prod, spec 0063); each rolls back by itself if unhealthy
 #   4 · Check production         https://xove.app and its API answer from the internet
-#   5 · Roll back production     only when the check fails; the "Run workflow" button runs this stage alone
+#   5 · Roll back production     both apps, only when the check fails; the "Run workflow" button
+#                                runs this stage alone, for the app it's given
 #   6 · GitHub Release           notes of what changed (a pre-release for v0.0.x)
 #   Notify Discord               every result
 #
@@ -16,8 +18,15 @@ name: Production release
 on:
   push:
     tags: ["v*"]
-  # The "Run workflow" button: rolls production back to the version that ran before.
+  # The "Run workflow" button: rolls production back to the version that ran before,
+  # for one app or both (each has its own history, spec 0063).
   workflow_dispatch:
+    inputs:
+      app:
+        description: "Which app to roll back"
+        type: choice
+        options: [both, api, web]
+        default: both
 
 permissions:
   contents: read
@@ -110,56 +119,35 @@ jobs:
           echo "\`$TAG\` is also \`$GITHUB_REF_NAME\`." >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------- stage 3
-  deploy-production:
-    name: 3 · Deploy production
+  # Production's own keys (spec 0046), one per app (spec 0063). On the VPS each can only
+  # run shared-infra's ops/deploy.sh for its app on production (a forced command).
+  # The API first; the web app only after the API is healthy.
+  deploy-api:
+    name: 3 · Deploy production (API)
     needs: promote
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      # Production's own key (spec 0046), from the 1Password vault "Xove CI". On the VPS it
-      # can only run shared-infra's ops/deploy.sh for xove on production (a forced command).
-      - name: Load production's deploy key from 1Password
-        id: vault
-        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
-        with:
-          version: 2.39.0
-          # Values only as this step's (masked) outputs, never in the job's environment.
-          export-env: false
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          DEPLOY_SSH_KEY: op://Xove CI/deploy-ssh-prod/private_key?ssh-format=openssh
-          DEPLOY_KNOWN_HOSTS: op://Xove CI/deploy-ssh-prod/known-hosts
-          DEPLOY_HOST: op://Xove CI/deploy-ssh-prod/host
-          DEPLOY_PORT: op://Xove CI/deploy-ssh-prod/port
-          DEPLOY_USER: op://Xove CI/deploy-ssh-prod/user
+    uses: ./.github/workflows/deploy.yml
+    with:
+      app: xove-api
+      key: deploy-ssh-api-prod
+      command: deploy ${{ github.sha }}
+    secrets:
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
-      - name: Set up the deploy key
-        env:
-          DEPLOY_SSH_KEY: ${{ steps.vault.outputs.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ steps.vault.outputs.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          # Keys saved in the Windows 1Password app come with \r\n line endings, which ssh can't read.
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
-
-      - name: Deploy (the VPS rolls back by itself if the new version isn't healthy)
-        env:
-          DEPLOY_HOST: ${{ steps.vault.outputs.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ steps.vault.outputs.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ steps.vault.outputs.DEPLOY_USER }}
-        # Only connecting is retried (5 attempts, 20 s each); the command is sent once.
-        run: |
-          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
-            -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
-            -o ConnectTimeout=20 -o ConnectionAttempts=5 \
-            "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA"
+  deploy-web:
+    name: 3 · Deploy production (web)
+    needs: deploy-api
+    uses: ./.github/workflows/deploy.yml
+    with:
+      app: xove-web
+      key: deploy-ssh-web-prod
+      command: deploy ${{ github.sha }}
+    secrets:
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
   # ---------------------------------------------------------------- stage 4
   check-production:
     name: 4 · Check production
-    needs: deploy-production
+    needs: deploy-web
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -178,59 +166,53 @@ jobs:
           exit 1
 
   # ---------------------------------------------------------------- stage 5
-  rollback-production:
-    name: 5 · Roll back production
+  # When the check fails after a release (both apps), or alone from the "Run workflow"
+  # button on main (the app it's given). A failed deploy isn't rolled back here: the
+  # VPS already did it. The web app first, the reverse of the deploy order.
+  rollback-web:
+    name: 5 · Roll back production (web)
     needs: check-production
-    # When the check fails after a release, or alone from the "Run workflow" button (on main).
-    # A failed deploy isn't rolled back here: the VPS already did it.
     if: >-
       always() && (
         (github.event_name == 'push' && needs.check-production.result == 'failure') ||
-        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.app != 'api')
       )
+    uses: ./.github/workflows/deploy.yml
+    with:
+      app: xove-web
+      key: deploy-ssh-web-prod
+      command: rollback
+    secrets:
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+  rollback-api:
+    name: 5 · Roll back production (API)
+    needs: [check-production, rollback-web]
+    if: >-
+      always() && needs.rollback-web.result != 'failure' && (
+        (github.event_name == 'push' && needs.check-production.result == 'failure') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.app != 'web')
+      )
+    uses: ./.github/workflows/deploy.yml
+    with:
+      app: xove-api
+      key: deploy-ssh-api-prod
+      command: rollback
+    secrets:
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+  check-rollback:
+    name: 5 · Check production after the rollback
+    needs: [rollback-web, rollback-api]
+    if: always() && (needs.rollback-web.result == 'success' || needs.rollback-api.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
-      - name: Load production's deploy key from 1Password
-        id: vault
-        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
-        with:
-          version: 2.39.0
-          export-env: false
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          DEPLOY_SSH_KEY: op://Xove CI/deploy-ssh-prod/private_key?ssh-format=openssh
-          DEPLOY_KNOWN_HOSTS: op://Xove CI/deploy-ssh-prod/known-hosts
-          DEPLOY_HOST: op://Xove CI/deploy-ssh-prod/host
-          DEPLOY_PORT: op://Xove CI/deploy-ssh-prod/port
-          DEPLOY_USER: op://Xove CI/deploy-ssh-prod/user
-
-      - name: Set up the deploy key
-        env:
-          DEPLOY_SSH_KEY: ${{ steps.vault.outputs.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ steps.vault.outputs.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          # Keys saved in the Windows 1Password app come with \r\n line endings, which ssh can't read.
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
-
-      - name: Roll back (the version that ran before the current one)
-        env:
-          DEPLOY_HOST: ${{ steps.vault.outputs.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ steps.vault.outputs.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ steps.vault.outputs.DEPLOY_USER }}
-        run: |
-          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
-            -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
-            -o ConnectTimeout=20 -o ConnectionAttempts=5 \
-            "$DEPLOY_USER@$DEPLOY_HOST" "rollback"
-
-      - name: xove.app answers again
+      - name: xove.app and its API answer again
         run: |
           for attempt in $(seq 1 24); do
-            if curl -fsS --max-time 10 "$SITE/api/health" | grep -q '"status":"UP"'; then
+            if curl -fsS --max-time 10 "$SITE/" | grep -q '<div id="root">' \
+              && curl -fsS --max-time 10 "$SITE/api/health" | grep -q '"status":"UP"'; then
               echo "$SITE answers (attempt $attempt)"; exit 0
             fi
             sleep 5
@@ -259,7 +241,7 @@ jobs:
   # ---------------------------------------------------------------- notify
   notify:
     name: Notify Discord
-    needs: [verify, promote, deploy-production, check-production, rollback-production, github-release]
+    needs: [verify, promote, deploy-api, deploy-web, check-production, rollback-web, rollback-api, check-rollback, github-release]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -280,9 +262,13 @@ jobs:
           EVENT: ${{ github.event_name }}
           VERIFY: ${{ needs.verify.result }}
           PROMOTE: ${{ needs.promote.result }}
-          DEPLOY: ${{ needs.deploy-production.result }}
+          DEPLOY_API: ${{ needs.deploy-api.result }}
+          DEPLOY_WEB: ${{ needs.deploy-web.result }}
           CHECK: ${{ needs.check-production.result }}
-          ROLLBACK: ${{ needs.rollback-production.result }}
+          ROLLBACK_WEB: ${{ needs.rollback-web.result }}
+          ROLLBACK_API: ${{ needs.rollback-api.result }}
+          ROLLBACK_CHECK: ${{ needs.check-rollback.result }}
+          APP: ${{ inputs.app }}
           RELEASE: ${{ needs.github-release.result }}
         run: |
           if [[ -z "$WEBHOOK" ]]; then
@@ -296,30 +282,39 @@ jobs:
             esac
           }
 
+          # A rollback is good when every app it ran succeeded and the site answers again.
+          rolled_back() {
+            [[ "$ROLLBACK_WEB" != failure && "$ROLLBACK_WEB" != cancelled && "$ROLLBACK_API" != failure \
+              && "$ROLLBACK_API" != cancelled && "$ROLLBACK_CHECK" == success ]]
+          }
+          rollback_stages="$(icon "$ROLLBACK_WEB") Roll back web  $(icon "$ROLLBACK_API") Roll back API  $(icon "$ROLLBACK_CHECK") Check"
+
           if [[ "$EVENT" == "workflow_dispatch" ]]; then
-            if [[ "$ROLLBACK" == "success" ]]; then
-              title="↩️ Production rolled back"; color=15105570
-            elif [[ "$ROLLBACK" == "skipped" ]]; then
+            if [[ "$ROLLBACK_WEB" == skipped && "$ROLLBACK_API" == skipped ]]; then
               title="⏭️ Rollback skipped: run it from main"; color=9807270
+            elif rolled_back; then
+              title="↩️ Production rolled back ($APP)"; color=15105570
             else
-              title="❌ Production rollback failed: check the server"; color=15158332
+              title="❌ Production rollback ($APP) failed: check the server"; color=15158332
             fi
-            stages="$(icon "$ROLLBACK") Roll back"
+            stages="$rollback_stages"
           else
             if [[ "$CHECK" == "success" ]]; then
               title="✅ Production release: $GITHUB_REF_NAME is live"; color=3066993
-            elif [[ "$ROLLBACK" == "success" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME failed its check; rolled back"; color=15158332
+            elif [[ "$CHECK" == "failure" ]] && rolled_back; then
+              title="❌ Production release $GITHUB_REF_NAME failed its check; both apps rolled back"; color=15158332
             elif [[ "$CHECK" == "failure" || "$CHECK" == "cancelled" ]]; then
               title="❌ Production release $GITHUB_REF_NAME failed its check and wasn't rolled back: production may be broken, check the server"; color=15158332
-            elif [[ "$DEPLOY" == "failure" || "$DEPLOY" == "cancelled" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME failed to deploy: see the run log (the VPS rolls back by itself when it can)"; color=15158332
+            elif [[ "$DEPLOY_API" == "failure" || "$DEPLOY_API" == "cancelled" ]]; then
+              title="❌ Production release $GITHUB_REF_NAME: the API failed to deploy, the web app wasn't deployed. See the run log (the VPS rolls back by itself when it can)"; color=15158332
+            elif [[ "$DEPLOY_WEB" == "failure" || "$DEPLOY_WEB" == "cancelled" ]]; then
+              title="❌ Production release $GITHUB_REF_NAME: the web app failed to deploy, the API runs the new version. See the run log (the VPS rolls back by itself when it can)"; color=15158332
             elif [[ "$VERIFY" == "cancelled" || "$PROMOTE" == "cancelled" ]]; then
               title="⚪ Production release $GITHUB_REF_NAME cancelled"; color=9807270
             else
               title="❌ Production release $GITHUB_REF_NAME failed; production didn't change"; color=15158332
             fi
-            stages="$(icon "$VERIFY") Check release  $(icon "$PROMOTE") Tag images  $(icon "$DEPLOY") Deploy  $(icon "$CHECK") Check production  $(icon "$ROLLBACK") Roll back  $(icon "$RELEASE") GitHub Release"
+            stages="$(icon "$VERIFY") Check release  $(icon "$PROMOTE") Tag images  $(icon "$DEPLOY_API") Deploy API  $(icon "$DEPLOY_WEB") Deploy web  $(icon "$CHECK") Check production  $rollback_stages  $(icon "$RELEASE") GitHub Release"
           fi
 
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

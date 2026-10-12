@@ -25,6 +25,8 @@ flowchart LR
 
 The database is only reachable by the API, on a private Docker network per environment (`xove-<env>-db`), and the API knows it only by `POSTGRES_HOST`. Only the proxy and LiveKit's media ports face the internet.
 
+**Two apps, deployed on their own.** The web app and the API each have their own compose file (`web/compose.yaml`, `api/compose.yaml`), version and rollback: deploying one never restarts the other, so a web-only change keeps the room's live state. The web app gets only `APP_ENV`, none of the API's settings. The API deploys first, so the web app never runs against an older API than it was built for. Their container names (`xove-<env>-web`, `xove-<env>-api`) are what the proxy and LiveKit reach them by.
+
 **Signaling vs media.** Joining the room, knowing who's there and which tracks exist happens over a WebSocket that goes through the proxy. The video itself travels over UDP straight to LiveKit (with a TCP fallback for networks that block UDP). The API never touches media.
 
 ## Repository layout
@@ -51,10 +53,12 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-compose.yaml          the app's services (web, api) and the networks they join; the database and
-                      LiveKit run from the xove-ops repo
+api/compose.yaml      the API on its own, as servers deploy it: its service and the networks it joins
+web/compose.yaml      the web app on its own, as servers deploy it
+compose.yaml          the whole stack: includes both; the database and LiveKit run from the xove-ops repo
 compose.local.yaml    adds a throwaway database, for the whole stack locally and in CI
-.github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml)
+.github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml),
+                      one app's deploy or rollback (deploy.yml, called by both releases)
 ```
 
 
@@ -200,7 +204,7 @@ sequenceDiagram
 - **Sound:** the big person's plays. Previews are muted, each with its own speaker and a horizontal volume slider; a muted preview's sound isn't downloaded at all. A preview without sound has no speaker.
 - **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so previews and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
 
-Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy) empties them; each open room asks for its seat again within a poll, with its LiveKit connection (LiveKit doesn't report it joining again, so that confirms the seat), and registers what it's still sending. If the 6 places filled up meanwhile, it stops sending; any other failure is tried again on the next poll. Re-registered streams count as started then, so "longest sharing" restarts from that order.
+Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy of the API, not of the web app) empties them; each open room asks for its seat again within a poll, with its LiveKit connection (LiveKit doesn't report it joining again, so that confirms the seat), and registers what it's still sending. If the 6 places filled up meanwhile, it stops sending; any other failure is tried again on the next poll. Re-registered streams count as started then, so "longest sharing" restarts from that order.
 
 ### Video and sound quality
 
