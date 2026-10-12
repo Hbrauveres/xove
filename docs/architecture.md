@@ -25,7 +25,7 @@ flowchart LR
 
 The database is only reachable by the API, on a private Docker network per environment (`xove-<env>-db`), and the API knows it only by `POSTGRES_HOST`. Only the proxy and LiveKit's media ports face the internet.
 
-**Two apps, deployed on their own.** The web app and the API each have their own compose file (`web/compose.yaml`, `api/compose.yaml`), version and rollback: deploying one never restarts the other, so a web-only change keeps the room's live state. The web app gets only `APP_ENV`, none of the API's settings. The API deploys first, so the web app never runs against an older API than it was built for. Their container names (`xove-<env>-web`, `xove-<env>-api`) are what the proxy and LiveKit reach them by.
+**Two apps, deployed on their own.** The web app and the API each have their own compose file (`web/compose.yaml`, `api/compose.yaml`), version and rollback: deploying one never restarts the other, so a web-only change keeps the room's live state. The web app gets only `APP_ENV`, none of the API's settings. The API deploys first, so the web app never runs against an older API than it was built for. Their container names (`xove-<env>-web`, `xove-<env>-api`) are what the proxy and LiveKit reach them by. On servers each app runs as two copies, and only the serving one answers to that name: a new version starts next to it and takes the name once it's healthy, so a deploy fails no request.
 
 **Signaling vs media.** Joining the room, knowing who's there and which tracks exist happens over a WebSocket that goes through the proxy. The video itself travels over UDP straight to LiveKit (with a TCP fallback for networks that block UDP). The API never touches media.
 

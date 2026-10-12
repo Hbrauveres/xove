@@ -3,7 +3,7 @@
 #   Checks                  stages 1–3, the same workflow every commit runs (ci.yml)
 #   4 · Publish images      push to GitHub Container Registry as sha-<commit>
 #   5 · Deploy stage        the API, then the web app, each through its own key (spec 0063);
-#                           the VPS pulls the app's image and rolls it back by itself if unhealthy
+#                           the VPS starts the app's new version next to the serving one; an unhealthy one never serves
 #   6 · Remove failed images   only the app whose new version ran on the VPS and wasn't healthy
 #   Notify Discord          posts every result (success, failure, cancelled) to a Discord channel
 #
@@ -150,7 +150,7 @@ jobs:
       WEB_UNHEALTHY: ${{ needs.deploy-web.outputs.unhealthy }}
     steps:
       - name: Delete the failed app's images from the registry
-        # Staging already rolled back that app to its previous version (shared-infra's ops/deploy.sh);
+        # The failed version never served: the previous one kept serving (shared-infra's ops/deploy.sh);
         # this removes the images that failed, so nobody deploys them by mistake.
         # GHCR deletes whole versions, not single tags. A commit that didn't change
         # an image (docs only) shares its version with earlier tags, so a version
@@ -170,7 +170,7 @@ jobs:
                 echo "kept xove-$service version $id: it also carries $((tags - 1)) other tag(s)"
               fi
             done <<< "$versions"
-            echo "Deploy of xove-$service \`$TAG\` failed: it was rolled back; images only this commit used were removed." >> "$GITHUB_STEP_SUMMARY"
+            echo "Deploy of xove-$service \`$TAG\` failed: it never served; images only this commit used were removed." >> "$GITHUB_STEP_SUMMARY"
           done
 
   # ---------------------------------------------------------------- notify
@@ -227,9 +227,9 @@ jobs:
 
           notes=""
           if [[ "$API" == "failure" ]]; then
-            notes="The API's deploy failed: it was rolled back, or needs a fix forward (the deploy log says which). The web app wasn't deployed."
+            notes="The API's deploy failed: the previous version still serves, unless the deploy log says otherwise. The web app wasn't deployed."
           elif [[ "$WEB" == "failure" ]]; then
-            notes="The web app's deploy failed: it was rolled back, or needs a fix forward (the deploy log says which). The API runs the new version."
+            notes="The web app's deploy failed: the previous version still serves, unless the deploy log says otherwise. The API runs the new version."
           fi
 
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

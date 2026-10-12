@@ -4,7 +4,8 @@
 #
 # On the VPS the key can only run shared-infra's ops/deploy.sh for its app and
 # environment (a forced command); `command` is its argument: "deploy <sha>",
-# or "rollback". The VPS checks health and rolls back by itself.
+# or "rollback". The VPS starts the version next to the serving one and moves
+# traffic to it only once it's healthy; an unhealthy version never serves.
 
 name: Deploy one app
 
