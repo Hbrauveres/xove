@@ -176,7 +176,7 @@ jobs:
   # ---------------------------------------------------------------- notify
   notify:
     name: Notify Discord
-    needs: [checks, publish, deploy-api, deploy-web, cleanup]
+    needs: [checks, publish, deploy-api, deploy-web, mark-stage, cleanup]
     # Every release of main, whatever happened; a manual run from a branch isn't a release.
     if: always() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -199,6 +199,7 @@ jobs:
           PUBLISH: ${{ needs.publish.result }}
           API: ${{ needs.deploy-api.result }}
           WEB: ${{ needs.deploy-web.result }}
+          MARK: ${{ needs.mark-stage.result }}
           CLEANUP: ${{ needs.cleanup.result }}
           TAG: ${{ needs.publish.outputs.tag }}
           # Commit text goes through env and jq, never into the script itself.
@@ -239,7 +240,7 @@ jobs:
             --arg subject "${MESSAGE%%$'\n'*}" --arg author "$AUTHOR" \
             --arg commit "${GITHUB_SHA::12}" --arg commit_url "$commit_url" \
             --arg run_url "$run_url" --arg notes "$notes" \
-            --arg stages "$(icon "$CHECKS") Checks  $(icon "$PUBLISH") Publish  $(icon "$API") Deploy API  $(icon "$WEB") Deploy web  $(icon "$CLEANUP") Cleanup" \
+            --arg stages "$(icon "$CHECKS") Checks  $(icon "$PUBLISH") Publish  $(icon "$API") Deploy API  $(icon "$WEB") Deploy web  $(icon "$MARK") Mark :stage  $(icon "$CLEANUP") Cleanup" \
             '{
               username: "Xovê pipeline",
               allowed_mentions: { parse: [] },

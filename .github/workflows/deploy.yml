@@ -84,15 +84,23 @@ jobs:
           # the command is sent once, when a connection exists.
           # Exit 2 means the new version ran and wasn't healthy: only then are its
           # images deleted (stage.yml). Any other failure (refused, connection) changed nothing.
+          # This step always succeeds and hands the result to the next one, so the
+          # job's outputs reach the caller whatever happened.
           status=0
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=30 \
             -o ConnectTimeout=20 -o ConnectionAttempts=5 \
             "$DEPLOY_USER@$DEPLOY_HOST" "$COMMAND" || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
           if [[ $status == 2 ]]; then echo "unhealthy=true" >> "$GITHUB_OUTPUT"; fi
           if [[ $status == 0 ]]; then
             echo "\`$APP\`: $COMMAND done." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "\`$APP\`: $COMMAND failed (exit $status)." >> "$GITHUB_STEP_SUMMARY"
           fi
-          exit "$status"
+
+      - name: Fail when it failed
+        if: steps.run.outputs.status != '0'
+        env:
+          STATUS: ${{ steps.run.outputs.status }}
+        run: exit "${STATUS:-1}"
