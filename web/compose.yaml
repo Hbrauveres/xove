@@ -1,0 +1,22 @@
+# The web app on its own: what the server deploys as the app xove-web (spec 0063).
+# The whole stack, for local development and CI, is the root compose.yaml.
+# It needs only APP_ENV (and IMAGE_TAG, set by the deploy) (ADR-0062).
+
+services:
+  web:
+    image: ghcr.io/hbrauveres/xove-web:${IMAGE_TAG:-local}
+    build: .
+    container_name: xove-${APP_ENV:-prod}-web
+    restart: unless-stopped
+    # "Healthy" is defined here, with the app: the server's deploy and CI both wait for it.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ | grep -q '<div id=\"root\">'"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
