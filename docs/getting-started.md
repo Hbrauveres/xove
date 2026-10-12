@@ -30,10 +30,10 @@ Vite forwards every `/api` request to `http://localhost:8080`, so the web app ta
 
 ## Settings
 
-The API reads its settings from environment variables (the table at the end). For the maintainers, they come from the private `infra` repo (`config/dev.yaml`) and 1Password, built by the private `shared-infra` repo's tool, the same way the servers get theirs; in every new terminal:
+The API reads its settings from environment variables (the table at the end). For the maintainers, they come from the private `xove-ops` repo (`config/dev.yaml`) and 1Password, built by the private `shared-infra` repo's tool, the same way the servers get theirs; in every new terminal:
 
 ```bash
-eval "$(../shared-infra/ops/build-env dev --export --project ../infra)"
+eval "$(../shared-infra/ops/build-env dev --export --project ../xove-ops)"
 ```
 
 It exports every variable into that terminal only; nothing is written to disk. Anyone else sets the same variables by hand: a Google OAuth client, a local PostgreSQL and a LiveKit server (`livekit-server --dev`).
@@ -69,7 +69,7 @@ docker run -d --name xove-dev-livekit -p 7880:7880 -p 7881:7881 -p 7882:7882/udp
   --keys "$LIVEKIT_API_KEY: $LIVEKIT_API_SECRET"
 ```
 
-Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a closed tab's streams stay listed until the page comes back, and a seat isn't confirmed by LiveKit: it runs out after a minute and the open page asks for it again with its video connection, which confirms it. On the servers, LiveKit runs from the `infra` repo, one per environment, with webhooks.
+Restart the API after starting it. Without LiveKit everything works except video, and the room shows "Video offline". This dev server sends no webhooks, so a closed tab's streams stay listed until the page comes back, and a seat isn't confirmed by LiveKit: it runs out after a minute and the open page asks for it again with its video connection, which confirms it. On the servers, LiveKit runs from the `xove-ops` repo, one per environment, with webhooks.
 
 ## Run the whole stack in Docker
 
@@ -93,11 +93,11 @@ Locally there's no reverse proxy in front, so this is mainly useful to check tha
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | api | Google OAuth client |
 | `ADMIN_EMAILS` | api | Comma-separated admin emails |
 | `LIVEKIT_URL` | api | Address browsers use to reach LiveKit (`wss://…` on servers) |
-| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api | The pair shared with that environment's LiveKit (run from `infra`): the API signs tokens with it, LiveKit checks them and signs its webhooks. Secret ≥ 32 characters |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | api | The pair shared with that environment's LiveKit (run from `xove-ops`): the API signs tokens with it, LiveKit checks them and signs its webhooks. Secret ≥ 32 characters |
 | `LIVEKIT_ROOM` | api | This environment's room (staging `xove-stage`, production `xove`); defaults to `xove` |
 | `XOVE_ROOM_SEATS` | api | People in the room at once, sharers included: 1 to 20 (production 20, staging 3); defaults to 20. Anything else stops the API at start-up |
 
-Their values live in the `infra` repo, one file per environment (`config/dev.yaml`, `stage.yaml`…), with secrets as 1Password references. There's no `.env` in this repo: each server builds its own from those files.
+Their values live in the `xove-ops` repo, one file per environment (`config/dev.yaml`, `stage.yaml`…), with secrets as 1Password references. There's no `.env` in this repo: each server builds its own from those files.
 
 ## Next
 

@@ -20,7 +20,7 @@ flowchart LR
 | **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
 | **api** | Login, sessions, access requests, admin actions, the room's seats and live streams, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
 | **db** | Users, access requests, sessions | PostgreSQL 17, schema managed by Flyway |
-| **livekit** | Receives each screen and camera once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `infra` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
+| **livekit** | Receives each screen and camera once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `xove-ops` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
 | **reverse proxy** | HTTPS certificates, routing by hostname and path | Caddy, shared by every app on the server; configured in a separate private repository |
 
 The database is only reachable by the API, on a private Docker network. Only the proxy and LiveKit's media ports face the internet.
@@ -51,7 +51,7 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the infra repo
+compose.yaml          how the app's services run together (web, api, db); LiveKit runs from the xove-ops repo
                       (planned: on the servers, the database will run outside this repo,
                       like LiveKit; this file keeps one for local dev and CI)
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml)
@@ -232,7 +232,7 @@ To check a share on staging, open `chrome://webrtc-internals` in the viewer's or
 
 **LiveKit webhooks.** Each environment's LiveKit posts every room event to its own API (`http://xove-<env>-api:8080/api/livekit/webhook`), signed with that environment's API key (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, ignores events from any room other than its own, and only acts on `participant_joined` (the seat is used), `participant_left` (the person's streams end, the seat is kept 30 or 60 seconds by its `disconnectReason`) and `track_unpublished` (a screen or camera ends).
 
-**Where LiveKit runs** (spec 0044). One LiveKit server per environment, both defined once in the `infra` repo (`livekit/compose.yaml`) and fed by that environment's generated settings: staging at `rtc-stage.xove.app` with media on 7881/tcp and 7882/udp, production at `rtc.xove.app` with 7883/tcp and 7884/udp. Each has its own key pair, shared only with its own API, so nothing signed for one environment is accepted by the other. This app only needs `LIVEKIT_URL`, the key pair and `LIVEKIT_ROOM`.
+**Where LiveKit runs** (spec 0044). One LiveKit server per environment, both defined once in the `xove-ops` repo (`livekit/compose.yaml`) and fed by that environment's generated settings: staging at `rtc-stage.xove.app` with media on 7881/tcp and 7882/udp, production at `rtc.xove.app` with 7883/tcp and 7884/udp. Each has its own key pair, shared only with its own API, so nothing signed for one environment is accepted by the other. This app only needs `LIVEKIT_URL`, the key pair and `LIVEKIT_ROOM`.
 
 ## The look
 
