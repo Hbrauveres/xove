@@ -1,4 +1,4 @@
-# Serves the built React app. The shared proxy (Caddy in the infra repo) does TLS
+# Serves the built React app. The shared proxy (Caddy in the shared-infra repo) does TLS
 # in front of it.
 {
 	admin off
