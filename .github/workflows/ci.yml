@@ -94,9 +94,12 @@ jobs:
       # Throwaway values: this stack lives for a minute inside the runner.
       APP_ENV: ci
       IMAGE_TAG: ci
+      POSTGRES_HOST: db
       POSTGRES_DB: xove
       POSTGRES_USER: xove
       POSTGRES_PASSWORD: ci-only-password
+      # compose.yaml (the servers' file) plus compose.local.yaml (a throwaway database).
+      COMPOSE_FILE: compose.yaml:compose.local.yaml
       GOOGLE_CLIENT_ID: ci-placeholder
       GOOGLE_CLIENT_SECRET: ci-placeholder
       ADMIN_EMAILS: ""
@@ -124,6 +127,7 @@ jobs:
         # "Healthy" is defined in compose.yaml, the same checks the server's deploy waits for.
         run: |
           docker network create web
+          docker network create xove-ci-db
           docker compose up -d --no-build --wait --wait-timeout 150 db api web
 
       - name: Check that the API refuses anonymous requests
