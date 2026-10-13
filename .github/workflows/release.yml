@@ -4,7 +4,7 @@
 #   1 · Check the release        the tag is vX.Y.Z on main; the commit's stage release was green; its images exist
 #   2 · Tag the images           the commit's sha-<12> images also get vX.Y.Z (the same images, no rebuild)
 #   3 · Deploy production        the API, then the web app, each through its own key (shared-infra's
-#                                ops/deploy.sh xove-api prod, xove-web prod, spec 0063); each rolls back by itself if unhealthy
+#                                ops/deploy.sh xove-api prod, xove-web prod, spec 0063); an unhealthy version never serves
 #   4 · Check production         https://xove.app and its API answer from the internet
 #   5 · Roll back production     both apps, only when the check fails; the "Run workflow" button
 #                                runs this stage alone, for the app it's given
@@ -167,8 +167,8 @@ jobs:
 
   # ---------------------------------------------------------------- stage 5
   # When the check fails after a release (both apps), or alone from the "Run workflow"
-  # button on main (the app it's given). A failed deploy isn't rolled back here: the
-  # VPS already did it. The web app first, the reverse of the deploy order.
+  # button on main (the app it's given). A failed deploy isn't rolled back here: its
+  # version never served. The web app first, the reverse of the deploy order.
   rollback-web:
     name: 5 · Roll back production (web)
     needs: check-production
@@ -306,9 +306,9 @@ jobs:
             elif [[ "$CHECK" == "failure" || "$CHECK" == "cancelled" ]]; then
               title="❌ Production release $GITHUB_REF_NAME failed its check and wasn't rolled back: production may be broken, check the server"; color=15158332
             elif [[ "$DEPLOY_API" == "failure" || "$DEPLOY_API" == "cancelled" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME: the API failed to deploy, the web app wasn't deployed. See the run log (the VPS rolls back by itself when it can)"; color=15158332
+              title="❌ Production release $GITHUB_REF_NAME: the API failed to deploy, the web app wasn't deployed. See the run log (the previous version still serves, unless it says otherwise)"; color=15158332
             elif [[ "$DEPLOY_WEB" == "failure" || "$DEPLOY_WEB" == "cancelled" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME: the web app failed to deploy, the API runs the new version. See the run log (the VPS rolls back by itself when it can)"; color=15158332
+              title="❌ Production release $GITHUB_REF_NAME: the web app failed to deploy, the API runs the new version. See the run log (the previous version still serves, unless it says otherwise)"; color=15158332
             elif [[ "$VERIFY" == "cancelled" || "$PROMOTE" == "cancelled" ]]; then
               title="⚪ Production release $GITHUB_REF_NAME cancelled"; color=9807270
             else
