@@ -6,10 +6,9 @@
 #    The image builder (buildx) gets the same mirror in ci.yml.
 # 2. Logged in to Docker Hub, for those fallbacks: the pulls count against our
 #    account's limit, not the anonymous one GitHub's shared runners run out of.
-#    The username and a read-only token are GitHub secrets, copied from the
-#    1Password item "dockerhub": the checks run on every branch, so they never get
-#    the 1Password token. Without them (Dependabot's runs), or when the login keeps
-#    failing, the fallback pulls are anonymous.
+#    The username and a read-only token are GitHub secrets. Without them
+#    (Dependabot's runs), or when the login keeps failing, the fallback pulls are
+#    anonymous.
 name: Docker pulls
 description: Google's Docker Hub mirror first, then Docker Hub logged in from the DOCKERHUB_* secrets
 inputs:
