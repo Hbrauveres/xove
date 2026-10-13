@@ -7,6 +7,9 @@ updates:
   - package-ecosystem: maven
     directory: /api
     schedule: { interval: weekly }
+    # Paused while the API is frozen: it now lives in xove-api, and this copy
+    # goes with xove-workspace#82.
+    open-pull-requests-limit: 0
     cooldown: { default-days: 7 }
     groups: { maven: { patterns: ["*"] } }
 
@@ -17,15 +20,23 @@ updates:
     groups: { npm: { patterns: ["*"] } }
 
   - package-ecosystem: docker
-    directories: [/api, /web]
+    directory: /web
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
-    # Java and Node stay on their LTS lines; moving to the next LTS is a
-    # deliberate change, not a Dependabot bump.
+    # Node stays on its LTS line; moving to the next LTS is a deliberate change,
+    # not a Dependabot bump.
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: docker
+    directory: /api
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    # Paused while the API is frozen (see maven above).
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: eclipse-temurin
-        update-types: [version-update:semver-major]
-      - dependency-name: node
         update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
