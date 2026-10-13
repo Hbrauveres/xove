@@ -1,4 +1,4 @@
-// Caddy with its standard modules, built from source by web/Dockerfile.
+// Caddy with its standard modules, built from source by app/Dockerfile.
 package main
 
 import (

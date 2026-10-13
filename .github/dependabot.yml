@@ -5,13 +5,13 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /web
+    directory: /app
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
     groups: { npm: { patterns: ["*"] } }
 
   - package-ecosystem: docker
-    directory: /web
+    directory: /app
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
     # Node stays on its LTS line; moving to the next LTS is a deliberate change,

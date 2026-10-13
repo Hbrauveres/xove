@@ -1,5 +1,5 @@
 // Writes public/favicon.svg from the mark's geometry (specs 0111 and 0113), so the favicon
-// can't drift from the mark. Run from web/: node scripts/brand-icons.mjs (Node 22.18+ strips
+// can't drift from the mark. Run from app/: node scripts/brand-icons.mjs (Node 22.18+ strips
 // the types).
 //
 // The phone icons (apple-touch-icon.png 180, icon-192.png, icon-512.png) are PNGs, rendered
