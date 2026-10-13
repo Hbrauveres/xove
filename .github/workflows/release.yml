@@ -1,15 +1,20 @@
-# Production release: a version tag (vX.Y.Z) on a commit of main releases that
-# commit to https://xove.app. Nobody deploys production by hand (spec 0046).
+# Production release: a version tag (vX.Y.Z) on a commit of main releases the web app
+# to https://xove.app. Nobody deploys production by hand. The API is released from its
+# own repo, xove-api.
 #
-#   1 · Check the release        the tag is vX.Y.Z on main; the commit's stage release was green; its images exist
-#   2 · Tag the images           the commit's sha-<12> images also get vX.Y.Z (the same images, no rebuild)
-#   3 · Deploy production        the API, then the web app, each through its own key (shared-infra's
-#                                ops/deploy.sh xove-api prod, xove-web prod, spec 0063); an unhealthy version never serves
-#   4 · Check production         https://xove.app and its API answer from the internet
-#   5 · Roll back production     both apps, only when the check fails; the "Run workflow" button
-#                                runs this stage alone, for the app it's given
+#   1 · Check the release        the tag is vX.Y.Z on main; the commit's stage release was green; its image exists
+#   2 · Tag the image            the commit's sha-<12> image also gets vX.Y.Z (the same image, no rebuild)
+#   3 · Deploy production        through the web app's production key; an unhealthy version never serves
+#   4 · Check production         https://xove.app loads from the internet
+#   5 · Roll back production     only when the check fails; the "Run workflow" button runs this stage alone
 #   6 · GitHub Release           notes of what changed (a pre-release for v0.0.x)
 #   Notify Discord               every result
+#
+# The version rule (the API and the web app are released separately, so they can run
+# at different versions): before tagging, check that the API version this web app
+# needs is already live in production (xove-api's releases). The web app uses a new
+# API field only once that API is live, still works without it, and ignores fields it
+# doesn't know.
 #
 # Full explanation: docs/pipeline.md in the xove-workspace repo
 
@@ -18,15 +23,8 @@ name: Production release
 on:
   push:
     tags: ["v*"]
-  # The "Run workflow" button: rolls production back to the version that ran before,
-  # for one app or both (each has its own history, spec 0063).
+  # The "Run workflow" button: rolls the web app back to the version that ran before.
   workflow_dispatch:
-    inputs:
-      app:
-        description: "Which app to roll back"
-        type: choice
-        options: [both, api, web]
-        default: both
 
 permissions:
   contents: read
@@ -38,7 +36,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_PREFIX: ghcr.io/hbrauveres/xove
+  IMAGE: ghcr.io/hbrauveres/xove-web
   SITE: https://xove.app
 
 jobs:
@@ -52,7 +50,7 @@ jobs:
       contents: read
       actions: read   # to read the commit's stage release
     outputs:
-      tag: ${{ steps.images.outputs.tag }}
+      tag: ${{ steps.image.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -68,7 +66,7 @@ jobs:
           fi
 
       - name: The commit's stage release was green
-        # Its images were built, tested, scanned and ran healthy on staging.
+        # Its image was built, tested, scanned and ran healthy on staging.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -83,19 +81,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Its images are in the registry
-        id: images
+      - name: Its image is in the registry
+        id: image
         run: |
           tag="sha-${GITHUB_SHA::12}"
-          for service in api web; do
-            docker buildx imagetools inspect "$IMAGE_PREFIX-$service:$tag" >/dev/null \
-              || { echo "::error::$IMAGE_PREFIX-$service:$tag is missing"; exit 1; }
-          done
+          docker buildx imagetools inspect "$IMAGE:$tag" >/dev/null \
+            || { echo "::error::$IMAGE:$tag is missing"; exit 1; }
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------- stage 2
   promote:
-    name: 2 · Tag the images
+    name: 2 · Tag the image
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -110,32 +106,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag the images with the version
-        # The same images (same digests) under a second name; nothing is rebuilt.
+      - name: Tag the image with the version
+        # The same image (same digest) under a second name; nothing is rebuilt.
         run: |
-          for service in api web; do
-            docker buildx imagetools create --prefer-index=false -t "$IMAGE_PREFIX-$service:$GITHUB_REF_NAME" "$IMAGE_PREFIX-$service:$TAG"
-          done
+          docker buildx imagetools create --prefer-index=false -t "$IMAGE:$GITHUB_REF_NAME" "$IMAGE:$TAG"
           echo "\`$TAG\` is also \`$GITHUB_REF_NAME\`." >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------- stage 3
-  # Production's own keys (spec 0046), one per app (spec 0063). On the VPS each can only
-  # run shared-infra's ops/deploy.sh for its app on production (a forced command).
-  # The API first; the web app only after the API is healthy.
-  deploy-api:
-    name: 3 · Deploy production (API)
+  # Production's own key: on the VPS it can only run the deploy tool for the web app on
+  # production (a forced command).
+  deploy:
+    name: 3 · Deploy production
     needs: promote
-    uses: ./.github/workflows/deploy.yml
-    with:
-      app: xove-api
-      key: deploy-ssh-api-prod
-      command: deploy ${{ github.sha }}
-    secrets:
-      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-
-  deploy-web:
-    name: 3 · Deploy production (web)
-    needs: deploy-api
     uses: ./.github/workflows/deploy.yml
     with:
       app: xove-web
@@ -147,35 +129,33 @@ jobs:
   # ---------------------------------------------------------------- stage 4
   check-production:
     name: 4 · Check production
-    needs: deploy-web
+    needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: xove.app and its API answer from the internet
-        # Up to 2 minutes: the page loads and the API says it's up.
+      - name: xove.app loads from the internet
+        # Up to 2 minutes: the page loads.
         run: |
           for attempt in $(seq 1 24); do
-            if curl -fsS --max-time 10 "$SITE/" | grep -q '<div id="root">' \
-              && curl -fsS --max-time 10 "$SITE/api/health" | grep -q '"status":"UP"'; then
+            if curl -fsS --max-time 10 "$SITE/" | grep -q '<div id="root">'; then
               echo "$SITE answers (attempt $attempt)"
               exit 0
             fi
             sleep 5
           done
-          echo "::error::$SITE didn't answer as expected for 2 minutes"
+          echo "::error::$SITE didn't load for 2 minutes"
           exit 1
 
   # ---------------------------------------------------------------- stage 5
-  # When the check fails after a release (both apps), or alone from the "Run workflow"
-  # button on main (the app it's given). A failed deploy isn't rolled back here: its
-  # version never served. The web app first, the reverse of the deploy order.
-  rollback-web:
-    name: 5 · Roll back production (web)
+  # When the check fails after a release, or alone from the "Run workflow" button on
+  # main. A failed deploy isn't rolled back here: its version never served.
+  rollback:
+    name: 5 · Roll back production
     needs: check-production
     if: >-
       always() && (
         (github.event_name == 'push' && needs.check-production.result == 'failure') ||
-        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.app != 'api')
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
       )
     uses: ./.github/workflows/deploy.yml
     with:
@@ -185,39 +165,22 @@ jobs:
     secrets:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
-  rollback-api:
-    name: 5 · Roll back production (API)
-    needs: [check-production, rollback-web]
-    if: >-
-      always() && needs.rollback-web.result != 'failure' && (
-        (github.event_name == 'push' && needs.check-production.result == 'failure') ||
-        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.app != 'web')
-      )
-    uses: ./.github/workflows/deploy.yml
-    with:
-      app: xove-api
-      key: deploy-ssh-api-prod
-      command: rollback
-    secrets:
-      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-
   check-rollback:
     name: 5 · Check production after the rollback
-    needs: [rollback-web, rollback-api]
-    if: always() && (needs.rollback-web.result == 'success' || needs.rollback-api.result == 'success')
+    needs: rollback
+    if: always() && needs.rollback.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: xove.app and its API answer again
+      - name: xove.app loads again
         run: |
           for attempt in $(seq 1 24); do
-            if curl -fsS --max-time 10 "$SITE/" | grep -q '<div id="root">' \
-              && curl -fsS --max-time 10 "$SITE/api/health" | grep -q '"status":"UP"'; then
+            if curl -fsS --max-time 10 "$SITE/" | grep -q '<div id="root">'; then
               echo "$SITE answers (attempt $attempt)"; exit 0
             fi
             sleep 5
           done
-          echo "::error::$SITE didn't answer after the rollback"; exit 1
+          echo "::error::$SITE didn't load after the rollback"; exit 1
 
   # ---------------------------------------------------------------- stage 6
   github-release:
@@ -241,7 +204,7 @@ jobs:
   # ---------------------------------------------------------------- notify
   notify:
     name: Notify Discord
-    needs: [verify, promote, deploy-api, deploy-web, check-production, rollback-web, rollback-api, check-rollback, github-release]
+    needs: [verify, promote, deploy, check-production, rollback, check-rollback, github-release]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -254,7 +217,7 @@ jobs:
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          DISCORD_WEBHOOK_URL: op://Xove CI/discord-webhook/password
+          DISCORD_WEBHOOK_URL: op://Xove Web CI/discord-webhook/password
 
       - name: Post the result to Discord
         env:
@@ -262,13 +225,10 @@ jobs:
           EVENT: ${{ github.event_name }}
           VERIFY: ${{ needs.verify.result }}
           PROMOTE: ${{ needs.promote.result }}
-          DEPLOY_API: ${{ needs.deploy-api.result }}
-          DEPLOY_WEB: ${{ needs.deploy-web.result }}
+          DEPLOY: ${{ needs.deploy.result }}
           CHECK: ${{ needs.check-production.result }}
-          ROLLBACK_WEB: ${{ needs.rollback-web.result }}
-          ROLLBACK_API: ${{ needs.rollback-api.result }}
+          ROLLBACK: ${{ needs.rollback.result }}
           ROLLBACK_CHECK: ${{ needs.check-rollback.result }}
-          APP: ${{ inputs.app }}
           RELEASE: ${{ needs.github-release.result }}
         run: |
           if [[ -z "$WEBHOOK" ]]; then
@@ -282,39 +242,33 @@ jobs:
             esac
           }
 
-          # A rollback is good when every app it ran succeeded and the site answers again.
-          rolled_back() {
-            [[ "$ROLLBACK_WEB" != failure && "$ROLLBACK_WEB" != cancelled && "$ROLLBACK_API" != failure \
-              && "$ROLLBACK_API" != cancelled && "$ROLLBACK_CHECK" == success ]]
-          }
-          rollback_stages="$(icon "$ROLLBACK_WEB") Roll back web  $(icon "$ROLLBACK_API") Roll back API  $(icon "$ROLLBACK_CHECK") Check"
+          rolled_back() { [[ "$ROLLBACK" == success && "$ROLLBACK_CHECK" == success ]]; }
+          rollback_stages="$(icon "$ROLLBACK") Roll back  $(icon "$ROLLBACK_CHECK") Check"
 
           if [[ "$EVENT" == "workflow_dispatch" ]]; then
-            if [[ "$ROLLBACK_WEB" == skipped && "$ROLLBACK_API" == skipped ]]; then
-              title="⏭️ Rollback skipped: run it from main"; color=9807270
+            if [[ "$ROLLBACK" == skipped ]]; then
+              title="⏭️ Web rollback skipped: run it from main"; color=9807270
             elif rolled_back; then
-              title="↩️ Production rolled back ($APP)"; color=15105570
+              title="↩️ Production web app rolled back"; color=15105570
             else
-              title="❌ Production rollback ($APP) failed: check the server"; color=15158332
+              title="❌ Production web app rollback failed: check the server"; color=15158332
             fi
             stages="$rollback_stages"
           else
             if [[ "$CHECK" == "success" ]]; then
-              title="✅ Production release: $GITHUB_REF_NAME is live"; color=3066993
+              title="✅ Web production release: $GITHUB_REF_NAME is live"; color=3066993
             elif [[ "$CHECK" == "failure" ]] && rolled_back; then
-              title="❌ Production release $GITHUB_REF_NAME failed its check; both apps rolled back"; color=15158332
+              title="❌ Web production release $GITHUB_REF_NAME failed its check; rolled back"; color=15158332
             elif [[ "$CHECK" == "failure" || "$CHECK" == "cancelled" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME failed its check and wasn't rolled back: production may be broken, check the server"; color=15158332
-            elif [[ "$DEPLOY_API" == "failure" || "$DEPLOY_API" == "cancelled" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME: the API failed to deploy, the web app wasn't deployed. See the run log (the previous version still serves, unless it says otherwise)"; color=15158332
-            elif [[ "$DEPLOY_WEB" == "failure" || "$DEPLOY_WEB" == "cancelled" ]]; then
-              title="❌ Production release $GITHUB_REF_NAME: the web app failed to deploy, the API runs the new version. See the run log (the previous version still serves, unless it says otherwise)"; color=15158332
+              title="❌ Web production release $GITHUB_REF_NAME failed its check and wasn't rolled back: production may be broken, check the server"; color=15158332
+            elif [[ "$DEPLOY" == "failure" || "$DEPLOY" == "cancelled" ]]; then
+              title="❌ Web production release $GITHUB_REF_NAME failed to deploy. See the run log (the previous version still serves, unless it says otherwise)"; color=15158332
             elif [[ "$VERIFY" == "cancelled" || "$PROMOTE" == "cancelled" ]]; then
-              title="⚪ Production release $GITHUB_REF_NAME cancelled"; color=9807270
+              title="⚪ Web production release $GITHUB_REF_NAME cancelled"; color=9807270
             else
-              title="❌ Production release $GITHUB_REF_NAME failed; production didn't change"; color=15158332
+              title="❌ Web production release $GITHUB_REF_NAME failed; production didn't change"; color=15158332
             fi
-            stages="$(icon "$VERIFY") Check release  $(icon "$PROMOTE") Tag images  $(icon "$DEPLOY_API") Deploy API  $(icon "$DEPLOY_WEB") Deploy web  $(icon "$CHECK") Check production  $rollback_stages  $(icon "$RELEASE") GitHub Release"
+            stages="$(icon "$VERIFY") Check release  $(icon "$PROMOTE") Tag image  $(icon "$DEPLOY") Deploy  $(icon "$CHECK") Check production  $rollback_stages  $(icon "$RELEASE") GitHub Release"
           fi
 
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -19,12 +19,12 @@ A private room where invited friends share their screens and cameras and watch e
 
 | Part | Tech |
 | --- | --- |
-| API ([`api/`](api)) | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA), PostgreSQL 17 with Flyway, server-side sessions (Spring Session JDBC), Google sign-in |
+| API ([`xove-api`](https://github.com/Hbrauveres/xove-api)) | Java 21, Spring Boot 4, PostgreSQL 17, Google sign-in: its own repo |
 | Web ([`web/`](web)) | React 19, TypeScript, Vite, CSS modules, `livekit-client` |
 | Video | A self-hosted [LiveKit](https://livekit.io) server (a WebRTC SFU): each stream is uploaded once and forwarded to every viewer |
-| Delivery | GitHub Actions: build the images, start the stack and check it's healthy, unit tests, Trivy and Semgrep, publish to GHCR, deploy the API and the web app on their own (each with its own version and rollback) to staging on every merge and to production on a version tag, with automatic rollback |
+| Delivery | GitHub Actions: build the image, start it and check it's healthy, unit tests, Trivy and Semgrep, publish to GHCR, deploy to staging on every merge and to production on a version tag, where a new version takes over only once it's healthy, with a rollback button. The API has its own pipeline |
 
-The API and the web app are moving to their own repositories, [`xove-api`](https://github.com/Hbrauveres/xove-api) and `xove-web` (this one, renamed), so each can be built, released and deployed on its own. The API's code and history are already in `xove-api`; this repo still builds and deploys it from `api/` until its releases move there.
+The API and the web app are built, released and deployed on their own: the API from [`xove-api`](https://github.com/Hbrauveres/xove-api), the web app from this repo (to be renamed `xove-web`).
 
 ```mermaid
 flowchart LR
@@ -35,16 +35,13 @@ flowchart LR
   B -.->|video over WebRTC| L[LiveKit]
 ```
 
-More in [docs/architecture.md](docs/architecture.md), the endpoints in [docs/api.md](docs/api.md), and the whole look (the mark, colours, type, controls, every screen) in the [design sheet](docs/design.md).
+More in [docs/architecture.md](docs/architecture.md), the endpoints in [`xove-api`](https://github.com/Hbrauveres/xove-api/blob/main/docs/api.md), and the whole look (the mark, colours, type, controls, every screen) in the [design sheet](docs/design.md).
 
 ## Run it and test it
 
 ```bash
-cd web && npm install && npm run dev      # the web app on its own
-cd api && ./mvnw spring-boot:run          # the API (needs its settings, see Getting started)
-docker compose -f compose.yaml -f compose.local.yaml up   # the whole stack (see Getting started)
-
-cd api && ./mvnw test                     # JUnit, MockMvc, Testcontainers (needs Docker)
+cd web && npm install && npm run dev      # the web app (with a local API from xove-api, see Getting started)
+docker compose up --build                 # its image, as the servers run it
 cd web && npm test && npm run build       # Vitest + Testing Library, then a type-checked build
 ```
 

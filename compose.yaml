@@ -1,10 +1,8 @@
-# The whole stack, for local development and CI: the API and the web app, each
-# from its own file. compose.local.yaml adds a throwaway database. The servers
-# never read this file: they deploy api/compose.yaml as xove-api and
-# web/compose.yaml as xove-web, one at a time (spec 0063).
+# The web app, for local development and CI: web/compose.yaml, the same file the
+# servers deploy as xove-web. The API lives in its own repo, xove-api.
 #
-#   docker compose -f compose.yaml -f compose.local.yaml up -d --build
+#   docker network create web     # once
+#   docker compose up -d --build
 
 include:
-  - api/compose.yaml
   - web/compose.yaml

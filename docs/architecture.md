@@ -1,6 +1,6 @@
 # Architecture
 
-How the app is built: its parts, how people get in, how screens and cameras flow, the look, the data and the security model. The endpoints are in [API](api.md).
+How the web app is built: its place in Xovê, how people get in, how screens and cameras flow, and the look. The API (its endpoints, the room's rules, the data and its security) is in [`xove-api`](https://github.com/Hbrauveres/xove-api/blob/main/docs/README.md).
 
 ## Components
 
@@ -19,32 +19,21 @@ flowchart LR
 | --- | --- | --- |
 | **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
 | **api** | Login, sessions, access requests, admin actions, the room's seats and live streams, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
-| **db** | Users, access requests, sessions | PostgreSQL 17. The schema is the app's (Flyway, run by the API on start); the server runs outside this repo: on servers from the private `xove-ops` repo, one per environment; locally and in CI from `compose.local.yaml` |
+| **db** | Users, access requests, sessions | PostgreSQL 17. The schema is the app's (Flyway, run by the API on start); the server runs outside this repo: on servers from the private `xove-ops` repo, one per environment; locally from `xove-api`'s `compose.local.yaml` |
 | **livekit** | Receives each screen and camera once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `xove-ops` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
 | **reverse proxy** | HTTPS certificates, routing by hostname and path | Caddy, shared by every app on the server; configured in a separate private repository |
 
 The database is only reachable by the API, on a private Docker network per environment (`xove-<env>-db`), and the API knows it only by `POSTGRES_HOST`. Only the proxy and LiveKit's media ports face the internet.
 
-**Two apps, deployed on their own.** The web app and the API each have their own compose file (`web/compose.yaml`, `api/compose.yaml`), version and rollback: deploying one never restarts the other, so a web-only change keeps the room's live state. The web app gets only `APP_ENV`, none of the API's settings. The API deploys first, so the web app never runs against an older API than it was built for. Their container names (`xove-<env>-web`, `xove-<env>-api`) are what the proxy and LiveKit reach them by. On servers each app runs as two copies, and only the serving one answers to that name: a new version starts next to it and takes the name once it's healthy, so a deploy fails no request.
+**Two apps, deployed on their own.** The web app and the API each have their own repo (this one and [`xove-api`](https://github.com/Hbrauveres/xove-api)), compose file, version and rollback: deploying one never restarts the other, so a web-only change keeps the room's live state. The web app gets only `APP_ENV`, none of the API's settings. They're released separately, so they can run at different versions: a web release that needs a new API field is tagged only once that API version is live in production, and the web app ignores fields it doesn't know. Their container names (`xove-<env>-web`, `xove-<env>-api`) are what the proxy and LiveKit reach them by. On servers each app runs as two copies, and only the serving one answers to that name: a new version starts next to it and takes the name once it's healthy, so a deploy fails no request.
 
 **Signaling vs media.** Joining the room, knowing who's there and which tracks exist happens over a WebSocket that goes through the proxy. The video itself travels over UDP straight to LiveKit (with a TCP fallback for networks that block UDP). The API never touches media.
 
 ## Repository layout
 
-The API and the web app are moving to their own repositories, [`xove-api`](https://github.com/Hbrauveres/xove-api) and `xove-web` (this one, renamed), so each can be built, released and deployed on its own. Until then, both live here:
+The API lives in [`xove-api`](https://github.com/Hbrauveres/xove-api); this repo is the web app, to be renamed `xove-web`.
 
 ```
-api/                  Spring Boot application
-  src/main/java/dev/hbrauveres/xove/
-    access/           access requests and member management
-    admin/            admin endpoints
-    auth/             login success handling, /api/me, the current user
-    config/           security and application settings
-    livekit/          LiveKit token issuing
-    room/             the room's seats and the queue
-    stream/           the live streams (screens and cameras)
-    user/             users
-  src/main/resources/db/migration/   Flyway migrations (V1, V2, …)
 web/                  React application
   src/api/            HTTP client and API types
   src/auth/           session state and route guards
@@ -53,15 +42,11 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-api/compose.yaml      the API on its own, as servers deploy it: its service and the networks it joins
 web/compose.yaml      the web app on its own, as servers deploy it
-compose.yaml          the whole stack: includes both; the database and LiveKit run from the xove-ops repo
-compose.local.yaml    adds a throwaway database, for the whole stack locally and in CI
+compose.yaml          includes web/compose.yaml, for local use and the checks
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml),
-                      one app's deploy or rollback (deploy.yml, called by both releases)
+                      the deploy or rollback both call (deploy.yml)
 ```
-
-
 
 ## Who gets in
 
@@ -115,22 +100,12 @@ sequenceDiagram
 
 ### Seats and the queue
 
-- **20 seats,** sharers included. The number is a setting, `XOVE_ROOM_SEATS` (1 to 20, 20 when not set); staging uses 3 to try the queue.
-- **Only someone with a seat gets a LiveKit token,** so the room can't go past the seats.
-- **Entering:** the room page asks for a seat (`POST /api/room/enter`). With one free and nobody waiting, you're in. Otherwise the waiting screen shows your place, and asks again every 2 seconds (that poll is how the API knows you're still there).
-- **A free seat is offered** to the first in the queue: a popup with "Enter room" and "Cancel", and 60 seconds to answer (the tab's title says "Your turn"). The seat is held for them meanwhile. "Cancel" leaves the queue; no answer moves them to the end, and the next person gets the popup.
-- **Leaving keeps your place for a while:**
+The API decides who gets a seat, the queue and how long a place is kept: the rules are in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#seats-and-the-queue). What the web app does:
 
-  | You were | How you left | How the API knows | Kept for |
-  | --- | --- | --- | --- |
-  | In the room | closed the tab | LiveKit's `participant_left`, reason `CLIENT_INITIATED` | 30 s |
-  | In the room | connection dropped | `participant_left`, any other reason | 60 s |
-  | In the queue | closed the tab | `POST /api/room/leave`, sent with `keepalive` while the page closes | 30 s |
-  | In the queue | connection dropped | no poll | 90 s after the last poll: Chrome lets a tab in the background poll only about once a minute |
-
-  A dropped connection takes longer in total: LiveKit first waits for the browser to come back (about 20 to 30 seconds), and only then reports the leave.
-- **A seat never used** (a token handed out, nobody joined LiveKit) is given up after 60 seconds.
-- Nothing runs on a timer: whatever has run out is tidied away each time someone asks, by the clock.
+- **Entering:** the room page asks for a seat (`POST /api/room/enter`). In, it asks for a LiveKit token and joins the video room. Otherwise the waiting screen shows its place, and asks again every 2 seconds (that poll is how the API knows it's still there).
+- **The offer:** when the API offers a seat, a popup with "Enter room" and "Cancel" counts down the seconds it gives (the tab's title says "Your turn"). "Enter room" accepts (`POST /api/room/accept`), "Cancel" leaves the queue (`POST /api/room/cancel`).
+- **Leaving the queue:** closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the place is kept a short while.
+- **After an API restart** (its deploys), an open room asks for its seat again with its LiveKit connection, and registers what it's still sending.
 
 ### Streams
 
@@ -234,9 +209,7 @@ How a screen or a camera is sent is decided in one place, `web/src/media/shareSe
 
 To check a share on staging, open `chrome://webrtc-internals` in the viewer's or the sharer's browser. It shows the codec, frame rate, resolution, bitrate, and why quality drops: "cpu" means the sharer's computer can't keep up, "bandwidth" means the connection can't.
 
-**LiveKit webhooks.** Each environment's LiveKit posts every room event to its own API (`http://xove-<env>-api:8080/api/livekit/webhook`), signed with that environment's API key (a JWT with a hash of the body). The API refuses anything whose signature doesn't check out, ignores events from any room other than its own, and only acts on `participant_joined` (the seat is used), `participant_left` (the person's streams end, the seat is kept 30 or 60 seconds by its `disconnectReason`) and `track_unpublished` (a screen or camera ends).
-
-**Where LiveKit runs** (spec 0044). One LiveKit server per environment, both defined once in the `xove-ops` repo (`livekit/compose.yaml`) and fed by that environment's generated settings: staging at `rtc-stage.xove.app` with media on 7881/tcp and 7882/udp, production at `rtc.xove.app` with 7883/tcp and 7884/udp. Each has its own key pair, shared only with its own API, so nothing signed for one environment is accepted by the other. This app only needs `LIVEKIT_URL`, the key pair and `LIVEKIT_ROOM`.
+**LiveKit's webhooks** go to the API, which ends a leaving sharer's streams; how, and where each environment's LiveKit runs, is in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#livekit). The web app gets the LiveKit address and a token from the API (`POST /api/livekit/token`).
 
 ## The look
 
@@ -269,24 +242,13 @@ Specs 0111, 0113 and 0121, with the reference in 0121's design (its black palett
   - **The footer:** "Buy me a coffee" is white, among muted links.
   - `styles/controls.test.ts` checks these values.
 
-## Data model
-
-| Table | Columns |
-| --- | --- |
-| `users` | id, email (unique, lowercase), name, avatar_url, google_subject (unique), status (`NONE`, `PENDING`, `MEMBER`, `DECLINED`), created_at |
-| `access_requests` | id, user_id, message (≤ 500 characters), status (`PENDING`, `APPROVED`, `DECLINED`), created_at, decided_at, decided_by; at most one pending request per user |
-| `spring_session`, `spring_session_attributes` | Server-side sessions (Spring Session JDBC) |
-
-Every schema change is a new Flyway migration. A migration that already ran is never edited.
-
 ## Security model
 
-- **Authentication:** Google sign-in through Spring Security (state, PKCE and session fixation handled by the framework). Accounts whose Google email isn't verified are turned away.
-- **Sessions:** stored server-side in PostgreSQL, so removing a member can end their sessions immediately. The cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
-- **CSRF:** every state-changing request carries a token read from a cookie and echoed in a header.
-- **Authorization:** member and admin checks happen on the server for every request. The API never trusts an id sent by the browser.
-- **LiveKit tokens:** signed by the API with a secret LiveKit shares. A token names one room and one identity, allows publishing only a screen, its sound and a camera (never a microphone), and expires after one hour. Only someone with a seat gets one. The secret never reaches the browser.
-- **Network:** the database has no public port. The app's containers publish no ports; only the proxy (80/443) and each LiveKit's two media ports face the internet.
-- **Supply chain:** every change passes a vulnerability scan of the images and dependencies and a static analysis of the code before it can be published (the commit checks in `.github/workflows/ci.yml`).
+The API enforces sign-in, sessions, authorization and the LiveKit tokens: see [`xove-api`'s security model](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#security-model). The web app's side:
+
+- **CSRF:** every state-changing request carries the token read from the `XSRF-TOKEN` cookie, echoed in the `X-XSRF-TOKEN` header.
+- **No secrets:** the web app holds none and gets only `APP_ENV`; what a member may do always comes from the API.
+- **Network:** its container publishes no port; only the proxy (80/443) faces the internet.
+- **Supply chain:** every change passes a vulnerability scan of the image and the web dependencies and a static analysis of the code before it can be published (the commit checks in `.github/workflows/ci.yml`).
 
 **Trust boundaries to know about:** any seated member's token may publish a screen and a camera; the 6-stream limit is enforced by the web app and the API's list, not by LiveKit. And a token stays valid for an hour, so someone who lost their seat could rejoin LiveKit with an old one. And after a restart the API takes a page's word for its LiveKit connection when it asks for its seat again, so a member could keep a seat they don't use. All three are acceptable for a small group of friends.

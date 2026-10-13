@@ -1,5 +1,5 @@
 # The web app on its own: what the server deploys as the app xove-web (spec 0063).
-# The whole stack, for local development and CI, is the root compose.yaml.
+# Locally and in the checks, the root compose.yaml includes it.
 # It needs only APP_ENV (and IMAGE_TAG, set by the deploy) (ADR-0062).
 
 services:
