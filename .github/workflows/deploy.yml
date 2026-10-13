@@ -1,4 +1,4 @@
-# One app's deploy or rollback on the VPS, through that app's own key (spec 0063).
+# The web app's deploy or rollback on the VPS, through its own key (spec 0063).
 # Called by stage.yml and release.yml, never on its own: only they pass the
 # 1Password token, and branch checks never get it.
 #
@@ -7,17 +7,17 @@
 # or "rollback". The VPS starts the version next to the serving one and moves
 # traffic to it only once it's healthy; an unhealthy version never serves.
 
-name: Deploy one app
+name: Deploy the web app
 
 on:
   workflow_call:
     inputs:
       app:
-        description: "xove-api or xove-web"
+        description: "The app on the VPS: xove-web"
         type: string
         required: true
       key:
-        description: "The 1Password item in Xove CI holding the app's deploy key (deploy-ssh-api, deploy-ssh-web-prod…)"
+        description: "The 1Password item in Xove Web CI holding the deploy key (deploy-ssh-web or deploy-ssh-web-prod)"
         type: string
         required: true
       command:
@@ -43,7 +43,7 @@ jobs:
     outputs:
       unhealthy: ${{ steps.run.outputs.unhealthy }}
     steps:
-      # Secrets come from the 1Password vault "Xove CI" (spec 0043); the only
+      # Secrets come from the 1Password vault "Xove Web CI" (ADR-0065); the only
       # secret stored in GitHub is the read-only token of the xove-ci service account.
       - name: Load the app's deploy key from 1Password
         id: vault
@@ -54,11 +54,11 @@ jobs:
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          DEPLOY_SSH_KEY: op://Xove CI/${{ inputs.key }}/private_key?ssh-format=openssh
-          DEPLOY_KNOWN_HOSTS: op://Xove CI/${{ inputs.key }}/known-hosts
-          DEPLOY_HOST: op://Xove CI/${{ inputs.key }}/host
-          DEPLOY_PORT: op://Xove CI/${{ inputs.key }}/port
-          DEPLOY_USER: op://Xove CI/${{ inputs.key }}/user
+          DEPLOY_SSH_KEY: op://Xove Web CI/${{ inputs.key }}/private_key?ssh-format=openssh
+          DEPLOY_KNOWN_HOSTS: op://Xove Web CI/${{ inputs.key }}/known-hosts
+          DEPLOY_HOST: op://Xove Web CI/${{ inputs.key }}/host
+          DEPLOY_PORT: op://Xove Web CI/${{ inputs.key }}/port
+          DEPLOY_USER: op://Xove Web CI/${{ inputs.key }}/user
 
       - name: Set up the deploy key
         env:
