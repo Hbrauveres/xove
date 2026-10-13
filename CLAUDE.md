@@ -6,6 +6,7 @@ This repo's own `docs/` (architecture, API, getting started, testing) and `READM
 
 Specific to this repo:
 
+- **The API is frozen here until xove-workspace#82:** it now lives in [`xove-api`](https://github.com/Hbrauveres/xove-api), with its history; this repo still builds and deploys it from `api/` until the releases move there. No API changes in `api/` (features, fixes or Dependabot merges) until then.
 - Tests: `cd api && ./mvnw test`; `cd web && npm test && npm run build`.
 - Never push to `main`; PRs are squash-merged with a conventional-commit title.
 - Never edit a Flyway migration that already ran.
