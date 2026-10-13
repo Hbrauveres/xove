@@ -13,14 +13,14 @@ How to run the web app on your own machine. On Windows, do all of this inside WS
 ## Clone
 
 ```bash
-git clone https://github.com/Hbrauveres/xove.git
-cd xove
+git clone https://github.com/Hbrauveres/xove-web.git
+cd xove-web
 ```
 
 ## Run the web app
 
 ```bash
-cd web
+cd app
 npm install
 npm run dev          # http://localhost:5173
 ```
@@ -33,12 +33,12 @@ The API lives in [`xove-api`](https://github.com/Hbrauveres/xove-api). Its [Gett
 
 ## Run the image in Docker
 
-`compose.yaml` includes `web/compose.yaml`, the file the servers deploy. It builds the image and checks it's healthy, as the commit checks do:
+`app/compose.yaml` is the file the servers deploy. It builds the image and checks it's healthy, as the commit checks do:
 
 ```bash
 docker network create web          # once; shared with the reverse proxy on servers
-APP_ENV=dev docker compose up -d --build
-docker compose ps
+APP_ENV=dev docker compose -f app/compose.yaml up -d --build
+docker compose -f app/compose.yaml ps
 ```
 
 There's no reverse proxy and no API in front of it locally, so this only shows the image builds and serves its page. For day-to-day work, run the web app directly as above.

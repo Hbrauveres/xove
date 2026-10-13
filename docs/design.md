@@ -2,7 +2,7 @@
 
 Everything Xovê looks like, in one place: the name, the mark, the icons, the colours, the type, the shapes and motion, every control, and each screen on desktop, tablet and phone. It's the reference for new work, by people and by Claude: **use what's here before adding anything new**, and update this page in the same PR when the look changes.
 
-The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this page current](#keeping-this-page-current)). The values come from the code: `web/src/styles/global.css` (the tokens), `web/src/brand/` (the mark) and each component's CSS module.
+The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this page current](#keeping-this-page-current)). The values come from the code: `app/src/styles/global.css` (the tokens), `app/src/brand/` (the mark) and each component's CSS module.
 
 ![The room on a desktop](images/design/room-desktop.png)
 
@@ -36,7 +36,7 @@ The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this p
 
 - **The wordmark:** [XOVE] in a slim viewfinder. The O is a record button: a white ring as thick as the letters and a red dot inside. Four corners frame the word; the **top-right corner is red**.
 - **The symbol:** the record O alone, inside the same four corners. It's the app icon and the favicon.
-- **Construction** (`web/src/brand/mark.ts`, the only place the geometry lives): one grid with a cap height of 100 and a stroke of 10. Letter widths X 88, O 100, V 90, E 68, gaps 20. The viewfinder sits 28 from the letters, with arms of 24 (26 in the symbol). The dot's radius is 29.4 in an O 100 across. The X ends square, the V's tips are cut flat at the cap height.
+- **Construction** (`app/src/brand/mark.ts`, the only place the geometry lives): one grid with a cap height of 100 and a stroke of 10. Letter widths X 88, O 100, V 90, E 68, gaps 20. The viewfinder sits 28 from the letters, with arms of 24 (26 in the symbol). The dot's radius is 29.4 in an O 100 across. The X ends square, the V's tips are cut flat at the cap height.
 - **Colours:** white strokes (`--text`, `#ebebec`), the red dot and corner (`--accent`, `#ef4b4b`), on the soft black ground. Never recoloured, outlined, stretched or put on a busy picture.
 - **Drawn, not typed:** `components/brand/XoveMark` (the wordmark, inline SVG, named "Xovê" for screen readers) and `XoveIcon` (the symbol). In the header it's about 110 px wide.
 - **The hover animation** (`brand/markTimeline.ts`, `useMarkAnimation`): pointing at the wordmark (or focusing it) plays it once, in about 3 seconds. The left corners stay and the word slides under them until the X is gone, while the right corners close in on the O; the corners settle into the symbol; the dot double-blinks like a surprised eye; everything plays back. A new hover doesn't restart it, and it never plays with reduced motion.
@@ -50,13 +50,13 @@ The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this p
 
 | File | What | Notes |
 | --- | --- | --- |
-| `web/public/favicon.svg` | The tiny symbol, for the tab and bookmarks | Its white parts turn soft black when the browser is in light mode (a `prefers-color-scheme` rule inside the file); the red stays |
+| `app/public/favicon.svg` | The tiny symbol, for the tab and bookmarks | Its white parts turn soft black when the browser is in light mode (a `prefers-color-scheme` rule inside the file); the red stays |
 | `apple-touch-icon.png` | iPhone home screen | The large symbol on the soft black ground |
 | `icon-192.png`, `icon-512.png` | Android home screen, install prompt | Same |
 | `icon-maskable-512.png` | Android's shaped icons (circle, squircle) | The mark sits inside the 80% safe circle (its farthest pixel 191 px from the centre, the safe radius 205) |
 | `site.webmanifest` | Name, icons, `theme_color` and `background_color` `#0c0c0d`, `display: fullscreen` | Opened from the home screen, no browser bar |
 
-`node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`; `--maskable` renders the maskable icon. A test fails if the favicon drifts from the geometry.
+`node scripts/brand-icons.mjs` (from `app/`) rewrites the favicon from `mark.ts`; `--maskable` renders the maskable icon. A test fails if the favicon drifts from the geometry.
 
 **Interface icons** are drawn inline as SVG in the components, on a 20 × 20 grid (12 × 12 for the small arrows), with round 1.5–2 px strokes in `currentColor`, so they take the colour of their button. There's no icon library: a new icon follows the same grid and stroke.
 
@@ -290,5 +290,5 @@ The pictures come from the real app with fake people and moving pictures, in a h
 
 ```bash
 # from the private workspace, with the harness running (its /device-check skill)
-node .claude/skills/device-check/scripts/design-sheet.mjs repos/xove
+node .claude/skills/device-check/scripts/design-sheet.mjs repos/xove-web
 ```

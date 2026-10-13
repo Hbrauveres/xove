@@ -31,10 +31,10 @@ The database is only reachable by the API, on a private Docker network per envir
 
 ## Repository layout
 
-The API lives in [`xove-api`](https://github.com/Hbrauveres/xove-api); this repo is the web app, to be renamed `xove-web`.
+The API lives in [`xove-api`](https://github.com/Hbrauveres/xove-api); this repo, `xove-web`, is the web app, in `app/`.
 
 ```
-web/                  React application
+app/                  the web app: everything its image is built from
   src/api/            HTTP client and API types
   src/auth/           session state and route guards
   src/hooks/          useRoomSeat, useStreams, useLiveKitRoom, useRoomSession
@@ -42,8 +42,10 @@ web/                  React application
   src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
   src/pages/          Home, RequestAccess, Room, Admin
   src/test/           test helpers: fake API, fake LiveKit
-web/compose.yaml      the web app on its own, as servers deploy it
-compose.yaml          includes web/compose.yaml, for local use and the checks
+  public/             the favicon, the phone icons, site.webmanifest
+  Dockerfile, Caddyfile, caddy/   the image: the Vite build served by Caddy, built from source
+  compose.yaml        the web app, as servers deploy it, and for local use and the checks
+docs/                 these pages, and the design sheet's pictures
 .github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml),
                       the deploy or rollback both call (deploy.yml)
 ```
@@ -141,7 +143,7 @@ The API decides who gets a seat, the queue and how long a place is kept: the rul
   - **Unreadable streams:** it reads no pixels, so a stream the page can't read is lit too.
   - **Nobody live** (spec 0158): the empty stage's colour bars, at full colour, are lit too. They're a small still picture (`barsPicture()`), drawn once, with no loop.
   - **Settings:** on and brightness are saved in the browser (`xove.ambilight.*`).
-- **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`web/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
+- **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`app/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
 - **Who watches what:** each browser reports what's on its stage (`PUT /api/streams/watching`), once it has been still for a second, and again when a poll shows the API lost it. The streams poll returns everyone's, for the people panel.
 - **The info row** (spec 0107): both sides centred on one line.
   - **Left:** who is on the stage (the avatar's ring drawn inside it, a filled LIVE badge, what, how long), and who's watching: up to 4 avatars and "N watching", me included, never the sharer.
@@ -183,7 +185,7 @@ Seats and streams live in the API's memory: one API instance, a handful of peopl
 
 ### Video and sound quality
 
-How a screen or a camera is sent is decided in one place, `web/src/media/shareSettings.ts` (spec 0086). LiveKit's defaults suit slides and voice calls; these suit games and videos.
+How a screen or a camera is sent is decided in one place, `app/src/media/shareSettings.ts` (spec 0086). LiveKit's defaults suit slides and voice calls; these suit games and videos.
 
 - **Starting:** the browser's picker captures the screen, then a setup window shows a preview and the settings. Nothing is sent until "Start sharing".
 - **Which sound** (spec 0095): a picked window shares only its app's sound (Chrome's "Share this app's audio too"), a tab its own sound, and the whole screen the system sound without Xovê's own sound. Xovê opens the picker itself (`getDisplayMedia`) because livekit-client drops the `windowAudio` option, and hands the tracks to LiveKit.
@@ -216,7 +218,7 @@ To check a share on staging, open `chrome://webrtc-internals` in the viewer's or
 Specs 0111, 0113 and 0121, with the reference in 0121's design (its black palette and its Controls section).
 
 - **The mark:** [XOVE] in a slim viewfinder, the O a record button (a white ring and a red dot), and the top-right corner red, standing in for the ^ of Xovê.
-  - Its geometry lives in one place, `web/src/brand/mark.ts`.
+  - Its geometry lives in one place, `app/src/brand/mark.ts`.
   - `components/brand/XoveMark` draws the wordmark as inline SVG in every page's header, named "Xovê" for screen readers. `XoveIcon` draws the symbol.
 - **The hover animation:** pointing at the wordmark (or focusing it) plays it once.
   - The left corners stay. The word slides left under them until the X is gone, while the right corners close in to the O. Then the corners settle into the icon, the dot double-blinks, and it all plays back.
@@ -226,10 +228,10 @@ Specs 0111, 0113 and 0121, with the reference in 0121's design (its black palett
   - **Large** (64 px and up): slim, at about 70% of its square.
   - **Small** (32 px) and **tiny** (16 px): heavier strokes, filling more of the square. Tiny runs edge to edge.
   - The outer edges are the same in all three.
-- **Icons:** `web/public/` holds the favicon, the phone icons and `site.webmanifest`. `index.html` links them.
+- **Icons:** `app/public/` holds the favicon, the phone icons and `site.webmanifest`. `index.html` links them.
   - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn soft black when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
   - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the soft black ground, since phones fill transparency with black anyway.
-  - `node scripts/brand-icons.mjs` (from `web/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
+  - `node scripts/brand-icons.mjs` (from `app/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
 - **The palette** (`styles/global.css`): black, neutral greys and red, chosen over a dark blue and five greys compared on the real pages.
   - **Neutrals:** ground soft black `#0c0c0d`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
   - **Accent:** red, `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`.

@@ -6,7 +6,7 @@ Every change is tested automatically in the [pipeline](../.github/workflows/ci.y
 
 | Where | Tool | What it covers | Run it |
 | --- | --- | --- | --- |
-| Web | Vitest, Testing Library, jsdom | Pages, routing, hooks, the room's behaviour | `cd web && npm test` |
+| Web | Vitest, Testing Library, jsdom | Pages, routing, hooks, the room's behaviour | `cd app && npm test` |
 | Build | Docker, Compose | The image builds and starts healthy | Pipeline stage 2 |
 | Security | Trivy, Semgrep | Known vulnerabilities, risky code patterns | Pipeline stage 3 |
 
@@ -20,7 +20,7 @@ Tests render real pages at a URL, like the browser would, and interact the way a
 - **`test/fakeLiveKit.ts`** replaces the `livekit-client` package (jsdom has no WebRTC). A test can play the other people: `lastRoom().join("user-7", "Bruno")`, `publishScreen(...)`, or `browserStopsMyShare()`.
 
 ```bash
-cd web
+cd app
 npm test                 # once, like CI
 npm run test:watch       # re-runs on every save
 npm run build            # type-check + production build
@@ -39,7 +39,7 @@ The room page accepts a short poll interval in tests, so nothing waits 2 seconds
 ## Before opening a pull request
 
 ```bash
-cd web && npm test && npm run build
+cd app && npm test && npm run build
 ```
 
 If that's green, the pipeline's unit test and build stages will be too.
