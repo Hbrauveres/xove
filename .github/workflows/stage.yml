@@ -5,10 +5,9 @@
 #   5 · Deploy stage        through the web app's staging key; the VPS starts the new version
 #                           next to the serving one, and an unhealthy one never serves
 #   6 · Remove failed image only when the new version ran on the VPS and wasn't healthy
-#
-# The API is released from its own repo, xove-api.
 #   Notify Discord          posts every result (success, failure, cancelled) to a Discord channel
 #
+# The API is released from its own repo, xove-api.
 # Full explanation: docs/pipeline.md in the xove-workspace repo
 
 name: Stage release

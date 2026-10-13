@@ -100,22 +100,12 @@ sequenceDiagram
 
 ### Seats and the queue
 
-- **20 seats,** sharers included. The number is a setting, `XOVE_ROOM_SEATS` (1 to 20, 20 when not set); staging uses 3 to try the queue.
-- **Only someone with a seat gets a LiveKit token,** so the room can't go past the seats.
-- **Entering:** the room page asks for a seat (`POST /api/room/enter`). With one free and nobody waiting, you're in. Otherwise the waiting screen shows your place, and asks again every 2 seconds (that poll is how the API knows you're still there).
-- **A free seat is offered** to the first in the queue: a popup with "Enter room" and "Cancel", and 60 seconds to answer (the tab's title says "Your turn"). The seat is held for them meanwhile. "Cancel" leaves the queue; no answer moves them to the end, and the next person gets the popup.
-- **Leaving keeps your place for a while:**
+The API decides who gets a seat, the queue and how long a place is kept: the rules are in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#seats-and-the-queue). What the web app does:
 
-  | You were | How you left | How the API knows | Kept for |
-  | --- | --- | --- | --- |
-  | In the room | closed the tab | LiveKit's `participant_left`, reason `CLIENT_INITIATED` | 30 s |
-  | In the room | connection dropped | `participant_left`, any other reason | 60 s |
-  | In the queue | closed the tab | `POST /api/room/leave`, sent with `keepalive` while the page closes | 30 s |
-  | In the queue | connection dropped | no poll | 90 s after the last poll: Chrome lets a tab in the background poll only about once a minute |
-
-  A dropped connection takes longer in total: LiveKit first waits for the browser to come back (about 20 to 30 seconds), and only then reports the leave.
-- **A seat never used** (a token handed out, nobody joined LiveKit) is given up after 60 seconds.
-- Nothing runs on a timer: whatever has run out is tidied away each time someone asks, by the clock.
+- **Entering:** the room page asks for a seat (`POST /api/room/enter`). In, it asks for a LiveKit token and joins the video room. Otherwise the waiting screen shows its place, and asks again every 2 seconds (that poll is how the API knows it's still there).
+- **The offer:** when the API offers a seat, a popup with "Enter room" and "Cancel" counts down the seconds it gives (the tab's title says "Your turn"). "Enter room" accepts (`POST /api/room/accept`), "Cancel" leaves the queue (`POST /api/room/cancel`).
+- **Leaving the queue:** closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the place is kept a short while.
+- **After an API restart** (its deploys), an open room asks for its seat again with its LiveKit connection, and registers what it's still sending.
 
 ### Streams
 
@@ -254,14 +244,11 @@ Specs 0111, 0113 and 0121, with the reference in 0121's design (its black palett
 
 ## Security model
 
-The API enforces these; the details are in [`xove-api`'s security model](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#security-model). What the web app does about them: it sends the CSRF token on every state-changing request, never holds a secret, and asks the API for everything a member may do.
+The API enforces sign-in, sessions, authorization and the LiveKit tokens: see [`xove-api`'s security model](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#security-model). The web app's side:
 
-- **Authentication:** Google sign-in through Spring Security (state, PKCE and session fixation handled by the framework). Accounts whose Google email isn't verified are turned away.
-- **Sessions:** stored server-side in PostgreSQL, so removing a member can end their sessions immediately. The cookie is `HttpOnly`, `Secure` and `SameSite=Lax`.
-- **CSRF:** every state-changing request carries a token read from a cookie and echoed in a header.
-- **Authorization:** member and admin checks happen on the server for every request. The API never trusts an id sent by the browser.
-- **LiveKit tokens:** signed by the API with a secret LiveKit shares. A token names one room and one identity, allows publishing only a screen, its sound and a camera (never a microphone), and expires after one hour. Only someone with a seat gets one. The secret never reaches the browser.
-- **Network:** the database has no public port. The app's containers publish no ports; only the proxy (80/443) and each LiveKit's two media ports face the internet.
-- **Supply chain:** every change passes a vulnerability scan of the images and dependencies and a static analysis of the code before it can be published (the commit checks in `.github/workflows/ci.yml`).
+- **CSRF:** every state-changing request carries the token read from the `XSRF-TOKEN` cookie, echoed in the `X-XSRF-TOKEN` header.
+- **No secrets:** the web app holds none and gets only `APP_ENV`; what a member may do always comes from the API.
+- **Network:** its container publishes no port; only the proxy (80/443) faces the internet.
+- **Supply chain:** every change passes a vulnerability scan of the image and the web dependencies and a static analysis of the code before it can be published (the commit checks in `.github/workflows/ci.yml`).
 
 **Trust boundaries to know about:** any seated member's token may publish a screen and a camera; the 6-stream limit is enforced by the web app and the API's list, not by LiveKit. And a token stays valid for an hour, so someone who lost their seat could rejoin LiveKit with an old one. And after a restart the API takes a page's word for its LiveKit connection when it asks for its seat again, so a member could keep a seat they don't use. All three are acceptable for a small group of friends.
