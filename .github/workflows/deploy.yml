@@ -44,7 +44,7 @@ jobs:
       unhealthy: ${{ steps.run.outputs.unhealthy }}
     steps:
       # Secrets come from the 1Password vault "Xove Web CI" (ADR-0065); the only
-      # secret stored in GitHub is the read-only token of the xove-ci service account.
+      # secret stored in GitHub is the read-only token of the xove-web-ci service account.
       - name: Load the app's deploy key from 1Password
         id: vault
         uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
