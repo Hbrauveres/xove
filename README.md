@@ -20,11 +20,11 @@ A private room where invited friends share their screens and cameras and watch e
 | Part | Tech |
 | --- | --- |
 | API ([`xove-api`](https://github.com/Hbrauveres/xove-api)) | Java 21, Spring Boot 4, PostgreSQL 17, Google sign-in: its own repo |
-| Web ([`web/`](web)) | React 19, TypeScript, Vite, CSS modules, `livekit-client` |
+| Web ([`app/`](app)) | React 19, TypeScript, Vite, CSS modules, `livekit-client` |
 | Video | A self-hosted [LiveKit](https://livekit.io) server (a WebRTC SFU): each stream is uploaded once and forwarded to every viewer |
 | Delivery | GitHub Actions: build the image, start it and check it's healthy, unit tests, Trivy and Semgrep, publish to GHCR, deploy to staging on every merge and to production on a version tag, where a new version takes over only once it's healthy, with a rollback button. The API has its own pipeline |
 
-The API and the web app are built, released and deployed on their own: the API from [`xove-api`](https://github.com/Hbrauveres/xove-api), the web app from this repo (to be renamed `xove-web`).
+The API and the web app are built, released and deployed on their own: the API from [`xove-api`](https://github.com/Hbrauveres/xove-api), the web app from this one, `xove-web`, in [`app/`](app).
 
 ```mermaid
 flowchart LR
@@ -40,9 +40,9 @@ More in [docs/architecture.md](docs/architecture.md), the endpoints in [`xove-ap
 ## Run it and test it
 
 ```bash
-cd web && npm install && npm run dev      # the web app (with a local API from xove-api, see Getting started)
-docker compose up --build                 # its image, as the servers run it
-cd web && npm test && npm run build       # Vitest + Testing Library, then a type-checked build
+cd app && npm install && npm run dev      # the web app (with a local API from xove-api, see Getting started)
+docker compose -f app/compose.yaml up --build   # its image, as the servers run it
+cd app && npm test && npm run build       # Vitest + Testing Library, then a type-checked build
 ```
 
 Details in [Getting started](docs/getting-started.md) and [Testing](docs/testing.md).

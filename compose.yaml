@@ -1,8 +1,0 @@
-# The web app, for local development and CI: web/compose.yaml, the same file the
-# servers deploy as xove-web. The API lives in its own repo, xove-api.
-#
-#   docker network create web     # once
-#   docker compose up -d --build
-
-include:
-  - web/compose.yaml
