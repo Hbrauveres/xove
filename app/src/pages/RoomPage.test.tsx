@@ -1360,7 +1360,8 @@ describe("room: waiting for a seat", () => {
     });
 
     expect(await screen.findByText(/you're next/i)).toBeInTheDocument();
-    expect(room.disconnected).toBe(true);
+    // The video room is left when the room's view goes, which can be a render after the waiting screen shows.
+    await waitFor(() => expect(room.disconnected).toBe(true));
   });
 });
 
