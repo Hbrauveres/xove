@@ -192,7 +192,7 @@ How a screen or a camera is sent is decided in one place, `app/src/media/shareSe
 - **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is always captured at 1080p and sent in VP9 with all three layers; the chosen quality is a **cap**: the layers above it aren't sent.
   - **No tight limits:** each layer may use up to 8, 4 and 2 Mbit/s. That's above what a screen usually needs, so only the sharer's computer and connection, and each viewer's, limit the picture. The browser and LiveKit lower the bitrate by themselves when a connection can't keep up.
   - The sharer uploads all the layers (up to about 14 Mbit/s at 1080p on a great connection); each viewer downloads one.
-  - The VPS's monthly traffic (8 TB) is watched in Hostinger's panel.
+  - The server's monthly traffic is watched outside the app.
   - Firefox (no VP9) and Safari send a single layer: viewers then get only the sharer's quality, and the quality menu offers nothing lower. In Safari, Sharp mode also behaves like Smooth.
 - **A camera** (spec 0060) goes up to 720p: 720p (the default) or 480p, at 30 fps, in VP9 with a 720p and a 480p layer. It has the same modes.
 - **And a mode:**
