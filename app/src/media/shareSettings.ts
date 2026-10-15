@@ -26,8 +26,8 @@ export type SharePreset = {
 /**
  * From best to lowest. The ceilings are well above what a screen usually needs, so
  * nobody is held back by them, only by their own connection; the browser and LiveKit
- * lower the bitrate by themselves when a connection can't keep up. The VPS's monthly
- * traffic is watched in Hostinger's panel (decided with Henrique, 2026-10-03).
+ * lower the bitrate by themselves when a connection can't keep up. The server's monthly
+ * traffic is watched outside the app (decided 2026-10-03).
  */
 export const SHARE_QUALITIES: readonly SharePreset[] = [
   { id: "1080p", width: 1920, height: 1080, fps: 30, maxBitrate: 8_000_000 },

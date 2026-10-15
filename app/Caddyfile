@@ -1,5 +1,4 @@
-# Serves the built React app. The shared proxy (Caddy in the shared-infra repo) does TLS
-# in front of it.
+# Serves the built React app. The server's shared proxy does TLS in front of it.
 {
 	admin off
 	persist_config off
