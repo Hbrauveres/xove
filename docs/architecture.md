@@ -211,7 +211,7 @@ How a screen or a camera is sent is decided in one place, `app/src/media/shareSe
 
 To check a share on staging, open `chrome://webrtc-internals` in the viewer's or the sharer's browser. It shows the codec, frame rate, resolution, bitrate, and why quality drops: "cpu" means the sharer's computer can't keep up, "bandwidth" means the connection can't.
 
-**LiveKit's webhooks** go to the API, which ends a leaving sharer's streams; how, and where each environment's LiveKit runs, is in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#livekit). The web app gets the LiveKit address and a token from the API (`POST /api/livekit/token`).
+**LiveKit's webhooks** go to the API, which ends a leaving sharer's streams; how is in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#livekit). The web app gets the LiveKit address and a token from the API (`POST /api/livekit/token`).
 
 ## The look
 
@@ -246,7 +246,7 @@ Specs 0111, 0113 and 0121, with the reference in 0121's design (its black palett
 
 ## Security model
 
-The API enforces sign-in, sessions, authorization and the LiveKit tokens: see [`xove-api`'s security model](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#security-model). The web app's side:
+The API enforces sign-in, sessions, authorization and the LiveKit tokens: see [`xove-api`'s security page](https://github.com/Hbrauveres/xove-api/blob/main/docs/security.md). The web app's side:
 
 - **CSRF:** every state-changing request carries the token read from the `XSRF-TOKEN` cookie, echoed in the `X-XSRF-TOKEN` header.
 - **No secrets:** the web app holds none and gets only `APP_ENV`; what a member may do always comes from the API.
