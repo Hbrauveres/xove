@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:8080',
+      // Keeps the browser's address (no changeOrigin) and sends X-Forwarded-*, so the
+      // API builds its links, Google's callback included, on localhost:5173.
+      '/api': { target: 'http://localhost:8080', xfwd: true },
     },
   },
   test: {

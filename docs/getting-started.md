@@ -25,7 +25,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Vite forwards every `/api` request to `http://localhost:8080`, so the web app talks to a local API without any CORS setup. Without the API running, you'll see the home page and a failed sign-in.
+Vite forwards every `/api` request to `http://localhost:8080`, so the web app talks to a local API without any CORS setup. It keeps the browser's address, so the API's redirects, Google's sign-in callback included, come back to `http://localhost:5173`. Without the API running, you'll see the home page and a failed sign-in.
 
 ## Run the API next to it
 
