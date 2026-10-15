@@ -6,7 +6,7 @@ COPY . .
 RUN npm run build
 
 # Caddy built from source on the latest Go with the latest security-sensitive
-# libraries, the same recipe as the shared proxy in the shared-infra repo. The official
+# libraries, the same recipe as the server's shared proxy. The official
 # Caddy image lags behind Go's security releases.
 FROM golang:1.27-alpine AS caddy
 # The pipeline passes today's date so this stage (and "@latest") re-runs once a
