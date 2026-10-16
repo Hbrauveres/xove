@@ -126,6 +126,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
       cameraVideo={session.mine.camera ? session.myCamera : session.cameraPreview}
       onPreviewCamera={session.previewCamera}
       busy={session.busy}
+      fullView={sheet && fullView}
     />
   );
 
@@ -232,6 +233,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               onSettings: toggleSettings,
             }}
             settingsPanel={sheet ? undefined : settingsPanel}
+            sheetOpen={sheet && settingsOpen}
           />
         </div>
         {/* Over the bottom of the middle: the column is sized exactly, nothing may push it. */}

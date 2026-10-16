@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
 import { viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
@@ -12,6 +12,7 @@ import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
 import { VolumeButton } from "./VolumeButton";
+import { FULL_VIEW_SHEET, makeRoom } from "./makeRoom";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching, STREAM_PLACES } from "./NowWatching";
@@ -60,6 +61,8 @@ type Props = {
   arrivedAt?: Record<string, number>;
   /** The settings panel, as a drawer inside the player, so it comes along in fullscreen (spec 0107). */
   settingsPanel?: ReactNode;
+  /** The settings sheet is open over the stage: the upright full view makes room for the player. */
+  sheetOpen?: boolean;
 };
 
 const NOBODY: Friend[] = [];
@@ -97,6 +100,7 @@ export function Stage({
   topRight,
   fullView,
   settingsPanel,
+  sheetOpen = false,
 }: Props) {
   const phone = layout === "phone";
   const sideways = layout === "sideways";
@@ -124,6 +128,34 @@ export function Stage({
   const held = useRef(new Set<string>());
   // Sideways the top bar is part of it too: its focus, and an open panel (spec 0160).
   const topRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // The upright full view with the settings sheet open (spec 0107, design decision 6): the
+  // player, its round buttons included, moves up between the top bar and the sheet at the
+  // same size, if it fits there; if not, the sheet covers it. Only a translate moves it.
+  const makingRoom = sideways && Boolean(fullView?.on && !fullView.hidden) && sheetOpen;
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const section = stageRef.current;
+    if (!box || !section) return;
+    const place = () => {
+      if (!makingRoom) {
+        box.style.translate = "";
+        return;
+      }
+      const top = topRef.current;
+      const bar = top
+        ? Math.max(0, ...[...top.children].map((c) => (c as HTMLElement).offsetTop + (c as HTMLElement).offsetHeight))
+        : 0;
+      const height = section.clientHeight;
+      const lift = makeRoom({ height, bar, sheet: height * FULL_VIEW_SHEET, band: { top: box.offsetTop, height: box.offsetHeight } });
+      box.style.translate = lift ? `0 ${-lift}px` : "";
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [makingRoom]);
   const focusInside = () =>
     held.current.size > 0 ||
     (frameRef.current?.contains(document.activeElement) ?? false) ||
@@ -357,6 +389,7 @@ export function Stage({
 
   return (
     <section
+      ref={stageRef}
       className={styles.stage}
       data-layout={layout}
       data-chrome={sideways ? chrome : undefined}
@@ -364,6 +397,7 @@ export function Stage({
       {...(sideways ? gestures : {})}
     >
       <div
+        ref={boxRef}
         className={styles.box}
         data-shape={shape.toFixed(4)}
         style={{ "--shape": shape } as React.CSSProperties}

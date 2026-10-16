@@ -23,7 +23,8 @@
   margin-inline: auto;
   transition:
     width 0.35s ease,
-    height 0.35s ease;
+    height 0.35s ease,
+    translate var(--unroll);
 }
 
 .frame {

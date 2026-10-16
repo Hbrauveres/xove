@@ -6,6 +6,7 @@ import type { CameraDevice, MediaTrack, StreamKind } from "../../types";
 import { Picker } from "../ui/Picker";
 import { Segmented } from "../ui/Segmented";
 import { CameraOnIcon, CloseIcon, ScreenShareIcon, WindowIcon } from "./icons";
+import { FULL_VIEW_SHEET } from "./makeRoom";
 import styles from "./SettingsPanel.module.css";
 
 /** How long it takes to slide in or out; it leaves the page once it's out. */
@@ -37,6 +38,8 @@ type Props = {
   /** Turns the camera on for the preview only, or off again. */
   onPreviewCamera: (on: boolean) => void;
   busy?: boolean;
+  /** The sheet in the upright full-screen view: a little shorter, so the player can fit above it. */
+  fullView?: boolean;
 };
 
 /**
@@ -100,6 +103,7 @@ export function SettingsPanel(props: Props) {
       role="dialog"
       aria-label="Settings"
       data-variant={variant}
+      style={props.fullView ? ({ "--sheet-height": `${FULL_VIEW_SHEET * 100}%` } as CSSProperties) : undefined}
       data-open={shown || undefined}
       inert={!open || undefined}
       onKeyDown={onKeyDown}
