@@ -1,8 +1,8 @@
 # xove-web — notes for Claude
 
-This repo is worked on from the private `xove-workspace` repo, where it's the submodule `repos/xove-web`. The workspace's `CLAUDE.md` holds every rule (workflow, git, secrets, tests); its `specs/` (with the `design.html` references mentioned in code comments), decisions and the cross-repo contracts are there. Read those first.
+This repo is worked on from a private workspace, where it's the submodule `repos/xove-web`. The workspace's `CLAUDE.md` holds every rule (workflow, git, secrets, tests); its specs (with the `design.html` references mentioned in code comments), decisions and the cross-repo contracts are there. Read those first.
 
-This repo's own `docs/` (architecture, design, getting started, testing) and `README.md` describe the code: update them in the same PR as the code they describe. They're public: nothing about servers, secrets or the process.
+This repo's own `docs/` (architecture, media, design, getting started, testing) and `README.md` describe the code: update them in the same PR as the code they describe. They're public: nothing about servers, secrets or the process.
 
 Specific to this repo:
 

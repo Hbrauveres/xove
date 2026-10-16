@@ -1,256 +1,178 @@
 # Architecture
 
-How the web app is built: its place in Xovê, how people get in, how screens and cameras flow, and the look. The API (its endpoints, the room's rules, the data and its security) is in [`xove-api`](https://github.com/Hbrauveres/xove-api/blob/main/docs/README.md).
+How the web app is built: its modules, its routes, how the room keeps its state, how it talks to the API and to LiveKit, and how it picks a layout for the device. How screens and cameras are sent and played is in [Media](media.md); how everything looks is in the [design sheet](design.md). The API (its endpoints, the room's rules, the data and its security) is in [`xove-api`](https://github.com/Hbrauveres/xove-api/blob/main/docs/README.md).
 
-## Components
+## Its place
 
 ```mermaid
 flowchart LR
-  B[Browser<br/>React app] -->|HTTPS 443| P[Reverse proxy<br/>TLS + routing]
-  P -->|/api/*| A[API<br/>Spring Boot]
-  P -->|everything else| W[web<br/>Caddy + static build]
-  A -->|JDBC, private network| D[(PostgreSQL)]
-  B -->|WSS 443, signaling| P
-  P -->|signaling| L[LiveKit]
-  B -.->|media over UDP,<br/>TCP fallback| L
+  B[Browser<br/>this app] -->|/api/*, same origin| A[xove-api]
+  B -->|token from the API| L[LiveKit]
+  B -.->|video, WebRTC| L
 ```
 
-| Component | What it does | Tech |
-| --- | --- | --- |
-| **web** | The single-page app: home, request access, room, admin | React 19, TypeScript, Vite, React Router, CSS modules, `livekit-client`; served by Caddy built from source on the latest Go, running as a non-root user |
-| **api** | Login, sessions, access requests, admin actions, the room's seats and live streams, LiveKit tokens | Java 21, Spring Boot 4 (Web MVC, Security, Data JPA, Actuator), Maven |
-| **db** | Users, access requests, sessions | PostgreSQL 17. The schema is the app's (Flyway, run by the API on start); the server runs outside this repo: on servers from the private `xove-ops` repo, one per environment; locally from `xove-api`'s `compose.local.yaml` |
-| **livekit** | Receives each screen and camera once and forwards it to every viewer | LiveKit server (a WebRTC SFU), one per environment, run from the `xove-ops` repo; each environment has its own room (staging `xove-stage`, production `xove`) |
-| **reverse proxy** | HTTPS certificates, routing by hostname and path | Caddy, shared by every app on the server; configured in a separate private repository |
+A single-page app (React 19, TypeScript, Vite, React Router, CSS modules) built to static files. It holds no secret and reads no setting: who you are, what you may do and which streams are live all come from the API at run time; the video comes from LiveKit, a WebRTC server that receives each stream once and forwards it to every viewer.
 
-The database is only reachable by the API, on a private Docker network per environment (`xove-<env>-db`), and the API knows it only by `POSTGRES_HOST`. Only the proxy and LiveKit's media ports face the internet.
+## Modules
 
-**Two apps, deployed on their own.** The web app and the API each have their own repo (this one and [`xove-api`](https://github.com/Hbrauveres/xove-api)), compose file, version and rollback: deploying one never restarts the other, so a web-only change keeps the room's live state. The web app gets only `APP_ENV`, none of the API's settings. They're released separately, so they can run at different versions: a web release that needs a new API field is tagged only once that API version is live in production, and the web app ignores fields it doesn't know. Their container names (`xove-<env>-web`, `xove-<env>-api`) are what the proxy and LiveKit reach them by. On servers each app runs as two copies, and only the serving one answers to that name: a new version starts next to it and takes the name once it's healthy, so a deploy fails no request.
+Everything is in `app/src`:
 
-**Signaling vs media.** Joining the room, knowing who's there and which tracks exist happens over a WebSocket that goes through the proxy. The video itself travels over UDP straight to LiveKit (with a TCP fallback for networks that block UDP). The API never touches media.
+| Folder | Owns |
+| --- | --- |
+| `api/` | The HTTP client (`client.ts`) and the API's types (`types.ts`): one function per endpoint, the CSRF header, errors as `ApiError` |
+| `auth/` | Who is signed in (`AuthProvider`, which asks `GET /api/me` once and on demand) and the route guards (`guards.tsx`) |
+| `pages/` | One component per route: `HomePage`, `RequestAccessPage`, `RoomPage`, `AdminPage`, and `InstallPage` |
+| `hooks/` | The room's state and the browser's: the seat and the queue (`useRoomSeat`), the streams (`useStreams`), the LiveKit connection (`useLiveKitRoom`), both put together for the room (`useRoomSession`), who's on the stage (`useStagePick`), the layout (`useRoomLayout`), swipes (`useStageSwipe`), the video's shape (`useVideoShape`), and small ones (`useElapsed`, `useFullscreenElement`, `useInstalled`) |
+| `media/` | How screens and cameras are sent (`shareSettings.ts`), the ambilight's drawing (`ambilight.ts`), who is big by default (`stagePick.ts`), choices kept in the browser (`preferences.ts`) |
+| `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons and their menus, the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
+| `components/room/` | The room around the stage: header, footer, people, activity (pill, bell, list), account menu, the waiting screen and the seat offer |
+| `components/share/` | The setup window shown before a share starts |
+| `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage` |
+| `components/brand/`, `brand/` | The mark: its geometry and animation timeline (`brand/`), and the components that draw it (`XoveMark`, `XoveIcon`) |
+| `install/` | Phones and tablets: which device it is, and the browser's install prompt |
+| `styles/` | The design tokens (`global.css`) and the tests that check them |
+| `test/` | The test helpers: a fake API, a fake LiveKit, and rendering the app at a URL ([Testing](testing.md)) |
 
-## Repository layout
-
-The API lives in [`xove-api`](https://github.com/Hbrauveres/xove-api); this repo, `xove-web`, is the web app, in `app/`.
-
-```
-app/                  the web app: everything its image is built from
-  src/api/            HTTP client and API types
-  src/auth/           session state and route guards
-  src/hooks/          useRoomSeat, useStreams, useLiveKitRoom, useRoomSession
-  src/media/          how screens and cameras are sent (presets, modes, sound), who is big, remembered choices
-  src/components/     UI components grouped by area (stage, controls, …), each with its CSS module
-  src/pages/          Home, RequestAccess, Room, Admin
-  src/test/           test helpers: fake API, fake LiveKit
-  public/             the favicon, the phone icons, site.webmanifest
-  Dockerfile, Caddyfile, caddy/   the image: the Vite build served by Caddy, built from source
-  compose.yaml        the web app, as servers deploy it, and for local use and the checks
-docs/                 these pages, and the design sheet's pictures
-.github/workflows/    commit checks (ci.yml), stage release (stage.yml), production release (release.yml),
-                      the deploy or rollback both call (deploy.yml)
-```
-
-## Who gets in
+At the top, `main.tsx` starts the app (and listens for the install prompt first), `App.tsx` holds the routes, and `types.ts` the room's shared types (a person, a stream, a sharer).
 
 ```mermaid
 flowchart TD
-  H["/ Home<br/>Continue with Google"] --> G[Google login]
-  G --> C{API callback<br/>account status?}
-  C -->|member| R["/room"]
-  C -->|new or pending| Q["/request-access"]
-  C -->|declined| X["/request-access<br/>declined state"]
-  Q -->|Request access| P[Pending request]
-  P -->|admin approves in /admin| R
+  P[pages] --> C[components]
+  P --> H[hooks]
+  P --> A[api]
+  C --> H
+  H --> A
+  H --> LK[livekit-client]
+  H --> M[media]
+  C --> M
+  P --> AU[auth]
+  AU --> A
+  APP[App.tsx] --> I[install]
+  APP --> P
 ```
 
-| Route | Who sees it | What it shows |
+Pages put the room together; components draw it; hooks own the state and talk to the API and LiveKit (the simpler pages call the API directly); `media/` holds the rules for sending and drawing video, as plain functions that hooks and components share. Each component has its own CSS module, using the tokens in `styles/global.css`.
+
+## Routes
+
+`App.tsx` maps each route to a page behind a guard:
+
+| Route | Guard | Shows |
 | --- | --- | --- |
-| `/` | Signed out | What Xovê is, "Continue with Google" |
-| `/request-access` | Signed in, not a member | "You need access", optional message, request button; a pending state that checks every 20 s and moves you in when approved; a declined state that allows asking again |
-| `/room` | Members | Stage (with my screen and camera buttons), people, activity feed |
-| `/admin` | Admins | Pending requests (approve, decline), members (remove) |
+| `/` | signed out (signed-in people are sent on) | What Xovê is, "Continue with Google" |
+| `/request-access` | signed in, not a member | "You need access", an optional message, the request; a pending state that checks every 20 s and moves you in when approved; a declined state that lets you ask again |
+| `/room` | members | The room |
+| `/admin` | admins | Pending requests (approve, decline) and members (remove) |
+| anything else | | Back to `/` |
 
-On a phone or tablet (touch first) in a browser tab, every route shows the install screen instead (spec 0171): Xovê is used from the home screen there, so sign-in happens inside the app.
+Sign-in is the API's: "Continue with Google" goes to `/api/oauth2/authorization/google`, and the API sends you back to `/room` or `/request-access`. The guards only read `AuthProvider`'s answer, so a member page never renders for someone who isn't one.
 
-Every sign-in gets a session, even for non-members; it just can't reach member-only endpoints.
+**On a phone or tablet in a browser tab**, the app shows only `InstallPage` instead of any route: Xovê is used from the home screen there, so sign-in happens inside the installed app. A device counts as touch-first when its main pointer is coarse (`pointer: coarse`); the home-screen app is recognised by its display mode (`useInstalled`: `fullscreen` or `standalone`, or `navigator.standalone` on iPhone).
 
-## Sharing screens and cameras
+## The room's state
 
-The API owns **who** is in the room and **which streams** are live (spec 0060). LiveKit carries the video.
+The room page combines two sources:
+
+- **The API** decides who has a seat and which streams are live. The page asks it every 2 seconds.
+- **LiveKit** carries the video and knows who is connected right now.
 
 ```mermaid
 sequenceDiagram
-  participant S as Sharer's browser
+  participant R as Room page
   participant A as API
   participant L as LiveKit
-  participant V as Viewer's browser
-  S->>A: POST /api/room/enter
-  A-->>S: in (a seat)
-  S->>A: POST /api/livekit/token
-  A-->>S: signed token (room, identity, allowed sources)
-  S->>L: connect with the token
-  Note over S: clicks "Share my screen", picks a window
-  S->>L: publish screen track
-  S->>A: POST /api/streams (screen, its connection and track ids)
-  V->>A: GET /api/streams (every 2 s)
-  A-->>V: the live streams
-  L-->>V: screen track
-  Note over S: closes the tab
-  L->>A: webhook participant_left (signed, reason CLIENT_INITIATED)
-  A-->>V: the stream is gone on the next poll
+  R->>A: POST /api/room/enter (every 2 s until in)
+  A-->>R: a seat, or a place in the queue
+  R->>A: POST /api/livekit/token
+  A-->>R: a signed token
+  R->>L: connect
+  loop every 2 s
+    R->>A: GET /api/streams
+    A-->>R: who's live, with what settings, and who watches what
+  end
+  L-->>R: the tracks of the streams on screen
 ```
 
-### Seats and the queue
+| State | Owned by | Lives |
+| --- | --- | --- |
+| My seat, or my place in the queue and the seat offer | `useRoomSeat` | The API; the page polls every 2 s while it waits |
+| The live streams, their settings, who watches what | `useStreams` | The API; polled every 2 s by every open room |
+| Who is connected, their tracks, my own captures | `useLiveKitRoom` | LiveKit |
+| Who's on my stage | `useStagePick` | This page only |
+| The layout | `useRoomLayout` | This page, from media queries |
+| Quality, volume, the camera picked, the ambilight's settings | `media/preferences.ts` | The browser (`localStorage`, `xove.*`) |
 
-The API decides who gets a seat, the queue and how long a place is kept: the rules are in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#seats-and-the-queue). What the web app does:
+**Waiting for a seat.** The queue's rules (who's next, how long a place and an offer last) are the API's ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#seats-and-the-queue)). Without a seat, the waiting screen shows the place in the queue and asks again every 2 seconds; that poll is also how the API knows the page is still there. When a seat is offered, a popup counts down the seconds the API gives ("Enter room" accepts, "Cancel" leaves the queue), and the tab's title says "Your turn". Closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the request survives the tab closing.
 
-- **Entering:** the room page asks for a seat (`POST /api/room/enter`). In, it asks for a LiveKit token and joins the video room. Otherwise the waiting screen shows its place, and asks again every 2 seconds (that poll is how the API knows it's still there).
-- **The offer:** when the API offers a seat, a popup with "Enter room" and "Cancel" counts down the seconds it gives (the tab's title says "Your turn"). "Enter room" accepts (`POST /api/room/accept`), "Cancel" leaves the queue (`POST /api/room/cancel`).
-- **Leaving the queue:** closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the place is kept a short while.
-- **After an API restart** (its deploys), an open room asks for its seat again with its LiveKit connection, and registers what it's still sending.
+**Who's on the stage.** Each viewer picks who is big: a preview, a card in the phone's feed, or a live stream's line in the activity list (a camera's line puts the camera big). By default, and when the big person stops, it's the person sharing the longest (`media/stagePick.ts`). Once the pick has been still for a second, the page reports it (`PUT /api/streams/watching`), and again when a poll shows the API lost it (after a restart), so the people panel can say who watches whom. Only the page that's really in the video room reports, so a second tab doesn't overwrite it.
 
-### Streams
+**When the API restarts.** The API keeps the room in memory ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#memory-and-the-database)). After a restart, an open room asks for its seat again on its next poll, with its LiveKit connection, and registers again what it's still sending; if the places filled up meanwhile, it stops sending. Nobody has to reload.
 
-1. **Up to 6 live streams,** each a person's screen or camera. Someone with both uses 2. Nobody is pushed out: with 6 live, the start buttons wait.
-2. **Share or turn on the camera** with the round buttons over the bottom of the stage (spec 0098): one centred row of volume, screen, camera and settings (spec 0101), volume and settings only while watching someone else. They fade with the player's labels over a stream, stay while focused or while a menu or the volume slider is open, and come along in fullscreen. In fullscreen, the setup window and any error from starting are drawn over the player. A full room greys them out, with the reason in their tooltip; a phone that can't share a screen shows only the camera button. The browser's picker (or camera prompt) opens first; Chrome is asked to stay on Xovê after the pick (`CaptureController.setFocusBehavior`), then a setup window shows a preview and the settings. Nothing is sent until its "Start" button. Closing the picker does nothing. The camera is asked for only on that click, never with the microphone.
-3. **While live,** the arrow on a stream's button opens its menu: quality and mode (below), then:
-   - **Change window** opens the picker again and swaps the new pick into the same LiveKit track (`replaceTrack`): no setup window, no new stream for the API or viewers. The sound follows: swapped, added as a new sound track, or removed.
-   - **A camera list** switches the camera being sent (`restartTrack` on the same track); the pick is saved in the browser (`xove.camera.device`).
-4. **Stop:** the lit button, the menu's Stop, or the browser's own bar stops the video and ends the stream. Only its person can stop or change a stream.
-5. **Reload while sharing:** the page sees the API lists a stream of its own that nothing sends, and ends it.
-6. **Everyone** polls the streams every 2 seconds and plays them from LiveKit. People sharing see their own streams, as viewers do, without their sound.
-7. **A sharer leaves** (closes the tab, loses connection, crashes): LiveKit sends the API a signed webhook, and the API ends all of that person's streams at once, so nobody watches a frozen picture; their seat is kept as above. A stopped track ends just that stream. Only one connection per person: opening the room on a second device disconnects the first. Specs: `0038`, `0060`.
+**Reloading while sharing.** The page sees that the API lists a stream of its own that nothing sends, and ends it.
 
-### Watching
+**When a sharer leaves** (closes the tab, loses the connection), LiveKit tells the API, which ends all of that person's streams ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#livekit)); every room drops them on its next poll, so nobody watches a frozen picture.
 
-- **The page** (spec 0104, the look in its design) is theater mode:
-  - **Header and footer:** full width and see-through. The header holds the logo, the activity pill, the people button and the account button (connection dot; name, role and connection, ambilight, Admin, Sign out). The footer is plain text.
-  - **The middle:** a size container. Its one column is the 16:9 box: as big as the window allows at 16:9, and the info row under it is exactly that wide.
-  - **The stage hugs the picture** (spec 0107, its design):
-    - `useVideoShape` reads the big video's width ÷ height, following its `resize` event and ignoring changes under 1%;
-    - the stage's box sizes itself from it in container units, inside the 16:9 box: a wider picture keeps the full width and gets shorter, a taller one keeps the full height and gets narrower, centred. No black bars.
-    - Empty and loading stages are 16:9; fullscreen keeps its bars.
-  - **Dropdowns** (`components/ui/Dropdown.tsx`): frosted sections with 2 px clear cuts. They unroll by their height, since a clip or fade would stop the blur. One opens at a time.
-- **Ambilight** (`media/ambilight.ts`, `stage/Ambilight.tsx`, spec 0118): drawn by the browser's graphics pipeline, with no pixel reads.
-  - **The canvas:** a grid of square cells round the stage follows its shape (`gridFor`): 64×36 at 16:9, 36×64 for a portrait picture, at most 96 along the longer side. On it, the glow reaches 16 cells, then a 3-cell margin, at 2 px a cell (`glowLayout`).
-  - **Each update:**
-    - draws the picture in nine pieces (`edgeDraws`): the whole picture under the stage, its edge strips stretched outward, and its corner patches stretched into the corners;
-    - draws them over the last update at partial opacity: the easing, with a 120 ms time constant (`easeFor`);
-    - blurs the result once and cuts it with a fade mask (`fadeMask`), made once per grid: the falloff to exactly zero before the margin, plus a fixed grain against bands.
+## Talking to the API
 
-    The page only stretches the canvas, so a 4K monitor costs the same.
-  - **Timing:** it updates with the screen's refresh (`requestAnimationFrame`, at most 60 a second), every 500 ms with reduced motion, and only while the tab is visible, the video plays and it's on.
-  - **Unreadable streams:** it reads no pixels, so a stream the page can't read is lit too.
-  - **Nobody live** (spec 0158): the empty stage's colour bars, at full colour, are lit too. They're a small still picture (`barsPicture()`), drawn once, with no loop.
-  - **Settings:** on and brightness are saved in the browser (`xove.ambilight.*`).
-- **Each viewer picks who is big:** a preview, or a live stream's event in the activity list (a camera event shows the camera big). By default, and when the big person stops, it's the person sharing the longest (`app/src/media/stagePick.ts`). The choice is kept by the room (`useStagePick`).
-- **Who watches what:** each browser reports what's on its stage (`PUT /api/streams/watching`), once it has been still for a second, and again when a poll shows the API lost it. The streams poll returns everyone's, for the people panel.
-- **The info row** (spec 0107): both sides centred on one line.
-  - **Left:** who is on the stage (the avatar's ring drawn inside it, a filled LIVE badge, what, how long), and who's watching: up to 4 avatars and "N watching", me included, never the sharer.
-  - **Empty stage:** "The stage is yours." with who's here.
-  - **Right:** the other streams as previews, then a dashed box with "N of 6 live" and the places left, gone when all 6 are live. A preview shows their screen, or their camera when that's all they share.
-  - **When room runs short:** the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
-- **The facecam:** when the big person shares their screen and their camera, the screen is big and the camera is a small window over it. Its "Swap views" button (two arrows) swaps them, also on your own preview. It can be dragged anywhere over the player (or moved with the arrow keys), and collapsed to a tab. Each browser keeps these choices for the visit only.
-- **On a phone or tablet** (specs 0158 and 0160, the design):
-  - **Which layout** (`useRoomLayout`, `layoutFor`):
+`api/client.ts` is the only place that calls `fetch`:
 
-    | Device | Upright | Sideways |
-    | --- | --- | --- |
-    | Phone: touch first (`pointer: coarse`), shorter side ≤ 500 px | upright view | sideways view |
-    | Tablet: touch first, larger | upright view | desktop layout |
-    | Anything else | upright view if the window is ≤ 760 px wide and upright | desktop layout |
+- **Same origin, under `/api`.** In development, Vite forwards `/api` to a local API ([Getting started](getting-started.md)); on the servers, a reverse proxy does.
+- **The session cookie** goes with every request (`credentials: "same-origin"`); the app never sees it.
+- **CSRF:** every `POST`, `PUT` and `DELETE` copies the readable `XSRF-TOKEN` cookie into an `X-XSRF-TOKEN` header. Another site can't read the cookie, so it can't forge the header.
+- **Errors** come as RFC 9457 problem details; the client throws an `ApiError` with the status and the API's `detail` as its message (or a plain fallback per status), and the pages show that message.
+- **A 401 from `GET /api/me`** means signed out: `AuthProvider` shows the home page.
 
-    Turning switches layouts at once; the stage keeps its place in the page, so the video and a share go on.
-  - **Upright:**
-  - **The top bar:** the wordmark; then, by use, the people button, a bell (`ActivityBell`: the activity list, with no count or dot) and my account at the far right. No footer: its items end the account menu.
-  - **The stage:** still one screen, with the stage edge to edge under the top bar, hugging the picture but never taller than 60% of the screen. Its info row is the compact `NowWatching`: "Name · what", then LIVE, the time and "N watching".
-  - **Under it, the only part that scrolls:** "Live now · N of 6" and the other streams as a feed (`LiveFeed`: full-width pictures, then the same info row; silent, so their sound isn't downloaded; a tap puts one on the stage). With nobody live, "Nobody live · 0 of 6 · 6 free" and who's here as cards (`HereCards`), with how long each has been here, from the API's `here`.
-  - **Swiping the stage** (spec 0159): left for the next person live, right for the previous, in the feed's order and wrapping around (`stepOnStage`). The picture follows the finger and slides (`useStageSwipe`); a drag under a quarter of the width, unless it's a quick flick, springs back; reduced motion changes at once. Drags that start on the round buttons, the facecam or the fullscreen button (`data-no-swipe`) are theirs. Dots above the buttons (`StageDots`), upright and sideways, show who's on the stage and jump on a tap; they fade with the buttons, and there are none with one person live.
-  - **Sound on a phone:** phones block sound that starts without a tap on the page, so the first tap or key in the room unlocks it (`room.startAudio()`), and LiveKit plays what was silent.
-  - **No pull-to-refresh in the room:** while the room is on the page (`data-room`), the page has `overscroll-behavior: none`, so a drag down (the volume slider near the top) never reloads it. The other pages keep pull-to-refresh.
-  - **Only from the home screen** (spec 0171, its design): in a browser tab, a touch device sees only `InstallPage`. It tells the home-screen app by the display mode (`useInstalled`: `display-mode` fullscreen or standalone, or `navigator.standalone`). On Android, "Get Xovê" opens the browser's install prompt, caught as the page loads (`install/prompt.ts`), once (a browser offers it only once), or points to the menu's "Install app" when there's none; on iPhone and iPad (`isApple`), Safari's Share steps. The manifest has what Chrome checks before offering an install (`id`, `start_url`, `scope`, a maskable icon) and `"display": "fullscreen"`, so the app opens with no browser bar.
-  - **The full-screen view:** on a phone, and on a tablet held upright, the stage's fullscreen button switches to the sideways layout while the phone stays upright, and back ("Full-screen view", "Exit full-screen view"). Turning doesn't change the choice, and sideways there's no button: the room is already in that view. Desktops, and tablets held sideways (the desktop layout), keep the player's fullscreen.
-  - **The setup window** on a short, wide screen shows its preview on the left and its settings on the right.
-  - **Upright on a tablet:** the stage stays full width; the info row and what scrolls under it sit in a centred column, at most 640 px wide.
-  - **Sideways:**
-    - **The stage:** no header, logo or footer. It fills the screen height first and hugs the picture, black at its sides where the light glows.
-    - **The top bar:** a black gradient across the top: who's on the stage (the compact info row, or "Nobody live · 0 of 6 · 6 free") on the left, and the people button, the bell and my account on the right.
-    - **The buttons:** the round buttons at the bottom of the stage. On a phone there's no fullscreen button sideways (the room is already in the full view); it shows at the bottom right only in the upright full view.
-    - **Fading:** while a stream plays, a touch anywhere shows the controls, and about 2.5 s later the top bar, the buttons and the row's arrow button fade (`data-fades`), and an open row closes. Over the empty stage nothing fades.
-    - **The streams row** (`StreamsRow`): the other streams as small silent pictures with names, "Live now · N of 6", along the bottom over a black gradient. It's closed at first; a swipe up opens it (`useStageSwipe` with `axis: "vertical"`), a swipe down or the controls fading close it, and a round button at the bottom left opens it (arrow up) and, on the open row, closes it (arrow down). A tap puts that person on the stage; a left or right swipe changes the stream, as upright.
-- **Sound:** the big person's plays. Previews are muted, each with its own speaker and a horizontal volume slider; a muted preview's sound isn't downloaded at all. A preview without sound has no speaker.
-- **Bandwidth:** each video is downloaded at the size it's shown (adaptive stream), so previews and the facecam come in low; layers nobody watches aren't sent (dynacast). The viewer's quality menu is for the big video.
+Every endpoint, who may call it and what it answers, is in [`xove-api`'s API page](https://github.com/Hbrauveres/xove-api/blob/main/docs/api.md). A web release that needs a new API field ships only once that API version is live, and the app still works without the field.
 
-Seats and streams live in the API's memory: one API instance, a handful of people, nothing worth persisting. A restart (every deploy of the API, not of the web app) empties them; each open room asks for its seat again within a poll, with its LiveKit connection (LiveKit doesn't report it joining again, so that confirms the seat), and registers what it's still sending. If the 6 places filled up meanwhile, it stops sending; any other failure is tried again on the next poll. Re-registered streams count as started then, so "longest sharing" restarts from that order.
+## LiveKit in the browser
 
-### Video and sound quality
+`useLiveKitRoom` joins the video room for as long as the room page is open:
 
-How a screen or a camera is sent is decided in one place, `app/src/media/shareSettings.ts` (spec 0086). LiveKit's defaults suit slides and voice calls; these suit games and videos.
+1. It asks the API for a token (`POST /api/livekit/token`), which names this person (`user-<id>`), the room and what they may send: a screen with its sound, and a camera; never a microphone.
+2. It connects with `adaptiveStream` and `dynacast` on ([Media](media.md#what-a-viewer-downloads)).
+3. It keeps React state in step with LiveKit's events: who joins and leaves, which tracks arrive, the connection's state ("reconnecting" while LiveKit retries).
+4. Leaving the page disconnects. **One connection per person:** opening the room on a second device disconnects the first.
 
-- **Starting:** the browser's picker captures the screen, then a setup window shows a preview and the settings. Nothing is sent until "Start sharing".
-- **Which sound** (spec 0095): a picked window shares only its app's sound (Chrome's "Share this app's audio too"), a tab its own sound, and the whole screen the system sound without Xovê's own sound. Xovê opens the picker itself (`getDisplayMedia`) because livekit-client drops the `windowAudio` option, and hands the tracks to LiveKit.
-- **The sharer picks a quality:** 1080p (the default), 720p or 480p, all at 30 fps. The screen is always captured at 1080p and sent in VP9 with all three layers; the chosen quality is a **cap**: the layers above it aren't sent.
-  - **No tight limits:** each layer may use up to 8, 4 and 2 Mbit/s. That's above what a screen usually needs, so only the sharer's computer and connection, and each viewer's, limit the picture. The browser and LiveKit lower the bitrate by themselves when a connection can't keep up.
-  - The sharer uploads all the layers (up to about 14 Mbit/s at 1080p on a great connection); each viewer downloads one.
-  - The server's monthly traffic is watched outside the app.
-  - Firefox (no VP9) and Safari send a single layer: viewers then get only the sharer's quality, and the quality menu offers nothing lower. In Safari, Sharp mode also behaves like Smooth.
-- **A camera** (spec 0060) goes up to 720p: 720p (the default) or 480p, at 30 fps, in VP9 with a 720p and a 480p layer. It has the same modes.
-- **And a mode:**
-  - **Smooth** (the default): marked as motion. When the connection is tight, the picture gets softer and the frame rate holds.
-  - **Sharp:** marked as detail. The picture keeps its detail and the frame rate drops.
-- **Changing them mid-share,** from the stream button's menu (each stream has its own), is live: same stream, no reload.
-  - The sharer's browser applies the new cap and mode right away, and tells the API (`POST /api/streams/{kind}/settings`).
-  - Every viewer's app reads the settings with the streams (every 2 seconds) and follows them: its quality menu offers nothing above the cap, and Auto asks for no more than the cap.
-  - Since no viewer asks for the layers above the cap, LiveKit stops sending them (dynacast), so the sharer's upload really drops.
-- **Sound** is captured without the microphone filters (echo cancellation, noise suppression, automatic volume), in stereo, and sent at 128 kbit/s without silence skipping. Chrome gives sound only from a tab, or from the whole screen on Windows; Firefox and Safari give none. A screen without sound says so in its button's tooltip and menu; viewers see a crossed, locked volume button ("No sound in this stream") until it has sound.
-- **Viewers** have two round buttons in the row (spec 0101):
-  - **Volume:** a click mutes, and unmutes back to the same volume. Pointing at it or focusing it slides a vertical slider up (a range input turned a quarter, so it's vertical in every browser). No slider while muted, without sound, or on iPhones and iPads, which ignore a page's volume.
-  - **Settings** (a gear): its quality menu offers "Auto" (adaptive stream: what fits the player and the connection) or a fixed quality from the sharer's down to 480p. A fixed quality asks the server for that size, so the viewer really downloads less.
-- **The LIVE label, the name and the bars** fade when the mouse stops moving over the player, and come back when it moves (or after a tap).
-- **Each browser remembers** its choices in `localStorage` (`xove.share.*`, `xove.camera.*`, `xove.watch.*`).
+**Sound.** Browsers block sound that starts without a tap on the page, so the first tap or key in the room unlocks it (`room.startAudio()`), and LiveKit plays what was silent.
 
-To check a share on staging, open `chrome://webrtc-internals` in the viewer's or the sharer's browser. It shows the codec, frame rate, resolution, bitrate, and why quality drops: "cpu" means the sharer's computer can't keep up, "bandwidth" means the connection can't.
+Sharing a screen or a camera is in [Media](media.md).
 
-**LiveKit's webhooks** go to the API, which ends a leaving sharer's streams; how is in [`xove-api`'s architecture](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#livekit). The web app gets the LiveKit address and a token from the API (`POST /api/livekit/token`).
+## Layouts
 
-## The look
+`useRoomLayout` picks one of three layouts and follows the screen as it turns or the window resizes:
 
-Specs 0111, 0113 and 0121, with the reference in 0121's design (its black palette and its Controls section).
+| Device | Upright | Sideways |
+| --- | --- | --- |
+| Phone: touch-first, shorter side ≤ 500 px | `upright` | `sideways` |
+| Tablet: touch-first, larger | `upright` | `desktop` |
+| Anything else | `upright` if the window is ≤ 760 px wide and upright | `desktop` |
 
-- **The mark:** [XOVE] in a slim viewfinder, the O a record button (a white ring and a red dot), and the top-right corner red, standing in for the ^ of Xovê.
-  - Its geometry lives in one place, `app/src/brand/mark.ts`.
-  - `components/brand/XoveMark` draws the wordmark as inline SVG in every page's header, named "Xovê" for screen readers. `XoveIcon` draws the symbol.
-- **The hover animation:** pointing at the wordmark (or focusing it) plays it once.
-  - The left corners stay. The word slides left under them until the X is gone, while the right corners close in to the O. Then the corners settle into the icon, the dot double-blinks, and it all plays back.
-  - The timeline is a pure function (`brand/markTimeline.ts`); `useMarkAnimation` applies it to the SVG without re-rendering.
-  - Nothing plays with reduced motion.
-- **The symbol by size:** `iconMark("large" | "small" | "tiny")`.
-  - **Large** (64 px and up): slim, at about 70% of its square.
-  - **Small** (32 px) and **tiny** (16 px): heavier strokes, filling more of the square. Tiny runs edge to edge.
-  - The outer edges are the same in all three.
-- **Icons:** `app/public/` holds the favicon, the phone icons and `site.webmanifest`. `index.html` links them.
-  - **Favicon** (`favicon.svg`): the bare tiny symbol. Its white parts turn soft black when the browser is light (a `prefers-color-scheme` rule inside the file); the red stays.
-  - **Phone icons** (`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`): the large symbol on the soft black ground, since phones fill transparency with black anyway.
-  - `node scripts/brand-icons.mjs` (from `app/`) rewrites the favicon from `mark.ts`, and a test fails if it drifts. `--phone` prints the SVG the PNGs are rendered from.
-- **The palette** (`styles/global.css`): black, neutral greys and red, chosen over a dark blue and five greys compared on the real pages.
-  - **Neutrals:** ground soft black `#0c0c0d`, panels `#161617`, raised `#1b1b1d`, lines `#2c2c2f`, text `#ebebec`, muted `#9a9a9f`, faint `#66666b`.
-  - **Accent:** red, `#ef4b4b`, the same as LIVE. Text on a red fill uses `--accent-ink` `#3a0808`.
-  - **Pure black only behind the video:** the stage, the previews, the facecam and the share preview keep `#000` behind the picture, its own frame, so the stage reads as a screen.
-  - **Unchanged:** green and yellow stay for status, the avatars keep a colour per person, and the empty stage's colour bars keep theirs.
-  - `styles/palette.test.ts` checks the tokens, rejects the old palettes, keeps pure black to the five video frames, and computes every text colour's contrast on every surface: 4.5:1, and 3:1 for faint labels.
-- **The controls** (spec 0121): quiet, so red stays for the brand and what's live.
-  - **Sliders:** `components/ui/Range`, a plain range input styled white like a video player's: a 3 px track, white up to the knob and `#ebebec` at 22% after, and a 12 px white knob that grows to 14 px on hover or focus. WebKit has no part for the filled side, so `Range` sets `--fill`; Firefox uses `::-moz-range-progress`. The ambilight's brightness, the stage's volume (turned a quarter) and a preview's volume all use it.
-  - **The switch** (the ambilight's, in the account menu): a 36 × 14 px grey `#3a3a3d` track, the same off and on, and a 20 px knob that overhangs it, `#bdbdc0` off and red on, sliding in 180 ms.
-  - **The footer:** "Buy me a coffee" is white, among muted links.
-  - `styles/controls.test.ts` checks these values.
+`layoutFor` is a plain function of four media queries, so its tests cover every device without a browser. On a tablet held upright, the info row and the feed sit in a column at most 640 px wide. What each layout looks like is in the [design sheet](design.md#screens-and-layouts); how the code keeps them smooth:
 
-## Security model
+- **The stage never moves in the page.** Turning or resizing changes the layout around it, so the video and a share go on without reloading.
+- **The stage hugs the picture.** `useVideoShape` reads the big video's width ÷ height from its `resize` event (ignoring changes under 1%), and the stage sizes itself from it in container units, inside a 16:9 box.
+- **Swipes** (`useStageSwipe`): left and right change who's on the stage, in the feed's order and wrapping around; the picture follows the finger, and a drag under a quarter of the width springs back unless it was a quick flick. Sideways, a swipe up opens the streams row and a swipe down closes it. Drags that start on a control (`data-no-swipe`) are the control's.
+- **Fading:** what fades over a playing stream is marked `data-fades`; the stage hides it after `CHROME_IDLE_MS` without a touch or a move ([how it looks](design.md#motion)).
+- **No pull-to-refresh in the room:** while the room is open (`data-room`), the page sets `overscroll-behavior: none`, so a drag down never reloads it.
+- **The full-screen view** is the room's own state (`fullView` in `RoomPage`), not the browser's fullscreen: on a phone, and a tablet held upright, the stage's fullscreen button shows the sideways layout while the device stays upright, and turning doesn't change it ([how it looks](design.md#phone-sideways)). Elsewhere the button uses the browser's fullscreen.
 
-The API enforces sign-in, sessions, authorization and the LiveKit tokens: see [`xove-api`'s security page](https://github.com/Hbrauveres/xove-api/blob/main/docs/security.md). The web app's side:
+**Installing.** On Android, "Get Xovê" opens the browser's install prompt, caught as the page loads (`install/prompt.ts`), since a browser offers it only once; with none, it points to the browser menu's "Install app". On iPhone and iPad, it shows Safari's Share steps. The manifest (`public/site.webmanifest`) has what Chrome checks before offering an install and `"display": "fullscreen"`, so the app opens without a browser bar.
 
-- **CSRF:** every state-changing request carries the token read from the `XSRF-TOKEN` cookie, echoed in the `X-XSRF-TOKEN` header.
-- **No secrets:** the web app holds none and gets only `APP_ENV`; what a member may do always comes from the API.
-- **Network:** its container publishes no port; only the proxy (80/443) faces the internet.
-- **Supply chain:** every change passes a vulnerability scan of the image and the web dependencies and a static analysis of the code before it can be published (the commit checks in `.github/workflows/ci.yml`).
+## Repository layout
 
-**Trust boundaries to know about:** any seated member's token may publish a screen and a camera; the 6-stream limit is enforced by the web app and the API's list, not by LiveKit. And a token stays valid for an hour, so someone who lost their seat could rejoin LiveKit with an old one. And after a restart the API takes a page's word for its LiveKit connection when it asks for its seat again, so a member could keep a seat they don't use. All three are acceptable for a small group of friends.
+```
+app/                  the web app: everything its image is built from
+  src/                the modules above
+  public/             the favicon, the phone icons, site.webmanifest
+  Dockerfile, Caddyfile, caddy/   the image: the Vite build served by Caddy, built from source
+  compose.yaml        runs the image (locally and in the checks)
+  scripts/            brand-icons.mjs (the favicon from the mark's geometry)
+docs/                 these pages, and the design sheet's pictures
+.github/workflows/    the commit checks and the releases
+```
+
+## Security, the web app's side
+
+- **No secrets:** the app holds none; what a member may do always comes from the API, which checks it again on every request ([`xove-api`'s security](https://github.com/Hbrauveres/xove-api/blob/main/docs/security.md)).
+- **CSRF:** the header on every change, as above.
+- **The image** is a static build served by Caddy as a non-root user, and every change passes a vulnerability scan of the image and the dependencies, and a static analysis of the code, before it can be merged (`.github/workflows/ci.yml`).

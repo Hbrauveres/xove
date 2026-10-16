@@ -1,6 +1,6 @@
 # Design sheet
 
-Everything Xovê looks like, in one place: the name, the mark, the icons, the colours, the type, the shapes and motion, every control, and each screen on desktop, tablet and phone. It's the reference for new work, by people and by Claude: **use what's here before adding anything new**, and update this page in the same PR when the look changes.
+Everything Xovê looks like, in one place: the name, the mark, the icons, the colours, the type, the shapes and motion, every control, and each screen on desktop, tablet and phone. It's the reference for new work: **use what's here before adding anything new**, and update this page in the same PR when the look changes.
 
 The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this page current](#keeping-this-page-current)). The values come from the code: `app/src/styles/global.css` (the tokens), `app/src/brand/` (the mark) and each component's CSS module.
 
@@ -28,7 +28,7 @@ The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this p
 - **Short, plain sentences**, in sentence case: "Share your screen", "Full-screen view", "Nobody live · 0 of 6 · 6 free", "Xovê works best from your home screen". No exclamation marks, no jargon.
 - **Say what happens, then what to do:** "The room is full. You're 2nd in line." A disabled control says why in its tooltip.
 - **The middle dot (·)** joins short facts on one line: "Marina · Screen", "3 of 6 live · 3 free".
-- **Every control has a spoken name** (`aria-label`) that says what it does or what it shows: "Watch Rafa's screen", "4 people here", "Henrique: account, connected".
+- **Every control has a spoken name** (`aria-label`) that says what it does or what it shows: "Watch Rafa's screen", "4 people here", "Marina: account, connected".
 
 ## The mark
 
@@ -56,7 +56,7 @@ The pictures are shot from the real app (`design-sheet.mjs`, see [Keeping this p
 | `icon-maskable-512.png` | Android's shaped icons (circle, squircle) | The mark sits inside the 80% safe circle (its farthest pixel 191 px from the centre, the safe radius 205) |
 | `site.webmanifest` | Name, icons, `theme_color` and `background_color` `#0c0c0d`, `display: fullscreen` | Opened from the home screen, no browser bar |
 
-`node scripts/brand-icons.mjs` (from `app/`) rewrites the favicon from `mark.ts`; `--maskable` renders the maskable icon. A test fails if the favicon drifts from the geometry.
+`node scripts/brand-icons.mjs` (from `app/`) rewrites the favicon from `mark.ts`; `--maskable` renders the maskable icon, and `--phone` prints the SVG the phone icons are rendered from. A test fails if the favicon drifts from the geometry.
 
 **Interface icons** are drawn inline as SVG in the components, on a 20 × 20 grid (12 × 12 for the small arrows), with round 1.5–2 px strokes in `currentColor`, so they take the colour of their button. There's no icon library: a new icon follows the same grid and stroke.
 
@@ -154,7 +154,8 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 - **Order**, centred at the bottom of the stage: volume, screen, camera, settings.
 - **Live:** the pill turns red (`--accent`) with a deep-red icon (`--accent-ink`), and grows a 26 px arrow on its right that opens the stream's menu.
 - **Hover and focus:** a white wash at 12% (black at 12% on red). **Focus** draws one red ring around the whole pill, arrow included.
-- **Unavailable** (a full room, no sound): 45% opacity, with the reason in the tooltip.
+- **Which ones:** sharing my screen and camera, plus volume and settings only while watching someone else. A phone that can't share a screen shows only the camera button. In fullscreen they come along, and the setup window and any error from starting are drawn over the player.
+- **Unavailable** (a full room, no sound): 45% opacity, with the reason in the tooltip. A stream without sound shows a crossed, locked volume button ("No sound in this stream").
 - They fade with the rest of the controls while a stream plays, and come back on any move.
 
 ### Buttons
@@ -169,11 +170,13 @@ Two sizes: **md** (10 × 18 px padding, 15 px text) and **sm** (6 × 12 px, 13 p
 
 ### Sliders
 
-`components/ui/Range`, white like a video player's: a **3 px track**, white up to the knob and `#ebebec` at 22% after, and a **12 px white knob** that grows to 14 px on hover or keyboard focus. Used for the ambilight's brightness, the stage's volume (vertical, sliding up from the volume button while it's pointed at) and each preview's volume (horizontal).
+`components/ui/Range`, white like a video player's: a **3 px track**, white up to the knob and `#ebebec` at 22% after, and a **12 px white knob** that grows to 14 px on hover or keyboard focus. Used for the ambilight's brightness, the stage's volume (vertical, sliding up from the volume button while it's pointed at) and each preview's volume (horizontal). WebKit has no part for the filled side, so `Range` sets a `--fill` variable; Firefox uses `::-moz-range-progress`.
 
 ### Switch
 
 A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, and a **20 px knob** that overhangs it: `#bdbdc0` when off, red when on, sliding in 180 ms. The ambilight's on/off in the account menu.
+
+`styles/controls.test.ts` checks the sliders' and the switch's values.
 
 ### Dropdown panels
 
@@ -197,8 +200,8 @@ A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, a
 
 ![The info row under the stage](images/design/info-row.png)
 
-- **The info row:** on the left, who's on the stage (avatar with its ring, name in the display font, LIVE, what, how long) and who's watching (up to 4 avatars and "N watching"); on the right, the other streams as **previews** with a name chip, then a dashed box "N of 6 live · N free · share yours", gone when all 6 are live.
-- **The facecam:** the camera as a small window over the screen, 24% of the player's width, `--radius-sm`, with 28 px round buttons (swap views, collapse) that fade with the controls; collapsed, a 28 × 44 px tab at the right edge. It can be dragged, or moved with the arrow keys.
+- **The info row:** on the left, who's on the stage (avatar with its ring, name in the display font, LIVE, what, how long) and who's watching (up to 4 avatars and "N watching", me included, never the sharer); on the right, the other streams as **previews** with a name chip (their screen, or their camera when that's all they share), then a dashed box "N of 6 live · N free · share yours", gone when all 6 are live. When room runs short, the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
+- **The facecam:** the camera as a small window over the screen, 24% of the player's width, `--radius-sm`, with 28 px round buttons (swap views, collapse) that fade with the controls; collapsed, a 28 × 44 px tab at the right edge. It can be dragged, or moved with the arrow keys. Swapping also works on your own preview; the swap and the collapse last for the visit only.
 - **The fullscreen button:** top right on desktop; on a phone in the upright full view, bottom right, level with the round buttons.
 - **Stage dots** (phone, more than one live): 6 px dots just above the round buttons, the current one stretched to 14 px; a tap jumps to that person.
 
@@ -216,11 +219,7 @@ A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, a
 
 ### Which layout
 
-| Device | Held upright | Held sideways |
-| --- | --- | --- |
-| **Phone:** touch first (`pointer: coarse`), shorter side ≤ 500 px | Upright view | Sideways view |
-| **Tablet:** touch first, larger | Upright view (in a 640 px column under the stage) | Desktop layout |
-| **Desktop** | Upright view if the window is ≤ 760 px wide and upright | Desktop layout |
+Three layouts: the **desktop's** (theater mode), the **upright view** (phones held upright, tablets held upright, narrow upright windows) and the **sideways view** (phones held sideways). Which device gets which, and the sizes that decide it, are in [Architecture](architecture.md#layouts).
 
 Turning switches layouts at once, and the stage keeps its place in the page, so the video never reloads. Phones and tablets use Xovê only as a home-screen app; in a browser tab they see the install screen.
 
@@ -252,8 +251,9 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **No header or footer:** the stage fills the height and hugs the picture, black at its sides where the light glows.
 - **A top bar** over a black gradient: who's on the stage on the left; the people button, the bell and my account on the right.
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
-- Everything fades about 2.5 s after the last touch while a stream plays.
-- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone.
+- Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
+- **The setup window** on a short, wide screen puts its preview on the left and its settings on the right.
+- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
 
 ### Tablet, upright
 
@@ -277,18 +277,13 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 
 ## Rules for new work
 
-- **Use the tokens.** A new colour, size or font is a design decision: it needs a draft and Henrique's approval, then it lands in `global.css` and here.
+- **Use the tokens.** A new colour, size or font is a design decision: it needs an approved draft first, then it lands in `global.css` and here.
 - **Red means the brand or live.** Don't use it for anything else.
-- **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the spec. The approved draft is the reference the code must match.
+- **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
 - **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Avatar`, `LiveDot`, `StageNotice`. A new control follows their sizes, motion and focus ring.
 - **Say what effects cost:** blur, canvases and animations run on every frame; keep them to what's here.
 
 ## Keeping this page current
 
-The pictures come from the real app with fake people and moving pictures, in a headless browser. After a visual change, retake them and update the text in the same PR:
-
-```bash
-# from the private workspace, with the harness running (its /device-check skill)
-node .claude/skills/device-check/scripts/design-sheet.mjs repos/xove-web
-```
+The pictures are shot from the real app, with fake people and moving pictures, by a script that drives a headless browser through every screen and size (it lives with the project's tooling, outside this repo). After a visual change, retake them and update the text in the same pull request.
