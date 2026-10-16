@@ -60,8 +60,8 @@
   display: flex;
 }
 
-@media (max-width: 520px) {
-  .buttons {
-    --gap: 8px;
-  }
+/* The phone held upright (spec 0106): smaller buttons, closer together. Its full-screen
+   view and a phone held sideways keep the desktop's 48 px and 10 px. */
+:global([data-layout="phone"]) .buttons {
+  --gap: 8px;
 }

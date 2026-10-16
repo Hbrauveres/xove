@@ -10,14 +10,13 @@ type Phase = "in" | "entering" | "leaving";
  * A round button that comes and goes (the volume and the settings while watching someone,
  * the microphone while sharing): its width and its gap open or close in 220 ms while it
  * fades in or out, so its neighbours slide instead of jumping. While it goes it stays drawn,
- * out of reach. `onChange` tells the row a change is starting, so it can hold the button
- * under the pointer still.
+ * out of reach. The row holds the button under the pointer still while it does
+ * (`usePinnedRow`).
  */
-export function ButtonSlot({ shown, side, onChange, children }: {
+export function ButtonSlot({ shown, side, children }: {
   shown: boolean;
   /** Which edge of the row it sits at: its gap closes on the other side. */
   side: "start" | "end";
-  onChange?: () => void;
   children: ReactNode;
 }) {
   const [present, setPresent] = useState(shown);
@@ -26,15 +25,13 @@ export function ButtonSlot({ shown, side, onChange, children }: {
   const [width, setWidth] = useState<number | null>(null);
   const kept = useRef<ReactNode>(children);
   const inner = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
+  // The value it last acted on: a repeated effect (React's StrictMode) isn't a change.
+  const last = useRef(shown);
   if (shown) kept.current = children;
 
   useLayoutEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    onChange?.();
+    if (last.current === shown) return;
+    last.current = shown;
     if (shown) {
       setPresent(true);
       setPhase("entering");
@@ -44,7 +41,6 @@ export function ButtonSlot({ shown, side, onChange, children }: {
       setPhase("leaving");
       setOpen(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a change of `shown` starts one
   }, [shown]);
 
   // One frame later the slot opens (or closes) to its measured width; then it settles.

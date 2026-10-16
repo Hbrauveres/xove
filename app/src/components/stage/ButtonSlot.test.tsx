@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ButtonSlot, SLOT_MS } from "./ButtonSlot";
 
@@ -19,13 +20,14 @@ describe("a round button that comes and goes (spec 0106)", () => {
     expect(document.querySelector("[data-slot]")).toBeNull();
   });
 
-  it("tells the row when it starts to come or go, so the row can hold the clicked button", () => {
-    const onChange = vi.fn();
-    const view = render(<ButtonSlot shown={false} side="end" onChange={onChange}><button>Settings</button></ButtonSlot>);
+  it("doesn't animate a button that's there from the start, even when its effect runs twice", () => {
+    render(
+      <StrictMode>
+        <ButtonSlot shown side="end"><button>Settings</button></ButtonSlot>
+      </StrictMode>,
+    );
 
-    view.rerender(<ButtonSlot shown side="end" onChange={onChange}><button>Settings</button></ButtonSlot>);
-
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("[data-slot]")?.getAttribute("data-slot")).toBe("in");
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });
 });

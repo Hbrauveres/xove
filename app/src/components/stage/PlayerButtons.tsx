@@ -52,9 +52,9 @@ const LABEL: Record<StreamKind, { start: string; stop: string; menuStop: string;
     options: "Screen options",
   },
   camera: {
-    start: "Turn on camera",
-    stop: "Turn off camera",
-    menuStop: "Turn off camera",
+    start: "Turn on your camera",
+    stop: "Turn off your camera",
+    menuStop: "Turn off your camera",
     options: "Camera options",
   },
 };
@@ -79,19 +79,19 @@ export function PlayerButtons(props: Props) {
   }, [open, onMenuChange]);
 
   // A button that comes or goes never moves the one under the pointer (spec 0106).
-  const row = usePinnedRow<HTMLDivElement>();
+  const { ref: rowRef } = usePinnedRow<HTMLDivElement>();
 
   const kinds: StreamKind[] = canShareScreen ? ["screen", "camera"] : ["camera"];
   return (
     <div className={styles.row}>
-      <div className={styles.buttons} ref={row.ref}>
-        <ButtonSlot shown={Boolean(before)} side="start" onChange={row.hold}>
+      <div className={styles.buttons} ref={rowRef}>
+        <ButtonSlot shown={Boolean(before)} side="start">
           {before}
         </ButtonSlot>
         {kinds.map((kind) => (
           <StreamButton key={kind} kind={kind} {...props} open={open === kind} onOpen={(o) => show(o ? kind : null)} />
         ))}
-        <ButtonSlot shown={Boolean(after)} side="end" onChange={row.hold}>
+        <ButtonSlot shown={Boolean(after)} side="end">
           {after}
         </ButtonSlot>
       </div>

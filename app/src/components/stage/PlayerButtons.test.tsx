@@ -59,7 +59,7 @@ describe("stream buttons: off and live", () => {
   it("shows a screen and a camera button, off, each saying what a click does", () => {
     setup();
     const share = screen.getByRole("button", { name: "Share your screen" });
-    const camera = screen.getByRole("button", { name: "Turn on camera" });
+    const camera = screen.getByRole("button", { name: "Turn on your camera" });
     expect(share).toHaveAttribute("aria-pressed", "false");
     expect(camera).toHaveAttribute("aria-pressed", "false");
     expect(share).toHaveAccessibleDescription("Share your screen");
@@ -75,14 +75,14 @@ describe("stream buttons: off and live", () => {
     expect(screen.queryByRole("button", { name: "Camera options" })).not.toBeInTheDocument();
 
     await user.click(stop);
-    await user.click(screen.getByRole("button", { name: "Turn on camera" }));
+    await user.click(screen.getByRole("button", { name: "Turn on your camera" }));
     expect(onStop).toHaveBeenCalledWith("screen");
     expect(onStart).toHaveBeenCalledWith("camera");
   });
 
   it("names the camera's stop", () => {
     setup({ mine: { screen: false, camera: true } });
-    expect(screen.getByRole("button", { name: "Turn off camera" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Turn off your camera" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 
@@ -95,7 +95,7 @@ describe("player buttons: the row (spec 0101)", () => {
     expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([
       "Volume",
       "Share your screen",
-      "Turn on camera",
+      "Turn on your camera",
       "Settings",
     ]);
   });
@@ -147,7 +147,7 @@ describe("stream buttons: the menus", () => {
     await user.click(within(menu).getByRole("menuitemradio", { name: "Integrated Webcam" }));
     expect(onPickCamera).toHaveBeenCalledWith("cam-2");
 
-    await user.click(within(menu).getByRole("menuitem", { name: "Turn off camera" }));
+    await user.click(within(menu).getByRole("menuitem", { name: "Turn off your camera" }));
     expect(onStop).toHaveBeenCalledWith("camera");
   });
 
@@ -189,7 +189,7 @@ describe("stream buttons: when they can't be used", () => {
   it("disables the off buttons of a full room, saying why, and keeps the live ones", async () => {
     const { user, onStart, onStop } = setup({ mine: { screen: true, camera: false }, free: 0 });
 
-    const camera = screen.getByRole("button", { name: "Turn on camera" });
+    const camera = screen.getByRole("button", { name: "Turn on your camera" });
     expect(camera).toHaveAttribute("aria-disabled", "true");
     expect(camera).toHaveAccessibleDescription(FULL_ROOM);
     await user.click(camera);
@@ -197,6 +197,17 @@ describe("stream buttons: when they can't be used", () => {
 
     await user.click(screen.getByRole("button", { name: "Stop sharing your screen" }));
     expect(onStop).toHaveBeenCalledWith("screen");
+  });
+
+  it("draws an unavailable button faded, with its crossed icon only", () => {
+    setup({ free: 0 });
+
+    for (const [name, icon] of [["Turn on your camera", "camera-off"], ["Share your screen", "screen-off"]]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.parentElement?.className).toMatch(/disabled/);
+      expect(button.querySelector(`svg[data-icon="${icon}"]`)).toBeInTheDocument();
+      expect(button.querySelector('svg[data-icon$="-on"]')).not.toBeInTheDocument();
+    }
   });
 
   it("waits while a request is on its way, in the menus too", async () => {
@@ -242,7 +253,7 @@ describe("stream buttons: when they can't be used", () => {
   it("has no screen button where the browser can't share a screen", () => {
     setup({ canShareScreen: false });
     expect(screen.queryByRole("button", { name: "Share your screen" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Turn on camera" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Turn on your camera" })).toBeInTheDocument();
   });
 });
 
@@ -293,11 +304,11 @@ describe("icons: one state system (spec 0106)", () => {
 
   it("crosses the camera while it's off, and shows it plain while it's on", () => {
     const { rerender } = setup();
-    expect(icon(screen.getByRole("button", { name: "Turn on camera" }))).toEqual(["camera-off"]);
+    expect(icon(screen.getByRole("button", { name: "Turn on your camera" }))).toEqual(["camera-off"]);
 
     rerender({ mine: { screen: false, camera: true } });
 
-    expect(icon(screen.getByRole("button", { name: "Turn off camera" }))).toEqual(["camera-on"]);
+    expect(icon(screen.getByRole("button", { name: "Turn off your camera" }))).toEqual(["camera-on"]);
   });
 });
 
