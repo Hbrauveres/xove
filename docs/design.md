@@ -129,6 +129,9 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 | What | Duration | Easing |
 | --- | --- | --- |
 | Button hover and press | 120 ms (press moves 1 px down, 80 ms) | ease |
+| A round button coming or going: width and gap | 220 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| …its fade | in 160 ms after 80 ms, out 140 ms | ease |
+| The round buttons' row back to the centre, once the pointer leaves | 220 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | Slider knob growing | 120 ms | — |
 | Switch knob | 180 ms | ease |
 | Stage dots | 180 ms | ease |
@@ -142,7 +145,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 | The mark's hover animation | about 3 s, once | — |
 
 - **Panels never clip, fade or filter** while they move: that would stop their blur. They unroll by their height.
-- **With reduced motion**, every animation and transition is cut to nothing (a global rule), the mark doesn't play, swipes change at once and the ambilight updates every 500 ms.
+- **With reduced motion**, every animation and transition is cut to nothing (a global rule), the mark doesn't play, swipes change at once and the ambilight updates every 500 ms. A round button that comes or goes still never moves the one under the pointer.
 
 ## Controls
 
@@ -150,12 +153,15 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 
 ![The round buttons over the stage](images/design/round-buttons.png)
 
-- **48 px** circles in a pill (42 px on a phone and on screens under 520 px wide), dark frosted glass (`rgba(10, 10, 11, 0.72)`, blur 8 px, a soft shadow), white icon.
+- **48 px** circles in a pill (44 px on a phone and on screens under 520 px wide), 10 px apart (8 px on a phone), dark frosted glass (`rgba(10, 10, 11, 0.72)`, blur 8 px, a soft shadow), with a 20 px icon.
+- **One state system, on every round button:** **sending** (your screen, your camera) is a red pill (`--accent`) with the plain icon in deep red (`--accent-ink`); **off** is dark glass with the crossed icon in white; **unavailable** is 45% opacity, with the reason in the tooltip. Red means live, nothing else.
+- **The icons** (`components/stage/icons.tsx`): the screen is a crossed monitor while you're not sharing, and shows **a screen with an arrow up** while it's pointed at or focused, so it says what a click does; while you share, the plain monitor. The camera is crossed while off, plain while on. The volume is a speaker with its waves, crossed when muted or silent. Settings is **a cog with teeth**.
 - **Order**, centred at the bottom of the stage: volume, screen, camera, settings.
-- **Live:** the pill turns red (`--accent`) with a deep-red icon (`--accent-ink`), and grows a 26 px arrow on its right that opens the stream's menu.
+- **Live:** the red pill grows a 26 px arrow on its right that opens the stream's menu.
 - **Hover and focus:** a white wash at 12% (black at 12% on red). **Focus** draws one red ring around the whole pill, arrow included.
 - **Which ones:** sharing my screen and camera, plus volume and settings only while watching someone else. A phone that can't share a screen shows only the camera button. In fullscreen they come along, and the setup window and any error from starting are drawn over the player.
 - **Unavailable** (a full room, no sound): 45% opacity, with the reason in the tooltip. A stream without sound shows a crossed, locked volume button ("No sound in this stream").
+- **Coming and going without moving what you clicked:** a button that appears or goes (the volume and settings when you start or stop watching someone) opens or closes its width and its gap in 220 ms while it fades (in: 160 ms after 80 ms; out: 140 ms), so its neighbours slide. While the pointer is on the row, the button under it stays exactly where it is; once the pointer leaves, the row glides back to the centre in 220 ms.
 - They fade with the rest of the controls while a stream plays, and come back on any move.
 
 ### Buttons
