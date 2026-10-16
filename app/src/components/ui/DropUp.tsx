@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type ReactNode } from "react";
 import styles from "./DropUp.module.css";
 
 /** How long the pointer rests on the button before the drop-up unrolls. */
@@ -20,6 +20,8 @@ type Props = {
   trigger: ReactNode;
   /** Told when it closes because the pointer left (a picker inside closes too). */
   onLeave?: () => void;
+  /** Its width, when not the usual 228 px. */
+  width?: number;
   children: ReactNode;
 };
 
@@ -30,7 +32,7 @@ type Props = {
  * click, with a short grace for a slip. The keyboard's focus opens it too. Never on a touch
  * screen: there, the settings panel has the same controls.
  */
-export function DropUp({ label, enabled, trigger, onLeave, children }: Props) {
+export function DropUp({ label, enabled, trigger, onLeave, width, children }: Props) {
   const [open, setOpen] = useState(false);
   const [hover] = useState(canHover);
   const opening = useRef<number | undefined>(undefined);
@@ -101,7 +103,13 @@ export function DropUp({ label, enabled, trigger, onLeave, children }: Props) {
       <div className={styles.trigger} data-dropup-trigger>
         {trigger}
       </div>
-      <div className={styles.dropup} role="group" aria-label={label} inert={!open || undefined}>
+      <div
+        className={styles.dropup}
+        role="group"
+        aria-label={label}
+        inert={!open || undefined}
+        style={width ? ({ "--dropup-width": `${width}px` } as CSSProperties) : undefined}
+      >
         {children}
       </div>
     </div>

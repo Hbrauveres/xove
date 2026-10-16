@@ -7,7 +7,7 @@ import { VolumeButton } from "./VolumeButton";
 
 /** The button with its own state, as the stage uses it. */
 function Harness({
-  initial = { quality: "auto", volume: 0.6, muted: false },
+  initial = { volume: 0.6, muted: false },
   hasSound = true,
   canSetVolume = true,
   onChange,
@@ -49,9 +49,9 @@ describe("volume button (spec 0101)", () => {
     const button = screen.getByRole("button", { name: "Mute" });
     expect(button).toHaveAccessibleDescription("Mute");
     await user.click(button);
-    expect(onChange).toHaveBeenLastCalledWith({ quality: "auto", volume: 0.6, muted: true });
+    expect(onChange).toHaveBeenLastCalledWith({ volume: 0.6, muted: true });
     await user.click(screen.getByRole("button", { name: "Unmute" }));
-    expect(onChange).toHaveBeenLastCalledWith({ quality: "auto", volume: 0.6, muted: false });
+    expect(onChange).toHaveBeenLastCalledWith({ volume: 0.6, muted: false });
   });
 
   it("slides a vertical volume up while pointed at, and away after the pointer leaves", async () => {
@@ -68,7 +68,7 @@ describe("volume button (spec 0101)", () => {
     expect(slider()).toHaveValue("0.6");
 
     fireEvent.change(slider()!, { target: { value: "0.3" } });
-    expect(onChange).toHaveBeenLastCalledWith({ quality: "auto", volume: 0.3, muted: false });
+    expect(onChange).toHaveBeenLastCalledWith({ volume: 0.3, muted: false });
 
     await user.unhover(screen.getByRole("button", { name: "Mute" }));
     await waitFor(() => {
@@ -117,7 +117,7 @@ describe("volume button (spec 0101)", () => {
 
   it("has no slider while muted", async () => {
     const user = userEvent.setup();
-    render(<Harness initial={{ quality: "auto", volume: 0.6, muted: true }} />);
+    render(<Harness initial={{ volume: 0.6, muted: true }} />);
 
     await user.hover(screen.getByRole("button", { name: "Unmute" }));
 

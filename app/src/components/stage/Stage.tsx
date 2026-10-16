@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { loadWatchPrefs, saveWatchPrefs, type WatchPrefs } from "../../media/preferences";
-import { effectiveQuality, viewerQualities } from "../../media/shareSettings";
+import { viewerQualities } from "../../media/shareSettings";
 import type { StagePick } from "../../hooks/useStagePick";
 import type { AmbilightPrefs } from "../../media/preferences";
 import type { Friend, LiveFeed, Sharer } from "../../types";
@@ -12,7 +12,6 @@ import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
 import { VolumeButton } from "./VolumeButton";
-import { WatchSettings } from "./WatchSettings";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching, STREAM_PLACES } from "./NowWatching";
@@ -59,6 +58,8 @@ type Props = {
   people?: Friend[];
   meId?: string;
   arrivedAt?: Record<string, number>;
+  /** The settings panel, as a drawer inside the player, so it comes along in fullscreen (spec 0107). */
+  settingsPanel?: ReactNode;
 };
 
 const NOBODY: Friend[] = [];
@@ -95,6 +96,7 @@ export function Stage({
   arrivedAt = NO_ARRIVALS,
   topRight,
   fullView,
+  settingsPanel,
 }: Props) {
   const phone = layout === "phone";
   const sideways = layout === "sideways";
@@ -163,7 +165,16 @@ export function Stage({
   );
   const onMenuChange = useCallback((open: boolean) => hold("menu", open), [hold]);
   const onVolumeOpen = useCallback((open: boolean) => hold("volume", open), [hold]);
-  const onSettingsOpen = useCallback((open: boolean) => hold("settings", open), [hold]);
+  // The settings panel keeps the controls shown while it's open: held from the cog's click,
+  // let go however it closes (the cog, its ✕, Escape).
+  const { settingsOpen, onSettings } = controls;
+  const toggleSettings = useCallback(() => {
+    hold("settings", !settingsOpen);
+    onSettings();
+  }, [hold, settingsOpen, onSettings]);
+  useEffect(() => {
+    if (!settingsOpen) held.current.delete("settings");
+  }, [settingsOpen]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -188,10 +199,10 @@ export function Stage({
     saveWatchPrefs(next);
   };
 
-  // Ask for the chosen quality as soon as the big video arrives, and whenever it or
-  // its sharer's cap changes. A remembered quality this stream doesn't offer counts
-  // as Auto, and Auto never asks for more than the sharer's cap (so LiveKit stops
-  // sending layers above it).
+  // Watching is always Auto (spec 0107): the size it's shown at, stepping down when the
+  // connection can't keep up. Asked for as soon as the big video arrives, and whenever its
+  // sharer's cap changes: Auto never asks for more than the cap, so LiveKit stops sending
+  // the layers above it.
   const remote = big?.isMe ? undefined : main?.remote;
   // A new function arrives with every LiveKit update; the video it's about is what matters.
   const setQuality = useRef(remote?.setQuality);
@@ -201,8 +212,7 @@ export function Stage({
   const bigVideo = remote?.video;
   const cap = main?.settings.quality;
   const offered = viewerQualities(remote?.height ?? 0, remote?.layers, cap);
-  const chosen = effectiveQuality(watch.quality, offered);
-  const request = chosen === "auto" && cap && cap !== "1080p" ? offered[0] : chosen;
+  const request = cap && cap !== "1080p" ? offered[0] : "auto";
   useEffect(() => {
     const set = setQuality.current;
     if (!bigVideo || !set) return;
@@ -391,8 +401,9 @@ export function Stage({
             )}
             <PlayerButtons
               {...controls}
+              onSettings={toggleSettings}
               onMenuChange={onMenuChange}
-              // Watching someone else: their volume first and the quality last (spec 0101).
+              // Watching someone else: their volume first (spec 0101).
               before={
                 remote &&
                 big && (
@@ -406,20 +417,9 @@ export function Stage({
                   />
                 )
               }
-              after={
-                remote && (
-                  <WatchSettings
-                    sharerHeight={remote.height ?? 0}
-                    layers={remote.layers}
-                    cap={cap}
-                    prefs={watch}
-                    onChange={changeWatch}
-                    onOpenChange={onSettingsOpen}
-                  />
-                )
-              }
             />
           </div>
+          {settingsPanel}
         </div>
       </div>
 

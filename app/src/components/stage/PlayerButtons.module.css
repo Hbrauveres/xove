@@ -65,3 +65,43 @@
 :global([data-layout="phone"]) .buttons {
   --gap: 8px;
 }
+
+/* In the screen's drop-up: what's shared, and Change (the dark pill of a chosen option). */
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.source span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.change {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sel-bg);
+  box-shadow: var(--sel-shadow);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.change:hover {
+  background: var(--sel-hover);
+}

@@ -31,6 +31,8 @@ export type RoomSession = {
    * with the remembered settings (spec 0107). A closed picker changes nothing.
    */
   start: (kind: StreamKind) => void;
+  /** My camera while it's sent, for the settings panel. */
+  myCamera: MediaTrack | undefined;
   /** My camera, captured for the settings panel's preview but not sent. */
   cameraPreview: MediaTrack | undefined;
   /** Turns the camera on for the preview only, or off again. */
@@ -469,6 +471,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     prefs,
     setPrefs,
     start: (kind: StreamKind) => void start(kind),
+    myCamera: lk.local.camera,
     cameraPreview: preview?.video,
     previewCamera: (on: boolean) => void previewCamera(on),
     stop: (kind: StreamKind) => void stop(kind),

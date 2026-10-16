@@ -169,44 +169,27 @@ async function startSharing(user: User) {
 
 type MenuKind = "Screen" | "Camera";
 
-/** My stream's menu, from the arrow on its button (spec 0098). Opened when it isn't. */
+/** The settings panel on a tab (spec 0107): opened from the cog when it isn't. */
 async function openMenu(user: User, kind: MenuKind = "Screen") {
-  const name = `${kind} options`;
-  if (!screen.queryByRole("menu", { name })) await user.click(within(stage()).getByRole("button", { name }));
-  return within(screen.getByRole("menu", { name }));
-}
-
-/** Picks a quality or mode in my stream's menu. */
-async function pickInMenu(user: User, option: string, kind: MenuKind = "Screen") {
-  await user.click((await openMenu(user, kind)).getByRole("menuitemradio", { name: option }));
-}
-
-/** The viewer's settings menu (spec 0101): opened from the gear when it isn't. */
-function watchSettings() {
-  if (!screen.queryByRole("menu", { name: "Settings" })) {
-    fireEvent.click(within(stage()).getByRole("button", { name: "Settings" }));
+  if (!screen.queryByRole("dialog", { name: "Settings" })) {
+    await user.click(within(controls()).getByRole("button", { name: "Settings" }));
   }
-  return within(screen.getByRole("menu", { name: "Settings" }));
+  const panel = within(screen.getByRole("dialog", { name: "Settings" }));
+  const tab = panel.getByRole("tab", { name: new RegExp(kind) });
+  if (tab.getAttribute("aria-selected") !== "true") await user.click(tab);
+  return within(panel.getByRole("tabpanel"));
 }
 
-const qualityValue = (item: HTMLElement) => (item.textContent === "Auto" ? "auto" : item.textContent);
+/** Picks a quality or mode in the settings, on that stream's tab. */
+async function pickInMenu(user: User, option: string, kind: MenuKind = "Screen") {
+  await user.click((await openMenu(user, kind)).getByRole("radio", { name: option }));
+}
 
-/** The qualities the viewer's settings offer, as values ("auto", "1080p", …). */
-const offeredQualities = () => watchSettings().getAllByRole("menuitemradio").map(qualityValue);
-
-/** The quality ticked in the viewer's settings. */
-const watchedQuality = () =>
-  qualityValue(watchSettings().getAllByRole("menuitemradio").find((i) => i.getAttribute("aria-checked") === "true")!);
-
-/** Picks a quality in the viewer's settings ("auto" for Auto). */
-const pickWatchQuality = (value: string) =>
-  fireEvent.click(watchSettings().getByRole("menuitemradio", { name: value === "auto" ? "Auto" : value }));
-
-/** The quality ticked in my stream's open menu. */
+/** The quality chosen on the settings' open tab. */
 const tickedQuality = (kind: MenuKind = "Screen") =>
-  within(screen.getByRole("menu", { name: `${kind} options` }))
-    .getAllByRole("menuitemradio")
-    .find((item) => /^\d+p$/.test(item.textContent ?? "") && item.getAttribute("aria-checked") === "true")?.textContent;
+  within(screen.getByRole("radiogroup", { name: `${kind} quality` }))
+    .getAllByRole("radio")
+    .find((r) => r.getAttribute("aria-checked") === "true")?.textContent;
 
 describe("room: sharing", () => {
   afterEach(() => localStorage.clear());
@@ -509,7 +492,7 @@ describe("room: changing the stream while sharing", () => {
     await startSharing(user);
     const video = lastRoom().localParticipant.screens[0].track;
 
-    await pickInMenu(user, "Sharp (text, code)");
+    await pickInMenu(user, "Sharp");
 
     await waitFor(() => expect(myLiveStream(server)?.settings).toEqual({ quality: "1080p", mode: "sharp" }));
     expect(video.mediaStreamTrack.contentHint).toBe("detail");
@@ -588,33 +571,16 @@ describe("room: the viewer's quality and volume", () => {
     return view;
   };
 
-  it("asks the server for less when a lower quality is picked, and for the best again on Auto", async () => {
+  // Spec 0107, AC-4: no quality to pick while watching.
+  it("always asks for Auto, whatever quality was remembered before", async () => {
+    localStorage.setItem("xove.watch.quality", "480p");
     await watchBruno();
     const publication = lastRoom().screenPublication("user-7")!;
 
-    pickWatchQuality("480p");
-    expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
-
-    pickWatchQuality("auto");
     expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
-  });
-
-  it("only offers what the sharer sends", async () => {
-    await watchBruno({ height: 720 });
-    expect(offeredQualities()).toEqual(["auto", "720p", "480p"]);
-  });
-
-  it("offers no lower quality when the sharer sends only one (Firefox, Safari)", async () => {
-    await watchBruno({ height: 1080, layers: 1 });
-    expect(offeredQualities()).toEqual(["auto", "1080p"]);
-  });
-
-  it("asks for Auto when the remembered quality isn't offered by this sharer", async () => {
-    localStorage.setItem("xove.watch.quality", "1080p");
-    await watchBruno({ height: 720 });
-
-    expect(watchedQuality()).toBe("auto");
-    expect(lastRoom().screenPublication("user-7")!.setVideoQuality).toHaveBeenLastCalledWith(2);
+    expect(publication.setVideoDimensions).not.toHaveBeenCalled();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: /watch/i })).not.toBeInTheDocument();
   });
 
   it("plays the sound at the chosen volume, mutes it, and remembers both", async () => {
@@ -640,21 +606,13 @@ describe("room: the viewer's quality and volume", () => {
     expect(screen.getByRole("slider", { name: "Volume" })).toHaveValue("0.3");
   });
 
-  it("asks for the remembered quality as soon as the screen arrives", async () => {
-    localStorage.setItem("xove.watch.quality", "720p");
-    await watchBruno();
-
-    expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
-    expect(watchedQuality()).toBe("720p");
-  });
-
-  it("gives the sharer's own player no viewer's bar and no settings: those are in the button's menu", async () => {
+  it("gives the sharer's own player no volume; the cog opens the settings for what I send", async () => {
     installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
 
     expect(within(stage()).queryByRole("button", { name: "Mute" })).not.toBeInTheDocument();
-    expect(within(stage()).queryByRole("button", { name: "Settings" })).not.toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "Settings" })).toBeInTheDocument();
     expect(within(stage()).queryByLabelText("Send quality")).not.toBeInTheDocument();
     expect(within(stage()).queryByLabelText("Mode")).not.toBeInTheDocument();
     expect(within(stage()).queryByRole("combobox")).not.toBeInTheDocument();
@@ -664,7 +622,7 @@ describe("room: the viewer's quality and volume", () => {
 describe("room: viewers follow the sharer's changes", () => {
   afterEach(() => localStorage.clear());
 
-  it("offers nothing above the sharer's quality, and Auto asks for at most that", async () => {
+  it("asks for Auto, at most the sharer's quality", async () => {
     const server = installFakeApi({ me: member });
     server.streams = [someoneSharing("Bruno Lima", 7)];
     renderRoom();
@@ -675,8 +633,6 @@ describe("room: viewers follow the sharer's changes", () => {
     });
     await screen.findByLabelText("Bruno's shared screen");
     const publication = lastRoom().screenPublication("user-7")!;
-    const offered = offeredQualities;
-    expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]);
 
     // Bruno lowers his quality; the API says so on the next poll.
     act(() => {
@@ -684,7 +640,6 @@ describe("room: viewers follow the sharer's changes", () => {
     });
 
     await waitFor(() => {
-      expect(offered()).toEqual(["auto", "720p", "480p"]);
       expect(publication.setVideoDimensions).toHaveBeenLastCalledWith({ width: 1280, height: 720 });
     });
 
@@ -694,32 +649,10 @@ describe("room: viewers follow the sharer's changes", () => {
     });
 
     await waitFor(() => {
-      expect(offered()).toEqual(["auto", "1080p", "720p", "480p"]);
       expect(publication.setVideoQuality).toHaveBeenLastCalledWith(2);
     });
   });
 
-  it("keeps a viewer's own lower choice when the sharer lowers theirs", async () => {
-    localStorage.setItem("xove.watch.quality", "480p");
-    const server = installFakeApi({ me: member });
-    server.streams = [someoneSharing("Bruno Lima", 7)];
-    renderRoom();
-    await connected();
-    await screen.findByRole("heading", { name: "Bruno" });
-    act(() => {
-      lastRoom().publishScreen("user-7");
-    });
-    await screen.findByLabelText("Bruno's shared screen");
-
-    act(() => {
-      server.streams[0].settings = { quality: "720p", mode: "sharp" };
-    });
-
-    await waitFor(() => {
-      expect(watchedQuality()).toBe("480p");
-      expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
-    });
-  });
 });
 
 describe("room: the player's labels and bars", () => {
@@ -805,7 +738,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
         .getAllByRole("button")
         .map((b) => b.getAttribute("aria-label"))
         .filter((name) => name !== "Fullscreen" && name !== "Exit fullscreen" && !name?.startsWith("Watch "));
-    expect(row()).toEqual(["Share your screen", "Turn on your camera"]);
+    expect(row()).toEqual(["Share your screen", "Turn on your camera", "Settings"]);
 
     act(() => {
       server.streams = [someoneSharing("Bruno Lima", 7)];
@@ -835,20 +768,20 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
     expect(frame).toHaveAttribute("data-chrome", "shown");
   });
 
-  it("stay while a stream's menu is open", async () => {
+  it("stay while the settings are open", async () => {
     installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
     const frame = (await screen.findByLabelText("Your shared screen")).closest("[data-chrome]")!;
 
-    await user.click(within(stage()).getByRole("button", { name: "Screen options" }));
+    await user.click(within(stage()).getByRole("button", { name: "Settings" }));
     (document.activeElement as HTMLElement).blur();
     fireEvent.pointerLeave(frame);
 
     expect(frame).toHaveAttribute("data-chrome", "shown");
-    expect(screen.getByRole("menu", { name: "Screen options" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
 
-    // Past the time the bars would fade: still shown while the menu is open.
+    // Past the time the bars would fade: still shown while the settings are open.
     fireEvent.pointerMove(frame);
     (document.activeElement as HTMLElement).blur();
     await new Promise((resolve) => setTimeout(resolve, 2700));
@@ -963,7 +896,7 @@ describe("room: starting from fullscreen (spec 0101)", () => {
 describe("room: change window and pick a camera (spec 0098)", () => {
   afterEach(() => localStorage.clear());
 
-  it("swaps what my screen shares from its menu, on the same stream", async () => {
+  it("swaps what my screen shares from the settings, on the same stream", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
     const local = lastRoom().localParticipant;
@@ -976,14 +909,14 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     );
 
     local.nextPickerAudio = true;
-    await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
+    await user.click((await openMenu(user)).getByRole("button", { name: "Change" }));
 
     await waitFor(() => {
       expect(video.replaceTrack).toHaveBeenCalled();
       expect(local.getDisplayMedia).toHaveBeenCalledTimes(2);
     });
     // No setup window, no new stream: the API's stream is the same one.
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("dialog").map((d) => d.getAttribute("aria-label"))).toEqual(["Settings"]);
     expect(myLiveStream(server)).toEqual(started);
     expect(server.calls.filter((c) => c.path === "/api/streams" && c.method === "POST")).toHaveLength(1);
     expect(local.screens).toHaveLength(1);
@@ -1001,14 +934,14 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     const local = lastRoom().localParticipant;
     local.nextPicker = "cancel";
 
-    await user.click((await openMenu(user)).getByRole("menuitem", { name: "Change window" }));
+    await user.click((await openMenu(user)).getByRole("button", { name: "Change" }));
 
     expect(local.screens[0].track.replaceTrack).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "You" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("switches my camera from its menu without stopping it", async () => {
+  it("switches my camera from the settings without stopping it", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
     await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
@@ -1016,15 +949,13 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     const camera = lastRoom().localParticipant.lastCamera!;
 
     const menu = await openMenu(user, "Camera");
-    await waitFor(() => expect(menu.getByRole("menuitemradio", { name: "Logitech C920" })).toHaveAttribute("aria-checked", "true"));
-    await user.click(menu.getByRole("menuitemradio", { name: "Integrated Webcam" }));
+    await user.click(await menu.findByRole("button", { name: "Camera: Logitech C920" }));
+    await user.click(menu.getByRole("radio", { name: "Integrated Webcam" }));
 
     await waitFor(() => expect(camera.restartTrack).toHaveBeenCalled());
     expect(lastRoom().localParticipant.camera?.track).toBe(camera);
     expect(myLiveStream(server, "camera")).toBeDefined();
-    await waitFor(() =>
-      expect(menu.getByRole("menuitemradio", { name: "Integrated Webcam" })).toHaveAttribute("aria-checked", "true"),
-    );
+    expect(await menu.findByRole("button", { name: "Camera: Integrated Webcam" })).toBeInTheDocument();
   });
 });
 
@@ -1083,8 +1014,8 @@ describe("room: quick changes while sharing", () => {
     const video = lastRoom().localParticipant.screens[0].track;
     const menu = await openMenu(user);
 
-    fireEvent.click(menu.getByRole("menuitemradio", { name: "720p" }));
-    fireEvent.click(menu.getByRole("menuitemradio", { name: "480p" }));
+    fireEvent.click(menu.getByRole("radio", { name: "720p" }));
+    fireEvent.click(menu.getByRole("radio", { name: "480p" }));
 
     await waitFor(() => expect(myLiveStream(server)?.settings.quality).toBe("480p"));
     const sent = server.calls.filter((c) => c.path === "/api/streams/screen/settings").map((c) => (c.body as { quality: string }).quality);
@@ -1263,6 +1194,41 @@ describe("room: my camera", () => {
     expect(start?.body).toEqual({ kind: "camera", participantSid: "PA_me", trackSid: "TR_my_camera", quality: "720p", mode: "smooth" });
   });
 
+  // Spec 0107: the Camera tab's preview.
+  it("turns the camera on for the settings' preview only, and off when they close", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    const local = lastRoom().localParticipant;
+
+    await openMenu(user, "Camera");
+    await waitFor(() => expect(local.createTracks).toHaveBeenCalledTimes(1));
+    const preview = local.lastCamera!;
+    expect(preview.attached.length).toBeGreaterThan(0);
+    expect(local.publishTrack).not.toHaveBeenCalled();
+    expect(server.streams).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "Close settings" }));
+    await waitFor(() => expect(preview.stopped).toBe(true));
+    expect(local.publishTrack).not.toHaveBeenCalled();
+  });
+
+  it("sends the preview's camera as is when the camera button is pressed: no second ask", async () => {
+    const server = installFakeApi({ me: member });
+    const user = await readyRoom();
+    const local = lastRoom().localParticipant;
+    await openMenu(user, "Camera");
+    await waitFor(() => expect(local.createTracks).toHaveBeenCalledTimes(1));
+    const preview = local.lastCamera!;
+
+    await turnOnCamera(user);
+
+    await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
+    expect(local.createTracks).toHaveBeenCalledTimes(1);
+    expect(local.publishTrack).toHaveBeenCalledWith(preview, expect.anything());
+    expect(preview.stopped).toBe(false);
+    expect(within(screen.getByRole("dialog", { name: "Settings" })).getByText("LIVE")).toBeInTheDocument();
+  });
+
   it("starts with the camera settings remembered from last time", async () => {
     localStorage.setItem("xove.camera.quality", "480p");
     const server = installFakeApi({ me: member });
@@ -1414,17 +1380,16 @@ describe("room: several people sharing", () => {
     expect(screen.getByText("5 free · share yours")).toBeInTheDocument();
   });
 
-  it("puts a stream back to Auto when it leaves the big player", async () => {
-    localStorage.setItem("xove.watch.quality", "480p");
+  it("asks for Auto for the big player, and keeps a stream on Auto when it leaves it (spec 0107)", async () => {
     await threeSharing();
     const ana = lastRoom().screenPublication("user-3")!;
-    expect(ana.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
+    expect(ana.setVideoQuality).toHaveBeenLastCalledWith(2);
 
     await userEvent.setup().click(within(thumbnails()).getByRole("button", { name: /^Watch Bruno/ }));
 
     expect(ana.setVideoQuality).toHaveBeenLastCalledWith(2);
-    expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).toHaveBeenLastCalledWith({ width: 854, height: 480 });
-    localStorage.clear();
+    expect(lastRoom().screenPublication("user-7")!.setVideoQuality).toHaveBeenLastCalledWith(2);
+    expect(lastRoom().screenPublication("user-7")!.setVideoDimensions).not.toHaveBeenCalled();
   });
 });
 
@@ -1463,9 +1428,6 @@ describe("room: the facecam", () => {
 
     expect(within(facecam()!).getByLabelText("Bruno's shared screen")).toBeInTheDocument();
     expect(facecam()!.contains(within(stage()).getByLabelText("Bruno's camera"))).toBe(false);
-    // The quality menu now picks the camera's quality: it offers 720p at most.
-    expect(offeredQualities()).toEqual(["auto", "720p", "480p"]);
-    fireEvent.keyDown(screen.getByRole("menu", { name: "Settings" }), { key: "Escape" });
 
     await user.click(within(facecam()!).getByRole("button", { name: "Swap views" }));
     expect(within(facecam()!).getByLabelText("Bruno's camera")).toBeInTheDocument();
@@ -1793,7 +1755,7 @@ describe("room: whose sound plays", () => {
 describe("room: my settings for each of my streams", () => {
   afterEach(() => localStorage.clear());
 
-  it("changes the camera's quality live from its menu, apart from the screen's", async () => {
+  it("changes the camera's quality live from the settings, apart from the screen's", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
@@ -1802,7 +1764,7 @@ describe("room: my settings for each of my streams", () => {
     const camera = lastRoom().localParticipant.lastCamera!;
 
     const menu = await openMenu(user, "Camera");
-    expect(menu.queryByRole("menuitemradio", { name: "1080p" })).not.toBeInTheDocument();
+    expect(menu.queryByRole("radio", { name: "1080p" })).not.toBeInTheDocument();
     await pickInMenu(user, "480p", "Camera");
 
     await waitFor(() => {
@@ -1870,8 +1832,8 @@ describe("room: after the review", () => {
     });
 
     // Both changes go out before either answer comes back.
-    fireEvent.click((await openMenu(user, "Screen")).getByRole("menuitemradio", { name: "480p" }));
-    fireEvent.click((await openMenu(user, "Camera")).getByRole("menuitemradio", { name: "480p" }));
+    fireEvent.click((await openMenu(user, "Screen")).getByRole("radio", { name: "480p" }));
+    fireEvent.click((await openMenu(user, "Camera")).getByRole("radio", { name: "480p" }));
 
     await waitFor(() => expect(myLiveStream(server, "camera")?.settings.quality).toBe("480p"));
     await openMenu(user, "Screen");
@@ -2056,6 +2018,32 @@ describe("room: on a phone held upright (spec 0158)", () => {
     // The desktop's activity pill and footer aren't there; the footer's items are in my menu.
     expect(within(header).queryByRole("button", { name: /^Activity:/ })).toBeNull();
     expect(container.querySelector("footer")).toBeNull();
+  });
+
+  // Spec 0107: the settings as a bottom sheet, with only the Camera tab.
+  it("opens the settings from the cog as a bottom sheet over the page, with only Camera", async () => {
+    // A real phone: touch first, small, upright (a narrow desktop window keeps its Screen tab).
+    const real = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      ...real(query),
+      matches: [TOUCH_QUERY, SMALL_QUERY, PORTRAIT_QUERY, NARROW_UPRIGHT_QUERY].includes(query),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const user = userEvent.setup();
+
+    await user.click(within(stage()).getByRole("button", { name: "Settings" }));
+
+    const sheet = screen.getByRole("dialog", { name: "Settings" });
+    expect(sheet).toHaveAttribute("data-variant", "sheet");
+    expect(stage()).not.toContainElement(sheet);
+    expect(within(sheet).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Camera"]);
+    await user.click(within(sheet).getByRole("button", { name: "Close settings" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
   });
 
   it("puts the footer's items at the end of my account menu", async () => {
