@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
-import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, Sharer, StreamKind } from "../types";
+import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, MediaTrack, Sharer, StreamKind } from "../types";
 import type { LiveStream, RoomSeatsState } from "../api/types";
 import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
@@ -26,14 +26,15 @@ export type RoomSession = {
   /** How I send my screen and my camera (remembered); changing them while live applies at once. */
   prefs: Record<StreamKind, SharePrefs>;
   setPrefs: (kind: StreamKind, prefs: SharePrefs) => void;
-  /** A screen or camera I picked but haven't started sending: the setup window shows it. */
-  pending: Capture | null;
-  /** Starts sending the picked screen or camera with these settings. */
-  confirm: (prefs: SharePrefs) => void;
-  /** Drops the picked screen or camera without sending it. */
-  cancelPending: () => void;
-  /** Opens the browser's picker (screen) or asks for the camera. */
+  /**
+   * Opens the browser's picker (screen) or asks for the camera, and sends the pick at once
+   * with the remembered settings (spec 0107). A closed picker changes nothing.
+   */
   start: (kind: StreamKind) => void;
+  /** My camera, captured for the settings panel's preview but not sent. */
+  cameraPreview: MediaTrack | undefined;
+  /** Turns the camera on for the preview only, or off again. */
+  previewCamera: (on: boolean) => void;
   stop: (kind: StreamKind) => void;
   /** Opens the browser's picker again and swaps what my screen shares, without stopping it (spec 0098). */
   changeScreen: () => void;
@@ -270,13 +271,16 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   const [prefs, setPrefsState] = useState<Record<StreamKind, SharePrefs>>(loadPrefs);
   const [noSound, setNoSound] = useState(false);
 
-  const [pending, setPendingState] = useState<Capture | null>(null);
-  // Also kept in a ref, so leaving the page can stop a capture that was never sent.
-  const pendingRef = useRef<Capture | null>(null);
-  const setPending = useCallback((capture: Capture | null) => {
-    pendingRef.current = capture;
-    setPendingState(capture);
+  // The camera captured for the settings panel's preview, not sent (spec 0107). Also kept
+  // in a ref, so the camera button can send it as is, and leaving the page can stop it.
+  const [preview, setPreviewState] = useState<Capture | null>(null);
+  const previewRef = useRef<Capture | null>(null);
+  const setPreview = useCallback((capture: Capture | null) => {
+    previewRef.current = capture;
+    setPreviewState(capture);
   }, []);
+  // Whether the panel still wants it: the camera may answer after the panel closed.
+  const wantPreview = useRef(false);
 
   // The settings the API last accepted for each of my streams: what a refused change goes back to.
   const accepted = useRef<Record<StreamKind, SharePrefs>>(prefs);
@@ -286,46 +290,85 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   const changes = useRef<Promise<void>>(Promise.resolve());
   const latestChange = useRef<Record<StreamKind, number>>({ screen: 0, camera: 0 });
 
-  // Step 1, from the click: the browser's picker, or the camera. Captured, not sent.
+  // Sends a capture with these settings, then tells the API.
+  const send = useCallback(
+    async (capture: Capture, chosen: SharePrefs) => {
+      const kind = capture.kind;
+      const sending = await lk.publishCapture(capture, chosen);
+      if (!sending) return;
+      const { hasSound, ...connection } = sending;
+      const ok = (await api.start(kind, connection, chosen)) === "ok";
+      if (!ok) {
+        await lk.stop(kind);
+        return;
+      }
+      accepted.current = { ...accepted.current, [kind]: chosen };
+      if (kind === "screen") setNoSound(!hasSound);
+    },
+    [lk, api],
+  );
+
+  // One click (spec 0107): the browser's picker, or the camera, sent at once with the
+  // remembered settings. A camera already on for the preview is sent as is.
   const start = useCallback(
     async (kind: StreamKind) => {
       markStarting(kind, true);
       try {
-        const capture = await lk.capture(kind, prefs[kind].mode);
-        if (capture) setPending(capture);
+        let capture: Capture | null = null;
+        if (kind === "camera" && previewRef.current) {
+          capture = previewRef.current;
+          wantPreview.current = false;
+          setPreview(null);
+        }
+        capture ??= await lk.capture(kind, prefs[kind].mode);
+        if (capture) await send(capture, prefs[kind]);
       } finally {
         markStarting(kind, false);
       }
     },
-    [lk, prefs, setPending],
+    [lk, prefs, send, setPreview],
   );
 
-  // Step 2, from the setup window: send it with the chosen settings, then tell the API.
-  const confirm = useCallback(
-    async (chosen: SharePrefs) => {
-      const capture = pending;
-      if (!capture) return;
-      const kind = capture.kind;
-      setPending(null);
-      setPrefsState((prev) => ({ ...prev, [kind]: chosen }));
-      savePrefs(kind, chosen);
-      markStarting(kind, true);
-      try {
-        const sending = await lk.publishCapture(capture, chosen);
-        if (!sending) return;
-        const { hasSound, ...connection } = sending;
-        const ok = (await api.start(kind, connection, chosen)) === "ok";
-        if (!ok) {
-          await lk.stop(kind);
-          return;
-        }
-        accepted.current = { ...accepted.current, [kind]: chosen };
-        if (kind === "screen") setNoSound(!hasSound);
-      } finally {
-        markStarting(kind, false);
+  const previewCamera = useCallback(
+    async (on: boolean) => {
+      wantPreview.current = on;
+      if (!on) {
+        if (previewRef.current) lk.discardCapture(previewRef.current);
+        setPreview(null);
+        return;
       }
+      if (previewRef.current || lk.publishing.camera) return;
+      const capture = await lk.capture("camera", prefs.camera.mode);
+      if (!capture) return;
+      // Closed (or sent) while the camera was answering: don't leave it on.
+      if (!wantPreview.current || previewRef.current) {
+        lk.discardCapture(capture);
+        return;
+      }
+      setPreview(capture);
     },
-    [lk, api, pending, setPending],
+    [lk, prefs, setPreview],
+  );
+
+  // The camera going away during the preview (unplugged, or the browser's own control).
+  useEffect(() => {
+    const track = preview?.video.mediaStreamTrack;
+    if (!preview || !track) return;
+    const ended = () => {
+      lk.discardCapture(preview);
+      setPreview(null);
+    };
+    track.addEventListener("ended", ended);
+    return () => track.removeEventListener("ended", ended);
+  }, [preview, lk, setPreview]);
+
+  // Leaving the page with the preview on: nothing was sent, so stop the camera.
+  const discardCapture = lk.discardCapture;
+  useEffect(
+    () => () => {
+      if (previewRef.current) discardCapture(previewRef.current);
+    },
+    [discardCapture],
   );
 
   // "Change window": the same stream, another pick. Its sound may come or go.
@@ -339,34 +382,6 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
       setChanging(false);
     }
   }, [lk, prefs]);
-
-  const cancelPending = useCallback(() => {
-    if (pending) lk.discardCapture(pending);
-    setPending(null);
-  }, [lk, pending, setPending]);
-
-  // The browser's own "Stop sharing" bar (or the camera going away) while the setup
-  // window is open: stop the sound as well, and close the window.
-  useEffect(() => {
-    const capture = pending;
-    const track = capture?.video.mediaStreamTrack;
-    if (!capture || !track) return;
-    const ended = () => {
-      lk.discardCapture(capture);
-      setPending(null);
-    };
-    track.addEventListener("ended", ended);
-    return () => track.removeEventListener("ended", ended);
-  }, [pending, lk, setPending]);
-
-  // Leaving the page with the setup window open: nothing was sent, so stop capturing.
-  const discardCapture = lk.discardCapture;
-  useEffect(
-    () => () => {
-      if (pendingRef.current) discardCapture(pendingRef.current);
-    },
-    [discardCapture],
-  );
 
   // While live, a new quality or mode applies at once: LiveKit right away, and the
   // API, which tells every viewer's app on its next poll. Changes go one after the
@@ -439,10 +454,9 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     free: api.state?.free ?? 6,
     prefs,
     setPrefs,
-    pending,
-    confirm: (chosen: SharePrefs) => void confirm(chosen),
-    cancelPending,
     start: (kind: StreamKind) => void start(kind),
+    cameraPreview: preview?.video,
+    previewCamera: (on: boolean) => void previewCamera(on),
     stop: (kind: StreamKind) => void stop(kind),
     changeScreen: () => void changeScreen(),
     cameras: lk.cameras,

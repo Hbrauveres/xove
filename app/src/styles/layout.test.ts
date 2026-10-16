@@ -71,19 +71,6 @@ describe("the room on a phone sideways, and tablets (spec 0160)", () => {
   });
 });
 
-describe("the setup window sideways (spec 0160, FR-15)", () => {
-  const setup = sheet("components/share/ShareSetup.module.css");
-
-  it("puts the preview on the left and the rest on the right on a short, wide screen", () => {
-    const at = setup.indexOf("@media (orientation: landscape) and (max-height: 500px)");
-    expect(at).toBeGreaterThanOrEqual(0);
-    const block = setup.slice(at);
-    expect(block).toMatch(/\.window \{[^}]*display:\s*grid/);
-    expect(block).toMatch(/\.preview \{[^}]*grid-column:\s*1/);
-    expect(block).toMatch(/\.window > \* \{[^}]*grid-column:\s*2/);
-  });
-});
-
 describe("no pull-to-refresh in the room", () => {
   it("turns it off only while the room is on the page, so a drag down (the volume) never reloads", () => {
     const global = sheet("styles/global.css");

@@ -9,7 +9,6 @@ import { PeopleButton } from "../components/room/PeopleButton";
 import { FooterItems, RoomFooter } from "../components/room/RoomFooter";
 import { RoomHeader } from "../components/room/RoomHeader";
 import { WaitingRoom } from "../components/room/WaitingRoom";
-import { ShareSetup } from "../components/share/ShareSetup";
 import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
 import { Stage } from "../components/stage/Stage";
@@ -222,18 +221,6 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
           <p className={`${styles.error} ${styles.errorOver}`} role="alert">
             {session.error}
           </p>,
-          overPage,
-        )}
-      {session.pending &&
-        createPortal(
-          <ShareSetup
-            kind={session.pending.kind}
-            preview={session.pending.video}
-            initial={session.prefs[session.pending.kind]}
-            hasSound={session.pending.audio !== undefined}
-            onStart={session.confirm}
-            onCancel={session.cancelPending}
-          />,
           overPage,
         )}
     </div>
