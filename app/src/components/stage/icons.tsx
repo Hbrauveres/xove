@@ -84,3 +84,23 @@ export function CogIcon() {
     </Icon>
   );
 }
+
+/** The sound plays: a speaker with its waves. */
+export function VolumeIcon() {
+  return (
+    <Icon name="volume">
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5z" />
+      <path d="M13.5 7.5a3.5 3.5 0 010 5M15.5 5.5a6.5 6.5 0 010 9" />
+    </Icon>
+  );
+}
+
+/** Muted, or no sound: the speaker, crossed. */
+export function VolumeOffIcon() {
+  return (
+    <Icon name="volume-off">
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5z" />
+      <path d="M13.5 8l4 4M17.5 8l-4 4" />
+    </Icon>
+  );
+}

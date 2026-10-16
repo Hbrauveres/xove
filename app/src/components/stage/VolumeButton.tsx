@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { WatchPrefs } from "../../media/preferences";
 import { Range } from "../ui/Range";
+import { VolumeIcon, VolumeOffIcon } from "./icons";
 import round from "./RoundButton.module.css";
 import styles from "./VolumeButton.module.css";
 
@@ -81,20 +82,7 @@ export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenCh
             if (hasSound) onChange({ ...prefs, muted: !prefs.muted });
           }}
         >
-          <svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true">
-            <path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor" />
-            {silent ? (
-              <path d="M13 8l4 4M17 8l-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            ) : (
-              <path
-                d="M13 7.5a3.5 3.5 0 0 1 0 5M15 5a7 7 0 0 1 0 10"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            )}
-          </svg>
+          {silent ? <VolumeOffIcon /> : <VolumeIcon />}
         </button>
         <span id={tipId} role="tooltip" className={round.tip}>
           {label}
