@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
 import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, MediaTrack, Sharer, StreamKind } from "../types";
 import type { LiveStream, RoomSeatsState } from "../api/types";
-import { useLiveKitRoom, type Capture } from "./useLiveKitRoom";
+import { useLiveKitRoom, type Capture, type ScreenSurface } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
 import { api as client } from "../api/client";
 
@@ -42,6 +42,8 @@ export type RoomSession = {
   cameras: CameraDevice[];
   cameraId: string | null;
   pickCamera: (deviceId: string) => void;
+  /** What my screen share shows: a window, a tab or the whole screen. */
+  screenSurface?: ScreenSurface;
   /** I'm sharing my screen, but my browser gave no sound with it. */
   noSound: boolean;
   /** False when the API doesn't know I'm in the room (it restarted): enter again. Null until known. */
@@ -350,6 +352,18 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     [lk, prefs, setPreview],
   );
 
+  // Another camera: sent at once while live, remembered either way; a preview restarts with it.
+  const pickCamera = useCallback(
+    async (deviceId: string) => {
+      await lk.pickCamera(deviceId, prefs.camera);
+      if (!previewRef.current) return;
+      lk.discardCapture(previewRef.current);
+      setPreview(null);
+      await previewCamera(true);
+    },
+    [lk, prefs, setPreview, previewCamera],
+  );
+
   // The camera going away during the preview (unplugged, or the browser's own control).
   useEffect(() => {
     const track = preview?.video.mediaStreamTrack;
@@ -461,7 +475,8 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     changeScreen: () => void changeScreen(),
     cameras: lk.cameras,
     cameraId: lk.cameraId,
-    pickCamera: (deviceId: string) => void lk.pickCamera(deviceId, prefs.camera),
+    pickCamera: (deviceId: string) => void pickCamera(deviceId),
+    screenSurface: lk.screenSurface,
     // Only while my screen is actually going out.
     noSound: noSound && myLive.screen && lk.publishing.screen,
     seated,

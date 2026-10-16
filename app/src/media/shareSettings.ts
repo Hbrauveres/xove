@@ -45,6 +45,12 @@ export const MODES: { id: ShareMode; label: string }[] = [
   { id: "sharp", label: "Sharp (text, code)" },
 ];
 
+/** The modes, plain, as the settings show them, with what each keeps in their tooltips (spec 0107). */
+export const MODE_OPTIONS: { value: ShareMode; label: string; title: string }[] = [
+  { value: "smooth", label: "Smooth", title: "Keeps motion fluid when the connection is tight: games, videos" },
+  { value: "sharp", label: "Sharp", title: "Keeps detail sharp when the connection is tight: text, code" },
+];
+
 /** The content hint for a mode: how the browser encodes the screen. */
 export const contentHintOf = (mode: ShareMode) => (mode === "smooth" ? "motion" : "detail");
 

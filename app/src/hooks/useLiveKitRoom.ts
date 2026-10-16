@@ -74,6 +74,9 @@ async function captureScreen(room: Room, mode: ShareMode): Promise<(LocalVideoTr
 
 export type RoomPerson = { identity: string; name: string };
 
+/** What a screen share shows, as the browser says (`displaySurface`). */
+export type ScreenSurface = "monitor" | "window" | "browser";
+
 /** A stream that just started: where it comes from, and whether the browser gave its sound. */
 export type StartedStream = SharingConnection & { hasSound: boolean };
 
@@ -107,6 +110,8 @@ export type LiveKitRoom = {
   publishing: Record<StreamKind, boolean>;
   /** This browser's own screen and camera, for the previews. */
   local: Partial<Record<StreamKind, MediaTrack>>;
+  /** What my screen share shows: a window, a tab ("browser") or the whole screen ("monitor"). */
+  screenSurface?: ScreenSurface;
   /** Joins and leaves seen since this page connected. */
   presence: ActivityEvent[];
   error: string | null;
@@ -196,6 +201,7 @@ export function useLiveKitRoom(): LiveKitRoom {
   const [remote, setRemote] = useState<Record<string, RemoteMedia>>({});
   const [publishing, setPublishing] = useState<Record<StreamKind, boolean>>({ screen: false, camera: false });
   const [local, setLocal] = useState<Partial<Record<StreamKind, MediaTrack>>>({});
+  const [screenSurface, setScreenSurface] = useState<ScreenSurface | undefined>(undefined);
   const [presence, setPresence] = useState<ActivityEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -230,7 +236,10 @@ export function useLiveKitRoom(): LiveKitRoom {
     const me = room.localParticipant;
     const camera = me.getTrackPublication(Track.Source.Camera)?.track;
     setPublishing({ screen: me.isScreenShareEnabled, camera: Boolean(camera) });
-    setLocal({ screen: me.getTrackPublication(Track.Source.ScreenShare)?.track, camera });
+    const screen = me.getTrackPublication(Track.Source.ScreenShare)?.track;
+    setLocal({ screen, camera });
+    const surface = (screen?.mediaStreamTrack.getSettings?.() as { displaySurface?: string } | undefined)?.displaySurface;
+    setScreenSurface(surface === "monitor" || surface === "window" || surface === "browser" ? surface : undefined);
   }, []);
 
   useEffect(() => {
@@ -556,6 +565,7 @@ export function useLiveKitRoom(): LiveKitRoom {
     remote,
     publishing,
     local,
+    screenSurface,
     presence,
     error,
     capture,
