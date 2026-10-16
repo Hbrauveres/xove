@@ -11,9 +11,47 @@
 }
 
 .buttons {
+  --gap: 10px;
   display: flex;
-  gap: 12px;
+  gap: var(--gap);
   pointer-events: auto;
+}
+
+/*
+ * A round button that comes and goes (spec 0106): its width and its gap open or close in
+ * 220 ms while it fades (in: 160 ms, after 80 ms; out: 140 ms), so its neighbours slide.
+ */
+.slot {
+  display: flex;
+  transition:
+    width 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 140ms ease;
+}
+
+.slot[data-slot="entering"][data-open] {
+  transition:
+    width 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 160ms ease 80ms;
+}
+
+.slot:not([data-open]) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slot[data-side="start"]:not([data-open]) {
+  margin-inline-end: calc(-1 * var(--gap));
+}
+
+.slot[data-side="end"]:not([data-open]) {
+  margin-inline-start: calc(-1 * var(--gap));
+}
+
+.slotInner {
+  display: flex;
+  width: max-content;
 }
 
 /* One button with its tooltip and menu, which open above it. */
@@ -24,6 +62,6 @@
 
 @media (max-width: 520px) {
   .buttons {
-    gap: 8px;
+    --gap: 8px;
   }
 }

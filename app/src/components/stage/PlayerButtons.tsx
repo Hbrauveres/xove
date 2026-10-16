@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { usePinnedRow } from "../../hooks/usePinnedRow";
 import type { SharePrefs } from "../../media/preferences";
 import { CAMERA_QUALITIES, MODES, SHARE_QUALITIES } from "../../media/shareSettings";
 import type { CameraDevice, StreamKind } from "../../types";
+import { ButtonSlot } from "./ButtonSlot";
 import { CameraOffIcon, CameraOnIcon, ScreenOffIcon, ScreenOnIcon, ScreenShareIcon } from "./icons";
 import { MenuGroup, MenuItem, MenuNote, MenuRadio, MenuSeparator, PlayerMenu } from "./PlayerMenu";
 import round from "./RoundButton.module.css";
@@ -76,15 +78,22 @@ export function PlayerButtons(props: Props) {
     onMenuChange?.(open !== null);
   }, [open, onMenuChange]);
 
+  // A button that comes or goes never moves the one under the pointer (spec 0106).
+  const row = usePinnedRow<HTMLDivElement>();
+
   const kinds: StreamKind[] = canShareScreen ? ["screen", "camera"] : ["camera"];
   return (
     <div className={styles.row}>
-      <div className={styles.buttons}>
-        {before}
+      <div className={styles.buttons} ref={row.ref}>
+        <ButtonSlot shown={Boolean(before)} side="start" onChange={row.hold}>
+          {before}
+        </ButtonSlot>
         {kinds.map((kind) => (
           <StreamButton key={kind} kind={kind} {...props} open={open === kind} onOpen={(o) => show(o ? kind : null)} />
         ))}
-        {after}
+        <ButtonSlot shown={Boolean(after)} side="end" onChange={row.hold}>
+          {after}
+        </ButtonSlot>
       </div>
     </div>
   );
