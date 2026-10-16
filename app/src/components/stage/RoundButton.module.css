@@ -10,7 +10,7 @@
   border-radius: 999px;
   background: rgba(10, 10, 11, 0.72);
   backdrop-filter: blur(8px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   color: var(--text);
 }
 
@@ -32,6 +32,17 @@
   outline: none;
 }
 
+/* Pointed at, a glass pill lightens (as in the design); a live one stays as it is. */
+.pill {
+  transition: background 120ms ease;
+}
+
+@media (hover: hover) {
+  .pill:not(.live):not(.disabled):hover {
+    background: rgba(40, 40, 44, 0.85);
+  }
+}
+
 .main {
   width: 48px;
   border-radius: 999px;
@@ -43,24 +54,10 @@
   border-radius: 0 999px 999px 0;
 }
 
-.main:hover,
-.main:focus-visible,
-.arrow:hover,
-.arrow:focus-visible {
-  background: rgba(255, 255, 255, 0.12);
-}
-
 /* Live: the pill lights up. */
 .live {
   background: var(--accent);
   color: var(--accent-ink);
-}
-
-.live .main:hover,
-.live .main:focus-visible,
-.live .arrow:hover,
-.live .arrow:focus-visible {
-  background: rgba(0, 0, 0, 0.12);
 }
 
 /* Can't be used right now (a full room, no sound): faded, and says why in its tooltip. */
@@ -70,10 +67,6 @@
 
 .main[aria-disabled="true"] {
   cursor: not-allowed;
-}
-
-.main[aria-disabled="true"]:hover {
-  background: transparent;
 }
 
 .tip {
@@ -105,18 +98,44 @@
   opacity: 0;
 }
 
-@media (max-width: 520px) {
-  .pill {
-    height: 42px;
-  }
+/* The phone held upright (spec 0106): 44 px. */
+:global([data-layout="phone"]) .pill {
+  height: 44px;
+}
 
-  .main {
-    width: 42px;
-  }
+:global([data-layout="phone"]) .main {
+  width: 44px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tip {
+  .tip,
+  .pill {
     transition: none;
   }
+}
+
+/* Screen off (spec 0106): the crossed monitor at rest; "share" (a screen with an arrow up)
+   while the button is pointed at or focused, so it says what a click does. */
+.iconRest,
+.iconHover {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  line-height: 0;
+}
+
+.iconHover {
+  display: none;
+}
+
+/* Unavailable (a full room), it keeps the crossed monitor: a click wouldn't share. */
+.main:not([aria-disabled="true"]):hover .iconRest,
+.main:not([aria-disabled="true"]):focus-visible .iconRest {
+  display: none;
+}
+
+.main:not([aria-disabled="true"]):hover .iconHover,
+.main:not([aria-disabled="true"]):focus-visible .iconHover {
+  display: grid;
 }

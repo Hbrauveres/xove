@@ -384,7 +384,7 @@ describe("room: sharing", () => {
     const share = within(controls()).getByRole("button", { name: /share your screen/i });
     await waitFor(() => expect(share).toHaveAttribute("aria-disabled", "true"));
     expect(share).toHaveAccessibleDescription(expect.stringMatching(/6 streams are live/i));
-    expect(within(controls()).getByRole("button", { name: /turn on camera/i })).toHaveAttribute("aria-disabled", "true");
+    expect(within(controls()).getByRole("button", { name: /turn on your camera/i })).toHaveAttribute("aria-disabled", "true");
 
     act(() => {
       server.streams = server.streams.slice(1);
@@ -842,7 +842,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
 
     expect(screen.queryByRole("region", { name: /screen sharing/i })).not.toBeInTheDocument();
     const share = within(stage()).getByRole("button", { name: "Share your screen" });
-    expect(within(stage()).getByRole("button", { name: "Turn on camera" })).toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "Turn on your camera" })).toBeInTheDocument();
     expect(share.closest("[data-chrome]")).toBeNull();
     expect(screen.queryByRole("button", { name: /share my screen/i })).not.toBeInTheDocument();
   });
@@ -856,7 +856,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
         .getAllByRole("button")
         .map((b) => b.getAttribute("aria-label"))
         .filter((name) => name !== "Fullscreen" && name !== "Exit fullscreen" && !name?.startsWith("Watch "));
-    expect(row()).toEqual(["Share your screen", "Turn on camera"]);
+    expect(row()).toEqual(["Share your screen", "Turn on your camera"]);
 
     act(() => {
       server.streams = [someoneSharing("Bruno Lima", 7)];
@@ -867,7 +867,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
     });
     await screen.findByLabelText("Bruno's shared screen");
 
-    expect(row()).toEqual(["Mute", "Share your screen", "Turn on camera", "Settings"]);
+    expect(row()).toEqual(["Mute", "Share your screen", "Turn on your camera", "Settings"]);
   });
 
   it("fade with the player's bars over a stream", async () => {
@@ -1064,7 +1064,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     await startSharing(user);
     const started = myLiveStream(server);
     const video = local.screens[0].track;
-    expect(within(stage()).getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription(
+    expect(within(stage()).getByRole("button", { name: "Stop sharing your screen" })).toHaveAccessibleDescription(
       expect.stringMatching(/no sound is being shared/i),
     );
 
@@ -1082,7 +1082,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     expect(local.screens).toHaveLength(1);
     // The new pick has sound: it's sent, and the badge goes.
     await waitFor(() =>
-      expect(within(stage()).getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription("Stop sharing"),
+      expect(within(stage()).getByRole("button", { name: "Stop sharing your screen" })).toHaveAccessibleDescription("Stop sharing your screen"),
     );
     expect(local.screenAudio?.track.source).toBe("screen_share_audio");
   });
@@ -1104,7 +1104,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
   it("switches my camera from its menu without stopping it", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
     await user.click(within(setup).getByRole("button", { name: /start camera/i }));
     await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
@@ -1372,12 +1372,12 @@ describe("room: my camera", () => {
 
   const cameraWindow = () => screen.findByRole("dialog", { name: /turn on your camera/i });
 
-  /** Clicks "Turn on camera" and starts it from the setup window. */
+  /** Clicks "Turn on your camera" and starts it from the setup window. */
   async function turnOnCamera(user: User) {
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await cameraWindow();
     await user.click(within(setup).getByRole("button", { name: /start camera/i }));
-    await waitFor(() => expect(within(controls()).getByRole("button", { name: /turn off camera/i })).toBeInTheDocument());
+    await waitFor(() => expect(within(controls()).getByRole("button", { name: /turn off your camera/i })).toBeInTheDocument());
   }
 
   // AC-3
@@ -1387,7 +1387,7 @@ describe("room: my camera", () => {
     const local = lastRoom().localParticipant;
     expect(local.createTracks).not.toHaveBeenCalled();
 
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await cameraWindow();
 
     expect(local.createTracks).toHaveBeenCalledTimes(1);
@@ -1400,7 +1400,7 @@ describe("room: my camera", () => {
   it("offers 720p and 480p, starts at 720p, and sends the camera with its settings", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await cameraWindow();
     const quality = within(setup).getByLabelText("Send quality") as HTMLSelectElement;
 
@@ -1440,7 +1440,7 @@ describe("room: my camera", () => {
     const local = lastRoom().localParticipant;
     const camera = local.lastCamera!;
 
-    await user.click(within(controls()).getByRole("button", { name: /turn off camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn off your camera/i }));
 
     await waitFor(() => {
       expect(myLiveStream(server, "camera")).toBeUndefined();
@@ -1455,7 +1455,7 @@ describe("room: my camera", () => {
     const user = await readyRoom();
     lastRoom().localParticipant.nextCamera = "NotAllowedError";
 
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/didn't allow the camera/i);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -1467,7 +1467,7 @@ describe("room: my camera", () => {
     const user = await readyRoom();
     lastRoom().localParticipant.nextCamera = "NotFoundError";
 
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("No camera found.");
   });
@@ -1644,7 +1644,7 @@ describe("room: the facecam", () => {
     installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
     await user.click(within(setup).getByRole("button", { name: /start camera/i }));
 
@@ -1944,7 +1944,7 @@ describe("room: my settings for each of my streams", () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
     await user.click(within(setup).getByRole("button", { name: /start camera/i }));
     await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());
@@ -2011,7 +2011,7 @@ describe("room: after the review", () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();
     await startSharing(user);
-    await user.click(within(controls()).getByRole("button", { name: /turn on camera/i }));
+    await user.click(within(controls()).getByRole("button", { name: /turn on your camera/i }));
     const setup = await screen.findByRole("dialog", { name: /turn on your camera/i });
     await user.click(within(setup).getByRole("button", { name: /start camera/i }));
     await waitFor(() => expect(myLiveStream(server, "camera")).toBeDefined());

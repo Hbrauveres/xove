@@ -150,3 +150,18 @@ describe("volume button (spec 0101)", () => {
     expect(slider()).toBeNull();
   });
 });
+
+describe("the volume button's icon (spec 0106)", () => {
+  const icon = () => document.querySelector("svg[data-icon]")?.getAttribute("data-icon");
+
+  it("is a speaker while the sound plays, and a crossed speaker while it's muted or there's none", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    expect(icon()).toBe("volume");
+
+    await user.click(screen.getByRole("button", { name: "Mute" }));
+
+    expect(icon()).toBe("volume-off");
+  });
+});
+

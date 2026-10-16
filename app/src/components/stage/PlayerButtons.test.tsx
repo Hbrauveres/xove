@@ -59,7 +59,7 @@ describe("stream buttons: off and live", () => {
   it("shows a screen and a camera button, off, each saying what a click does", () => {
     setup();
     const share = screen.getByRole("button", { name: "Share your screen" });
-    const camera = screen.getByRole("button", { name: "Turn on camera" });
+    const camera = screen.getByRole("button", { name: "Turn on your camera" });
     expect(share).toHaveAttribute("aria-pressed", "false");
     expect(camera).toHaveAttribute("aria-pressed", "false");
     expect(share).toHaveAccessibleDescription("Share your screen");
@@ -69,20 +69,20 @@ describe("stream buttons: off and live", () => {
   it("lights a live stream's button, which stops it, and gives it an arrow", async () => {
     const { user, onStart, onStop } = setup({ mine: { screen: true, camera: false } });
 
-    const stop = screen.getByRole("button", { name: "Stop sharing" });
+    const stop = screen.getByRole("button", { name: "Stop sharing your screen" });
     expect(stop).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Screen options" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Camera options" })).not.toBeInTheDocument();
 
     await user.click(stop);
-    await user.click(screen.getByRole("button", { name: "Turn on camera" }));
+    await user.click(screen.getByRole("button", { name: "Turn on your camera" }));
     expect(onStop).toHaveBeenCalledWith("screen");
     expect(onStart).toHaveBeenCalledWith("camera");
   });
 
   it("names the camera's stop", () => {
     setup({ mine: { screen: false, camera: true } });
-    expect(screen.getByRole("button", { name: "Turn off camera" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Turn off your camera" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 
@@ -95,7 +95,7 @@ describe("player buttons: the row (spec 0101)", () => {
     expect(screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)).toEqual([
       "Volume",
       "Share your screen",
-      "Turn on camera",
+      "Turn on your camera",
       "Settings",
     ]);
   });
@@ -147,7 +147,7 @@ describe("stream buttons: the menus", () => {
     await user.click(within(menu).getByRole("menuitemradio", { name: "Integrated Webcam" }));
     expect(onPickCamera).toHaveBeenCalledWith("cam-2");
 
-    await user.click(within(menu).getByRole("menuitem", { name: "Turn off camera" }));
+    await user.click(within(menu).getByRole("menuitem", { name: "Turn off your camera" }));
     expect(onStop).toHaveBeenCalledWith("camera");
   });
 
@@ -189,14 +189,25 @@ describe("stream buttons: when they can't be used", () => {
   it("disables the off buttons of a full room, saying why, and keeps the live ones", async () => {
     const { user, onStart, onStop } = setup({ mine: { screen: true, camera: false }, free: 0 });
 
-    const camera = screen.getByRole("button", { name: "Turn on camera" });
+    const camera = screen.getByRole("button", { name: "Turn on your camera" });
     expect(camera).toHaveAttribute("aria-disabled", "true");
     expect(camera).toHaveAccessibleDescription(FULL_ROOM);
     await user.click(camera);
     expect(onStart).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    await user.click(screen.getByRole("button", { name: "Stop sharing your screen" }));
     expect(onStop).toHaveBeenCalledWith("screen");
+  });
+
+  it("draws an unavailable button faded, with its crossed icon only", () => {
+    setup({ free: 0 });
+
+    for (const [name, icon] of [["Turn on your camera", "camera-off"], ["Share your screen", "screen-off"]]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.parentElement?.className).toMatch(/disabled/);
+      expect(button.querySelector(`svg[data-icon="${icon}"]`)).toBeInTheDocument();
+      expect(button.querySelector('svg[data-icon$="-on"]')).not.toBeInTheDocument();
+    }
   });
 
   it("waits while a request is on its way, in the menus too", async () => {
@@ -204,7 +215,7 @@ describe("stream buttons: when they can't be used", () => {
       mine: { screen: true, camera: true },
       busy: true,
     });
-    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
+    await user.click(screen.getByRole("button", { name: "Stop sharing your screen" }));
     expect(onStop).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Screen options" }));
@@ -231,8 +242,8 @@ describe("stream buttons: when they can't be used", () => {
 
     // No badge on the button (spec 0101): the tooltip and the menu say it.
     expect(screen.queryByRole("img", { name: "No sound" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription(
-      `Stop sharing. ${NO_SOUND}`,
+    expect(screen.getByRole("button", { name: "Stop sharing your screen" })).toHaveAccessibleDescription(
+      `Stop sharing your screen. ${NO_SOUND}`,
     );
     await user.click(screen.getByRole("button", { name: "Screen options" }));
     expect(within(screen.getByRole("menu")).getByText(NO_SOUND)).toBeInTheDocument();
@@ -242,7 +253,7 @@ describe("stream buttons: when they can't be used", () => {
   it("has no screen button where the browser can't share a screen", () => {
     setup({ canShareScreen: false });
     expect(screen.queryByRole("button", { name: "Share your screen" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Turn on camera" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Turn on your camera" })).toBeInTheDocument();
   });
 });
 
@@ -251,7 +262,7 @@ describe("stream buttons: keyboard", () => {
     const { user, onPrefsChange } = setup({ mine: { screen: true, camera: false } });
 
     await user.tab();
-    expect(screen.getByRole("button", { name: "Stop sharing" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Stop sharing your screen" })).toHaveFocus();
     await user.tab();
     const arrow = screen.getByRole("button", { name: "Screen options" });
     expect(arrow).toHaveFocus();
@@ -271,3 +282,33 @@ describe("stream buttons: keyboard", () => {
     expect(arrow).toHaveFocus();
   });
 });
+
+describe("icons: one state system (spec 0106)", () => {
+  const icon = (button: HTMLElement) => [...button.querySelectorAll("svg[data-icon]")].map((s) => s.getAttribute("data-icon"));
+
+  it("shows a crossed monitor while not sharing, with the share icon for hover and focus", () => {
+    setup();
+
+    const share = screen.getByRole("button", { name: "Share your screen" });
+
+    expect(icon(share)).toEqual(["screen-off", "screen-share"]);
+  });
+
+  it("shows the plain monitor while sharing, and says it stops sharing your screen", () => {
+    setup({ mine: { screen: true, camera: false } });
+
+    const stop = screen.getByRole("button", { name: "Stop sharing your screen" });
+
+    expect(icon(stop)).toEqual(["screen-on"]);
+  });
+
+  it("crosses the camera while it's off, and shows it plain while it's on", () => {
+    const { rerender } = setup();
+    expect(icon(screen.getByRole("button", { name: "Turn on your camera" }))).toEqual(["camera-off"]);
+
+    rerender({ mine: { screen: false, camera: true } });
+
+    expect(icon(screen.getByRole("button", { name: "Turn off your camera" }))).toEqual(["camera-on"]);
+  });
+});
+

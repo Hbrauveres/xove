@@ -22,9 +22,9 @@ Everything is in `app/src`:
 | `api/` | The HTTP client (`client.ts`) and the API's types (`types.ts`): one function per endpoint, the CSRF header, errors as `ApiError` |
 | `auth/` | Who is signed in (`AuthProvider`, which asks `GET /api/me` once and on demand) and the route guards (`guards.tsx`) |
 | `pages/` | One component per route: `HomePage`, `RequestAccessPage`, `RoomPage`, `AdminPage`, and `InstallPage` |
-| `hooks/` | The room's state and the browser's: the seat and the queue (`useRoomSeat`), the streams (`useStreams`), the LiveKit connection (`useLiveKitRoom`), both put together for the room (`useRoomSession`), who's on the stage (`useStagePick`), the layout (`useRoomLayout`), swipes (`useStageSwipe`), the video's shape (`useVideoShape`), and small ones (`useElapsed`, `useFullscreenElement`, `useInstalled`) |
+| `hooks/` | The room's state and the browser's: the seat and the queue (`useRoomSeat`), the streams (`useStreams`), the LiveKit connection (`useLiveKitRoom`), both put together for the room (`useRoomSession`), who's on the stage (`useStagePick`), the layout (`useRoomLayout`), swipes (`useStageSwipe`), the video's shape (`useVideoShape`), the round buttons' row holding the clicked button still (`usePinnedRow`), and small ones (`useElapsed`, `useFullscreenElement`, `useInstalled`) |
 | `media/` | How screens and cameras are sent (`shareSettings.ts`), the ambilight's drawing (`ambilight.ts`), who is big by default (`stagePick.ts`), choices kept in the browser (`preferences.ts`) |
-| `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons and their menus, the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
+| `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons (their icons in `icons.tsx`, the ones that come and go in `ButtonSlot`) and their menus, the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
 | `components/room/` | The room around the stage: header, footer, people, activity (pill, bell, list), account menu, the waiting screen and the seat offer |
 | `components/share/` | The setup window shown before a share starts |
 | `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage` |
