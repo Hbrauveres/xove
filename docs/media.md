@@ -16,14 +16,12 @@ sequenceDiagram
   P->>X: Share my screen
   X->>B: getDisplayMedia (the picker)
   B-->>X: the picked screen, window or tab, with its sound
-  X->>P: the setup window: preview, quality, mode
-  P->>X: Start sharing
   X->>L: publish the video (three layers) and the sound
   X->>A: POST /api/streams (the screen, its connection and track ids)
 ```
 
-1. **The picker.** Xovê opens the browser's picker itself (`getDisplayMedia`) instead of through LiveKit, because `livekit-client` drops the `windowAudio` option. It always captures the best quality, 1080p at 30 fps, so the sharer can raise the quality later without picking again. It can't pick its own tab (that would show the room inside the room). In Chrome, it asks the browser to stay on Xovê after the pick (`CaptureController.setFocusBehavior`), so the sharer sees the setup window instead of jumping to the shared window.
-2. **The setup window** shows a preview and the settings. Nothing is sent until "Start sharing"; closing the picker or the window sends nothing.
+1. **The picker.** Xovê opens the browser's picker itself (`getDisplayMedia`) instead of through LiveKit, because `livekit-client` drops the `windowAudio` option. It always captures the best quality, 1080p at 30 fps, so the sharer can raise the quality later without picking again. It can't pick its own tab (that would show the room inside the room). In Chrome, it asks the browser to stay on Xovê after the pick (`CaptureController.setFocusBehavior`), so the sharer sees that it started and can adjust it right there instead of jumping to the shared window.
+2. **One click.** The pick is sent at once with the settings remembered in this browser (the defaults the first time: 1080p and Smooth for a screen, 720p and Smooth for a camera). Closing the picker leaves everything as it was.
 3. **Publishing** sends the tracks to LiveKit, then tells the API, which lists the stream for everyone. Up to 6 streams are live at once (someone with a screen and a camera uses 2); with 6 live, the start buttons wait: nobody is pushed out. A phone that can't share a screen offers only the camera.
 
 **Which sound comes along:**
@@ -34,19 +32,19 @@ sequenceDiagram
 | A tab | That tab's sound |
 | The whole screen | The system's sound, without Xovê's own (`restrictOwnAudio`), so viewers don't hear their own streams back |
 
-Sound is captured as music: no echo cancellation, no noise suppression, no automatic volume, in stereo, and sent at 128 kbit/s without silence skipping (`dtx: false`, which chops quiet moments). Whether a share has sound depends on the browser and the system: Chrome offers it for a tab, for a window where the system supports it, and for the whole screen on Windows; Firefox and Safari offer none. A screen without sound says so in its button's tooltip and menu, and viewers see a crossed, locked volume button.
+Sound is captured as music: no echo cancellation, no noise suppression, no automatic volume, in stereo, and sent at 128 kbit/s without silence skipping (`dtx: false`, which chops quiet moments). Whether a share has sound depends on the browser and the system: Chrome offers it for a tab, for a window where the system supports it, and for the whole screen on Windows; Firefox and Safari offer none. A screen without sound says so in its button's tooltip (with a mouse, in the settings' Screen tab), and viewers see a crossed, locked volume button.
 
-**While sharing**, the arrow on a stream's button opens its menu:
+**While sharing**, the settings panel (from the cog) has what's shared and Change, the camera list, and each stream's quality and mode; with a mouse, resting on a live button unrolls the same quick access (Change; the camera list):
 
-- **Change window** opens the picker again and swaps the new pick into the same LiveKit track (`replaceTrack`): no setup window, no new stream for the API or the viewers. The sound follows: swapped, added as a new track, or removed.
+- **Change** opens the picker again and swaps the new pick into the same LiveKit track (`replaceTrack`): no new stream for the API or the viewers. The sound follows: swapped, added as a new track, or removed.
 - **A camera list** switches the camera being sent (`restartTrack` on the same track).
-- **Stop**, the lit button or the browser's own "Stop sharing" bar end the stream.
+- **Stop:** the lit button, or the browser's own "Stop sharing" bar, ends the stream.
 
-**Cameras** are asked for only on that click, never with the microphone, and go up to 720p: enough for a face, and it spares the upload of someone sending a screen too. They're sent like a screen, with a 720p and a 480p layer.
+**Cameras** are asked for only on that click, or while the settings' Camera tab is open (a preview only the sharer sees, sent as is if the camera button is pressed then, and stopped when the tab closes), never with the microphone, and go up to 720p: enough for a face, and it spares the upload of someone sending a screen too. They're sent like a screen, with a 720p and a 480p layer.
 
 ## Quality and modes
 
-The sharer picks a quality and a mode in the setup window, and can change both while sharing.
+The sharer picks a quality and a mode in the settings, before sharing or while sharing.
 
 | Quality | Size | Frame rate | Up to |
 | --- | --- | --- | --- |
@@ -59,16 +57,15 @@ The sharer picks a quality and a mode in the setup window, and can change both w
 - **Two modes:**
   - **Smooth** (games, videos; the default): the track is marked as motion (`contentHint`), and when the connection is tight the picture gets softer while the frame rate holds (`maintain-framerate`).
   - **Sharp** (text, code): marked as detail; the picture keeps its detail and the frame rate drops (`maintain-resolution`).
-- **Changing them** from the stream's menu: the sharer's browser applies the new cap and mode right away and tells the API (`POST /api/streams/{kind}/settings`). Every viewer reads the settings with the streams, every 2 seconds, and follows them: its quality menu offers nothing above the cap, and Auto asks for no more than it. Since no viewer asks for the layers above the cap, LiveKit stops sending them (dynacast), and the sharer's upload really drops.
-- **Browsers:** Firefox (no VP9) and Safari send a single layer, so viewers get only the sharer's quality and the quality menu offers nothing lower. In Safari, Sharp behaves like Smooth.
+- **Changing them** while sharing: the sharer's browser applies the new cap and mode right away and tells the API (`POST /api/streams/{kind}/settings`). Every viewer reads the settings with the streams, every 2 seconds, and follows them: Auto asks for no more than the cap. Since no viewer asks for the layers above the cap, LiveKit stops sending them (dynacast), and the sharer's upload really drops.
+- **Browsers:** Firefox (no VP9) and Safari send a single layer, so viewers get only the sharer's quality, with nothing lower to step down to. In Safari, Sharp behaves like Smooth.
 
 ## What a viewer downloads
 
 - **The size it shows.** The room connects with `adaptiveStream`: each video is downloaded at the size it's shown, so previews and the facecam come in small. With `dynacast`, layers nobody watches aren't sent at all.
-- **A fixed quality.** The viewer's quality menu offers Auto (what fits the player and the connection) or a fixed quality from the sharer's down to 480p. A fixed quality asks LiveKit for that layer, so the viewer really downloads less.
+- **Always Auto.** There's no quality to pick while watching: each video comes at the size it's shown, steps down by itself when the connection can't keep up, and never asks for more than the sharer sends.
 - **Sound.** Only the big person's plays. Previews are muted, each with its own volume; a muted preview's sound isn't downloaded at all, and a preview without sound has no speaker. Someone sharing sees their own streams like everyone else, without their sound. The volume button mutes and unmutes to the same level; there's no slider while muted, without sound, or on iPhones and iPads, which ignore a page's volume.
-- **The quality menu** is for the big video; previews and the facecam follow their size.
-- **Remembered.** Each browser keeps its choices in `localStorage`: `xove.share.*` (quality, mode), `xove.camera.*` (quality, mode, device), `xove.watch.*` (quality, volume, muted) and `xove.ambilight.*` (on, brightness).
+- **Remembered.** Each browser keeps its choices in `localStorage`: `xove.share.*` (quality, mode), `xove.camera.*` (quality, mode, device), `xove.watch.*` (volume, muted) and `xove.ambilight.*` (on, brightness).
 
 To see what really happens, open `chrome://webrtc-internals` in the sharer's or a viewer's browser: the codec, frame rate, size, bitrate, and why the quality drops ("cpu": the sharer's computer can't keep up; "bandwidth": the connection can't).
 

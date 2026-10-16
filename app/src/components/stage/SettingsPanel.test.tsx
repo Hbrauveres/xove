@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { SharePrefs } from "../../media/preferences";
 import type { StreamKind } from "../../types";
+import { NO_SOUND } from "./PlayerButtons";
 import { SettingsPanel } from "./SettingsPanel";
 
 const PREFS: Record<StreamKind, SharePrefs> = {
@@ -96,6 +97,11 @@ describe("the settings panel: the Screen tab", () => {
     expect(within(tab).getByText("A window")).toBeInTheDocument();
     await user.click(within(tab).getByRole("button", { name: "Change" }));
     expect(onChangeWindow).toHaveBeenCalledOnce();
+  });
+
+  it("says how to share sound when my screen has none", () => {
+    setup({ mine: { screen: true, camera: false }, noSound: true });
+    expect(within(panel()).getByText(NO_SOUND)).toBeInTheDocument();
   });
 
   it("changes the quality and the mode, with the modes' tooltips", async () => {

@@ -416,6 +416,8 @@ export function Stage({
           ref={frameRef}
           className={styles.frame}
           data-chrome={chrome}
+          // The drawer covers the player's top right: the fullscreen button steps aside (spec 0107).
+          data-drawer-open={(settingsPanel && settingsOpen) || undefined}
           {...(sideways ? {} : gestures)}
           onPointerLeave={leaveChrome}
           onFocus={showChrome}

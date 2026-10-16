@@ -81,8 +81,14 @@ Dark only: Xovê is a room for watching screens, so the chrome stays out of the 
 | `--live` | `#ef4b4b` | LIVE, the live dot, danger buttons |
 | `--ok` | `#3fbf7f` | Connected, the seats bar |
 | `--warn` | `#e0b341` | Reconnecting |
+| `--glass` | `rgba(10, 10, 11, 0.72)` | The round buttons, drop-ups and pickers over the video (with an 8 px blur) |
+| `--panel` | `rgba(18, 18, 20, 0.74)` | The settings panel (with a 22 px blur) |
+| `--panel-line` | `rgba(255, 255, 255, 0.08)` | The panel's border and its tabs' line |
+| `--sel-bg` | `var(--surface-raised)` | The dark pill of a chosen option, and buttons in a row (Change) |
+| `--sel-shadow` | `0 1px 2px rgba(0, 0, 0, 0.4)` | Its shadow |
+| `--sel-hover` | `#26262a` | A button in a row, pointed at |
 
-- **Pure black `#000` only behind the video:** the stage, the previews, the facecam and the share preview, as the picture's own frame. Nowhere else.
+- **Pure black `#000` only behind the video:** the stage, the previews, the facecam and the camera's preview in the settings, as the picture's own frame. Nowhere else.
 - **Red is rare on purpose:** it means the brand or something live. Sliders are white and the switch is grey until it's on.
 - **Avatars** without a photo get the person's own hue: `hsl(<hue> 42% 38%)` with a white initial.
 - **The empty stage's colour bars** keep their colours, at full strength, and the ambilight glows from them.
@@ -136,6 +142,13 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 | Switch knob | 180 ms | ease |
 | Stage dots | 180 ms | ease |
 | Dropdown unroll and roll back | 260 ms, by its height | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| The settings panel sliding in and out (the drawer from the right, the sheet from the bottom) | 260 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| The settings' tab marker; a segmented control's pill | 200 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| A drop-up: the pause before it unrolls | 120 ms resting on the button | — |
+| …its fade and 6 px slide up | 140 ms and 180 ms; a slip outside shorter than 300 ms doesn't close it | ease, `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| A picker's chevron turning | 200 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| The soft light behind an option pointed at | 160 ms | ease |
+| The player moving up for the settings sheet (upright full view) and back | 260 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | A new activity in the pill | 350 ms | ease |
 | Facecam buttons fading | 250 ms | ease |
 | The stage resizing to a new picture | 350 ms | ease |
@@ -157,12 +170,53 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 - **One state system, on every round button:** **sending** (your screen, your camera) is a red pill (`--accent`) with the plain icon in deep red (`--accent-ink`); **off** is dark glass with the crossed icon in white; **unavailable** is 45% opacity, with the reason in the tooltip. Red means live, nothing else.
 - **The icons** (`components/stage/icons.tsx`): the screen is a crossed monitor while you're not sharing, and shows **a screen with an arrow up** while it's pointed at or focused, so it says what a click does (not while it's unavailable); while you share, the plain monitor. The camera is crossed while off, plain while on. The volume is a speaker with its waves, crossed when muted or silent. Settings is **a cog with teeth**.
 - **Order**, centred at the bottom of the stage: volume, screen, camera, settings.
-- **Live:** the red pill grows a 26 px arrow on its right that opens the stream's menu.
-- **Hover:** a glass pill lightens to `rgba(40, 40, 44, 0.85)` in 120 ms (only with a mouse); a red pill and an unavailable one don't change. **Focus** draws one red ring around the whole pill, arrow included.
-- **Which ones:** sharing my screen and camera, plus volume and settings only while watching someone else. A phone that can't share a screen shows only the camera button. In fullscreen they come along, and the setup window and any error from starting are drawn over the player.
+- **Plain on/off buttons, no arrows.** A click starts or stops; what you send is set in the [settings panel](#the-settings-panel), and while a stream is live, resting the mouse on its button unrolls its [drop-up](#drop-ups). With a mouse, a live button shows its drop-up instead of a tooltip.
+- **Hover:** a glass pill lightens to `rgba(40, 40, 44, 0.85)` in 120 ms (only with a mouse); a red pill and an unavailable one don't change. **Focus** draws one red ring around the pill.
+- **Which ones:** sharing my screen and camera, and the cog, always; the volume only while watching someone else. A phone that can't share a screen shows only the camera button. In fullscreen they come along, and any error from starting is drawn over the player.
 - **Unavailable** (a full room, no sound): 45% opacity, with the reason in the tooltip. A stream without sound shows a crossed, locked volume button ("No sound in this stream").
-- **Coming and going without moving what you clicked:** a button that appears or goes (the volume and settings when you start or stop watching someone), or a live pill's arrow that goes with the click that stops it, opens or closes its width and its gap in 220 ms while it fades (in: 160 ms after 80 ms; out: 140 ms), so its neighbours slide. While a mouse pointer rests on the row, the button under it stays exactly where it is (a touch doesn't stay, so nothing is held); once the pointer leaves, the row glides back to the centre in 220 ms.
+- **Coming and going without moving what you clicked:** a button that appears or goes (the volume when you start or stop watching someone) opens or closes its width and its gap in 220 ms while it fades (in: 160 ms after 80 ms; out: 140 ms), so its neighbours slide. While a mouse pointer rests on the row, the button under it stays exactly where it is (a touch doesn't stay, so nothing is held); once the pointer leaves, the row glides back to the centre in 220 ms.
 - They fade with the rest of the controls while a stream plays, and come back on any move.
+
+### Segmented controls
+
+`components/ui/Segmented`: every choice between a few options (Quality, Mode) is one.
+
+- A light translucent **track** as tall as the panel's controls, and **one dark pill** (`--sel-bg`, a 1 px inner line, `--sel-shadow`) that slides under the chosen option in 200 ms.
+- An option pointed at gets **a soft light that fades only sideways** (white at 6% in the middle, nothing at its ends, the track's full height), fading in 160 ms, and its text goes from muted to white. **The chosen option doesn't react**: it's already chosen.
+- Plain labels ("Smooth", "Sharp"), with what each does in its tooltip. A radio group: the arrow keys move the choice, with one tab stop.
+
+### Pickers
+
+`components/ui/Picker`: every choice from a list (which camera) is one, in any panel or over the video.
+
+- **Closed:** a pill as tall as the other controls, the chosen option and a small chevron.
+- **Open, it's one box with its pill:** the pill grows into the list with **no gap and no separate floating box**, in the pill's own colour. **The chosen option stays in the pill and isn't repeated**; the others follow in rows as tall as the pill, their text lined up with the pill's.
+- **In a panel, it opens in place** and pushes what's under it down: a see-through panel takes its colour from what's behind it, so a floating list could never match the pill. **Over the video, it grows upward** in the pill's glass, floating.
+- **No scrollbar in a list:** after three and a half options it scrolls by wheel, swipe or keys, and the half-shown option says there's more. A row's hover light (white at 5%) stays inside its row, so a short list never scrolls.
+- The arrow keys move through it; Escape or a click outside closes it.
+
+### Drop-ups
+
+`components/ui/DropUp`: quick access to a live button's most used action, where the pointer already is. Any later quick action follows these rules.
+
+- **Resting the mouse on a live round button** unrolls one frosted pill above it, centred, after **120 ms**: the round buttons' glass, blur and shadow, **with no box around it**. It fades and slides 6 px; nothing blurred is animated.
+- **Moving up into it keeps it open** (the gap is bridged), and so does an open list inside it. It closes when the pointer leaves, **also right after a click**; a slip outside shorter than **300 ms** doesn't close it. Keyboard focus opens it; a click's focus doesn't keep it open.
+- **The button's own click still does what it always does** (stop the stream). **Never on a touch screen:** there, the settings panel has the same controls.
+- **Screen:** what's shared ("A window", "A tab" or "Your whole screen") and **Change**. **Camera:** the camera's picker, growing upward. Their controls are 36 px tall, with 12 px text.
+
+### The settings panel
+
+![The settings drawer on the Camera tab, its picker open](images/design/settings-drawer.png) ![The settings sheet on a phone](images/design/settings-sheet.png)
+
+The settings for what you send, from the cog.
+
+- **Desktop, tablets and phones held sideways:** a **300 px drawer** inside the player, 10 px from its right edge, so it comes along in fullscreen. **A phone held upright** (its full-screen view too): a **bottom sheet**, no pull handle; the ✕, the cog or Escape closes it.
+- The drawer is frosted like the dropdown panels (the panel colour at 74%, blur 22 px, a 1 px white border at 8%), 16 px corners. The sheet, over the page's feed rather than a video, is **opaque** in the same tint (`#131315`), with 20 px corners on top: the feed never reads through it, and there's no blur to redraw. **One control height:** 30 px in the drawer, 44 px in the sheet.
+- **Tabs Screen and Camera**, with a **red marker** that slides under the chosen one and a **red dot** on the tab of what you're sending. **No Screen tab on phones**, nor where a screen can't be shared.
+- **Screen:** while you share, what's shared and **Change** (and, when the screen has no sound, a line saying how to share it); while you don't, one line saying these are used next time. **No preview**: the stage and the browser's picker already show it. Then Quality and Mode.
+- **Camera:** your camera's preview, centred: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Then the camera's picker, Quality and Mode.
+- **No field descriptions**, except where a setting needs a line to make sense. The body scrolls with the app's slim scrollbar, without arrows.
+- **In the upright full view, the sheet makes room instead of covering:** the player, its round buttons with it, moves up at the same size between the top bar and the sheet. If it doesn't fit (a vertical share), the sheet opens over it. The video is never shrunk; everything slides back when the sheet closes.
 
 ### Buttons
 
@@ -258,7 +312,6 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **A top bar** over a black gradient: who's on the stage on the left; the people button, the bell and my account on the right.
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
 - Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
-- **The setup window** on a short, wide screen puts its preview on the left and its settings on the right.
 - **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
 
 ### Tablet, upright
@@ -287,7 +340,7 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 - **Red means the brand or live.** Don't use it for anything else.
 - **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
-- **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Avatar`, `LiveDot`, `StageNotice`. A new control follows their sizes, motion and focus ring.
+- **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, no scrollbar), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
 - **Say what effects cost:** blur, canvases and animations run on every frame; keep them to what's here.
 
 ## Keeping this page current

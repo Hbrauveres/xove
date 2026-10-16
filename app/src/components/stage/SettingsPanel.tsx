@@ -6,6 +6,7 @@ import type { CameraDevice, MediaTrack, StreamKind } from "../../types";
 import { Picker } from "../ui/Picker";
 import { Segmented } from "../ui/Segmented";
 import { CameraOnIcon, CloseIcon, ScreenShareIcon, WindowIcon } from "./icons";
+import { NO_SOUND } from "./PlayerButtons";
 import { FULL_VIEW_SHEET } from "./makeRoom";
 import styles from "./SettingsPanel.module.css";
 
@@ -38,6 +39,8 @@ type Props = {
   /** Turns the camera on for the preview only, or off again. */
   onPreviewCamera: (on: boolean) => void;
   busy?: boolean;
+  /** I'm sharing my screen without sound: the Screen tab says how to share it. */
+  noSound?: boolean;
   /** The sheet in the upright full-screen view: a little shorter, so the player can fit above it. */
   fullView?: boolean;
 };
@@ -176,7 +179,7 @@ function QualityAndMode({ kind, prefs, onPrefsChange, busy }: { kind: StreamKind
 }
 
 function ScreenTab(props: Props) {
-  const { mine, screenSurface, onChangeWindow, busy } = props;
+  const { mine, screenSurface, onChangeWindow, busy, noSound } = props;
   return (
     <>
       {mine.screen ? (
@@ -197,6 +200,7 @@ function ScreenTab(props: Props) {
               Change
             </button>
           </div>
+          {noSound && <p className={styles.hint}>{NO_SOUND}</p>}
         </div>
       ) : (
         <p className={styles.hint}>

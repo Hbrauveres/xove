@@ -30,6 +30,10 @@
 
 .panel[data-variant="sheet"] {
   --ctl: 44px;
+  /* Over the page's feed, not a video: opaque in the panel's tint, so the feed never reads
+     through, and with no blur to redraw on every frame. */
+  background: #131315;
+  backdrop-filter: none;
   position: fixed;
   top: auto;
   left: 0;

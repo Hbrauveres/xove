@@ -49,3 +49,8 @@
 :global([data-chrome="hidden"]:focus-within) .overlay button {
   pointer-events: auto;
 }
+
+/* The settings drawer covers the top right: the fullscreen button doesn't show through it. */
+:global([data-drawer-open]) .top {
+  visibility: hidden;
+}

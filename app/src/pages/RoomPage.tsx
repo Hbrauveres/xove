@@ -119,6 +119,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
       prefs={session.prefs}
       onPrefsChange={session.setPrefs}
       screenSurface={session.screenSurface}
+      noSound={session.noSound}
       onChangeWindow={session.changeScreen}
       cameras={session.cameras}
       cameraId={session.cameraId}
