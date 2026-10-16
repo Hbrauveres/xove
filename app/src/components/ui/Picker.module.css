@@ -1,0 +1,159 @@
+/*
+ * The picker (the Player controls design, decisions 4 and 5). Closed: a pill as tall as the
+ * panel's controls (`--ctl`). Open: the pill and its list are one box, in the pill's own
+ * colour, with no gap. In a panel the list opens in place and pushes what's under it down;
+ * over the video it grows upward, floating, in the glass.
+ */
+.picker {
+  --pick-bg: rgba(255, 255, 255, 0.05);
+  --pick-hover: rgba(255, 255, 255, 0.08);
+  --pick-r: 10px;
+  --pick-pad: 12px;
+  position: relative;
+  display: grid;
+}
+
+.picker[data-look="glass"] {
+  --pick-bg: var(--glass);
+  --pick-hover: rgba(40, 40, 44, 0.85);
+  --pick-r: 18px;
+  --pick-pad: 14px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: var(--ctl, 38px);
+  padding: 0 var(--pick-pad);
+  border: 0;
+  border-radius: var(--pick-r);
+  background: var(--pick-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--pick-font, var(--text-sm));
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.picker[data-look="glass"] .pill {
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.pill:hover {
+  background: var(--pick-hover);
+}
+
+.chosen {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.pill[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+/* Open: one box. The pill keeps its colour (no hover change) and squares the side it opens on. */
+.picker[data-open] .pill,
+.picker[data-open] .pill:hover {
+  background: var(--pick-bg);
+  border-radius: var(--pick-r) var(--pick-r) 0 0;
+}
+
+.picker[data-open][data-opens="up"] .pill {
+  border-radius: 0 0 var(--pick-r) var(--pick-r);
+  box-shadow: none;
+}
+
+.list {
+  display: grid;
+  max-height: calc(var(--ctl, 38px) * 3.5);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 0 0 var(--pick-r) var(--pick-r);
+  background: var(--pick-bg);
+  /* No scrollbar: the half-shown option says there's more. */
+  scrollbar-width: none;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.picker[data-opens="up"] .list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 10;
+  border-radius: var(--pick-r) var(--pick-r) 0 0;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.option {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: var(--ctl, 38px);
+  padding: 0 var(--pick-pad);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--pick-font, var(--text-sm));
+  text-align: left;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+/* The soft light, fading only sideways, kept inside its row so a short list never scrolls. */
+.option::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.option:hover,
+.option:focus-visible {
+  color: var(--text);
+}
+
+.option:hover::before,
+.option:focus-visible::before {
+  opacity: 1;
+}
+
+.option:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .chevron,
+  .option,
+  .option::before {
+    transition: none;
+  }
+}
