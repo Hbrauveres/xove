@@ -154,7 +154,8 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 - **Order**, centred at the bottom of the stage: volume, screen, camera, settings.
 - **Live:** the pill turns red (`--accent`) with a deep-red icon (`--accent-ink`), and grows a 26 px arrow on its right that opens the stream's menu.
 - **Hover and focus:** a white wash at 12% (black at 12% on red). **Focus** draws one red ring around the whole pill, arrow included.
-- **Unavailable** (a full room, no sound): 45% opacity, with the reason in the tooltip.
+- **Which ones:** sharing my screen and camera, plus volume and settings only while watching someone else. A phone that can't share a screen shows only the camera button. In fullscreen they come along, and the setup window and any error from starting are drawn over the player.
+- **Unavailable** (a full room, no sound): 45% opacity, with the reason in the tooltip. A stream without sound shows a crossed, locked volume button ("No sound in this stream").
 - They fade with the rest of the controls while a stream plays, and come back on any move.
 
 ### Buttons
@@ -199,8 +200,8 @@ A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, a
 
 ![The info row under the stage](images/design/info-row.png)
 
-- **The info row:** on the left, who's on the stage (avatar with its ring, name in the display font, LIVE, what, how long) and who's watching (up to 4 avatars and "N watching"); on the right, the other streams as **previews** with a name chip, then a dashed box "N of 6 live · N free · share yours", gone when all 6 are live.
-- **The facecam:** the camera as a small window over the screen, 24% of the player's width, `--radius-sm`, with 28 px round buttons (swap views, collapse) that fade with the controls; collapsed, a 28 × 44 px tab at the right edge. It can be dragged, or moved with the arrow keys.
+- **The info row:** on the left, who's on the stage (avatar with its ring, name in the display font, LIVE, what, how long) and who's watching (up to 4 avatars and "N watching", me included, never the sharer); on the right, the other streams as **previews** with a name chip (their screen, or their camera when that's all they share), then a dashed box "N of 6 live · N free · share yours", gone when all 6 are live. When room runs short, the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
+- **The facecam:** the camera as a small window over the screen, 24% of the player's width, `--radius-sm`, with 28 px round buttons (swap views, collapse) that fade with the controls; collapsed, a 28 × 44 px tab at the right edge. It can be dragged, or moved with the arrow keys. Swapping also works on your own preview; the swap and the collapse last for the visit only.
 - **The fullscreen button:** top right on desktop; on a phone in the upright full view, bottom right, level with the round buttons.
 - **Stage dots** (phone, more than one live): 6 px dots just above the round buttons, the current one stretched to 14 px; a tap jumps to that person.
 
@@ -218,11 +219,7 @@ A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, a
 
 ### Which layout
 
-| Device | Held upright | Held sideways |
-| --- | --- | --- |
-| **Phone:** touch first (`pointer: coarse`), shorter side ≤ 500 px | Upright view | Sideways view |
-| **Tablet:** touch first, larger | Upright view (in a 640 px column under the stage) | Desktop layout |
-| **Desktop** | Upright view if the window is ≤ 760 px wide and upright | Desktop layout |
+Three layouts: the **desktop's** (theater mode), the **upright view** (phones held upright, tablets held upright, narrow upright windows) and the **sideways view** (phones held sideways). Which device gets which, and the sizes that decide it, are in [Architecture](architecture.md#layouts).
 
 Turning switches layouts at once, and the stage keeps its place in the page, so the video never reloads. Phones and tablets use Xovê only as a home-screen app; in a browser tab they see the install screen.
 
@@ -254,8 +251,9 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **No header or footer:** the stage fills the height and hugs the picture, black at its sides where the light glows.
 - **A top bar** over a black gradient: who's on the stage on the left; the people button, the bell and my account on the right.
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
-- Everything fades about 2.5 s after the last touch while a stream plays.
-- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone.
+- Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
+- **The setup window** on a short, wide screen puts its preview on the left and its settings on the right.
+- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
 
 ### Tablet, upright
 

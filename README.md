@@ -29,7 +29,7 @@ Every screen, on every device, is in the [design sheet](docs/design.md).
 
 ## The design
 
-- **Black, greys and one red.** A soft black ground, neutral greys for panels and text, and red only for the brand and what's live. Pure black only behind the video, as the picture's own frame. Every text colour reaches 4.5:1 contrast on every surface, and a test checks it.
+- **Black, greys and one red.** A soft black ground, neutral greys for panels and text, and red only for the brand and what's live. Pure black only behind the video, as the picture's own frame. Every text colour reaches 4.5:1 contrast on every surface (3:1 for faint labels), and a test checks it.
 - **Quiet controls:** white sliders like a video player's, a grey switch that turns red only when on, round buttons over the stage that fade with the player's labels.
 - **The mark:** [XOVE] in a viewfinder, the O a record button, with a hover animation.
 - **Tokens, not values:** colours, sizes and type are CSS variables in `app/src/styles/global.css`; each component's CSS module uses them. The [design sheet](docs/design.md) is the reference for all of it, with pictures shot from the real app.
@@ -40,7 +40,7 @@ Every screen, on every device, is in the [design sheet](docs/design.md).
 app/src/
   api/          the HTTP client and the API's types
   auth/         who is signed in, and the route guards
-  pages/        one per route: home, request access, room, admin, install
+  pages/        one per route (home, request access, room, admin), and the install screen
   hooks/        the room's state: the seat, the streams, the LiveKit connection, the layout
   media/        sending screens and cameras, the ambilight, who is big
   components/   stage, room, share, ui, brand: each with its CSS module

@@ -24,7 +24,7 @@ Everything is in `app/src`:
 | `pages/` | One component per route: `HomePage`, `RequestAccessPage`, `RoomPage`, `AdminPage`, and `InstallPage` |
 | `hooks/` | The room's state and the browser's: the seat and the queue (`useRoomSeat`), the streams (`useStreams`), the LiveKit connection (`useLiveKitRoom`), both put together for the room (`useRoomSession`), who's on the stage (`useStagePick`), the layout (`useRoomLayout`), swipes (`useStageSwipe`), the video's shape (`useVideoShape`), and small ones (`useElapsed`, `useFullscreenElement`, `useInstalled`) |
 | `media/` | How screens and cameras are sent (`shareSettings.ts`), the ambilight's drawing (`ambilight.ts`), who is big by default (`stagePick.ts`), choices kept in the browser (`preferences.ts`) |
-| `components/stage/` | The player and what's on it: the stage, the round buttons and their menus, the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
+| `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons and their menus, the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
 | `components/room/` | The room around the stage: header, footer, people, activity (pill, bell, list), account menu, the waiting screen and the seat offer |
 | `components/share/` | The setup window shown before a share starts |
 | `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage` |
@@ -33,20 +33,25 @@ Everything is in `app/src`:
 | `styles/` | The design tokens (`global.css`) and the tests that check them |
 | `test/` | The test helpers: a fake API, a fake LiveKit, and rendering the app at a URL ([Testing](testing.md)) |
 
+At the top, `main.tsx` starts the app (and listens for the install prompt first), `App.tsx` holds the routes, and `types.ts` the room's shared types (a person, a stream, a sharer).
+
 ```mermaid
 flowchart TD
   P[pages] --> C[components]
   P --> H[hooks]
+  P --> A[api]
   C --> H
-  H --> A[api]
+  H --> A
   H --> LK[livekit-client]
   H --> M[media]
   C --> M
   P --> AU[auth]
   AU --> A
+  APP[App.tsx] --> I[install]
+  APP --> P
 ```
 
-Pages put the room together; components draw it; hooks own the state and talk to the API and LiveKit; `media/` holds the rules for sending and drawing video, as plain functions that hooks and components share. Each component has its own CSS module, using the tokens in `styles/global.css`.
+Pages put the room together; components draw it; hooks own the state and talk to the API and LiveKit (the simpler pages call the API directly); `media/` holds the rules for sending and drawing video, as plain functions that hooks and components share. Each component has its own CSS module, using the tokens in `styles/global.css`.
 
 ## Routes
 
@@ -97,13 +102,15 @@ sequenceDiagram
 | The layout | `useRoomLayout` | This page, from media queries |
 | Quality, volume, the camera picked, the ambilight's settings | `media/preferences.ts` | The browser (`localStorage`, `xove.*`) |
 
-**Waiting for a seat.** Without a seat, the waiting screen shows the place in the queue and asks again every 2 seconds; that poll is also how the API knows the page is still there. When a seat is offered, a popup counts down the seconds the API gives ("Enter room" accepts, "Cancel" leaves the queue), and the tab's title says "Your turn". Closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the request survives the tab closing.
+**Waiting for a seat.** The queue's rules (who's next, how long a place and an offer last) are the API's ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#seats-and-the-queue)). Without a seat, the waiting screen shows the place in the queue and asks again every 2 seconds; that poll is also how the API knows the page is still there. When a seat is offered, a popup counts down the seconds the API gives ("Enter room" accepts, "Cancel" leaves the queue), and the tab's title says "Your turn". Closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the request survives the tab closing.
 
-**Who's on the stage.** Each viewer picks who is big: a preview, a card in the phone's feed, or a live stream's line in the activity list. By default, and when the big person stops, it's the person sharing the longest (`media/stagePick.ts`). Once the pick has been still for a second, the page reports it (`PUT /api/streams/watching`), and again when a poll shows the API lost it (after a restart), so the people panel can say who watches whom. Only the page that's really in the video room reports, so a second tab doesn't overwrite it.
+**Who's on the stage.** Each viewer picks who is big: a preview, a card in the phone's feed, or a live stream's line in the activity list (a camera's line puts the camera big). By default, and when the big person stops, it's the person sharing the longest (`media/stagePick.ts`). Once the pick has been still for a second, the page reports it (`PUT /api/streams/watching`), and again when a poll shows the API lost it (after a restart), so the people panel can say who watches whom. Only the page that's really in the video room reports, so a second tab doesn't overwrite it.
 
 **When the API restarts.** The API keeps the room in memory ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#memory-and-the-database)). After a restart, an open room asks for its seat again on its next poll, with its LiveKit connection, and registers again what it's still sending; if the places filled up meanwhile, it stops sending. Nobody has to reload.
 
 **Reloading while sharing.** The page sees that the API lists a stream of its own that nothing sends, and ends it.
+
+**When a sharer leaves** (closes the tab, loses the connection), LiveKit tells the API, which ends all of that person's streams ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#livekit)); every room drops them on its next poll, so nobody watches a frozen picture.
 
 ## Talking to the API
 
@@ -140,14 +147,14 @@ Sharing a screen or a camera is in [Media](media.md).
 | Tablet: touch-first, larger | `upright` | `desktop` |
 | Anything else | `upright` if the window is ≤ 760 px wide and upright | `desktop` |
 
-`layoutFor` is a plain function of four media queries, so its tests cover every device without a browser. What each layout looks like is in the [design sheet](design.md#screens-and-layouts); how the code keeps them smooth:
+`layoutFor` is a plain function of four media queries, so its tests cover every device without a browser. On a tablet held upright, the info row and the feed sit in a column at most 640 px wide. What each layout looks like is in the [design sheet](design.md#screens-and-layouts); how the code keeps them smooth:
 
 - **The stage never moves in the page.** Turning or resizing changes the layout around it, so the video and a share go on without reloading.
 - **The stage hugs the picture.** `useVideoShape` reads the big video's width ÷ height from its `resize` event (ignoring changes under 1%), and the stage sizes itself from it in container units, inside a 16:9 box.
 - **Swipes** (`useStageSwipe`): left and right change who's on the stage, in the feed's order and wrapping around; the picture follows the finger, and a drag under a quarter of the width springs back unless it was a quick flick. Sideways, a swipe up opens the streams row and a swipe down closes it. Drags that start on a control (`data-no-swipe`) are the control's.
-- **Fading** (sideways): while a stream plays, a touch shows the controls, and about 2.5 s later the ones marked `data-fades` fade.
+- **Fading:** what fades over a playing stream is marked `data-fades`; the stage hides it after `CHROME_IDLE_MS` without a touch or a move ([how it looks](design.md#motion)).
 - **No pull-to-refresh in the room:** while the room is open (`data-room`), the page sets `overscroll-behavior: none`, so a drag down never reloads it.
-- **The full-screen view:** on a phone, and a tablet held upright, the stage's fullscreen button switches to the sideways layout while the device stays upright; elsewhere it's the browser's fullscreen.
+- **The full-screen view** is the room's own state (`fullView` in `RoomPage`), not the browser's fullscreen: on a phone, and a tablet held upright, the stage's fullscreen button shows the sideways layout while the device stays upright, and turning doesn't change it ([how it looks](design.md#phone-sideways)). Elsewhere the button uses the browser's fullscreen.
 
 **Installing.** On Android, "Get Xovê" opens the browser's install prompt, caught as the page loads (`install/prompt.ts`), since a browser offers it only once; with none, it points to the browser menu's "Install app". On iPhone and iPad, it shows Safari's Share steps. The manifest (`public/site.webmanifest`) has what Chrome checks before offering an install and `"display": "fullscreen"`, so the app opens without a browser bar.
 

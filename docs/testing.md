@@ -65,7 +65,7 @@ it("stops the video and ends the stream", async () => {
 });
 ```
 
-The page, the hooks, the client and the room's logic all run for real; only the network and the video are fake. Hooks with logic of their own (the LiveKit connection, the room session, swipes) also have tests that render them alone (`renderHook`).
+The page, the hooks, the client and the room's logic all run for real; only the network and the video are fake. Hooks with logic of their own (the LiveKit connection, the room session, swipes) also have tests that render them alone (`renderHook`, or a small harness component for swipes).
 
 ## The look's values
 

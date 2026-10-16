@@ -24,7 +24,7 @@ sequenceDiagram
 
 1. **The picker.** Xovê opens the browser's picker itself (`getDisplayMedia`) instead of through LiveKit, because `livekit-client` drops the `windowAudio` option. It always captures the best quality, 1080p at 30 fps, so the sharer can raise the quality later without picking again. It can't pick its own tab (that would show the room inside the room). In Chrome, it asks the browser to stay on Xovê after the pick (`CaptureController.setFocusBehavior`), so the sharer sees the setup window instead of jumping to the shared window.
 2. **The setup window** shows a preview and the settings. Nothing is sent until "Start sharing"; closing the picker or the window sends nothing.
-3. **Publishing** sends the tracks to LiveKit, then tells the API, which lists the stream for everyone. With 6 streams live, the start buttons wait: nobody is pushed out.
+3. **Publishing** sends the tracks to LiveKit, then tells the API, which lists the stream for everyone. Up to 6 streams are live at once (someone with a screen and a camera uses 2); with 6 live, the start buttons wait: nobody is pushed out. A phone that can't share a screen offers only the camera.
 
 **Which sound comes along:**
 
@@ -34,7 +34,7 @@ sequenceDiagram
 | A tab | That tab's sound |
 | The whole screen | The system's sound, without Xovê's own (`restrictOwnAudio`), so viewers don't hear their own streams back |
 
-Sound is captured as music: no echo cancellation, no noise suppression, no automatic volume, in stereo, and sent at 128 kbit/s without silence skipping (`dtx: false`, which chops quiet moments). Chrome gives sound from a tab, and from the whole screen on Windows; Firefox and Safari give none. A screen without sound says so in its button's tooltip and menu.
+Sound is captured as music: no echo cancellation, no noise suppression, no automatic volume, in stereo, and sent at 128 kbit/s without silence skipping (`dtx: false`, which chops quiet moments). Whether a share has sound depends on the browser and the system: Chrome offers it for a tab, for a window where the system supports it, and for the whole screen on Windows; Firefox and Safari offer none. A screen without sound says so in its button's tooltip and menu, and viewers see a crossed, locked volume button.
 
 **While sharing**, the arrow on a stream's button opens its menu:
 
@@ -66,7 +66,8 @@ The sharer picks a quality and a mode in the setup window, and can change both w
 
 - **The size it shows.** The room connects with `adaptiveStream`: each video is downloaded at the size it's shown, so previews and the facecam come in small. With `dynacast`, layers nobody watches aren't sent at all.
 - **A fixed quality.** The viewer's quality menu offers Auto (what fits the player and the connection) or a fixed quality from the sharer's down to 480p. A fixed quality asks LiveKit for that layer, so the viewer really downloads less.
-- **Sound.** Only the big person's plays. Previews are muted, each with its own volume; a muted preview's sound isn't downloaded at all. The volume button mutes and unmutes to the same level; iPhones and iPads ignore a page's volume, so there's no slider there.
+- **Sound.** Only the big person's plays. Previews are muted, each with its own volume; a muted preview's sound isn't downloaded at all, and a preview without sound has no speaker. Someone sharing sees their own streams like everyone else, without their sound. The volume button mutes and unmutes to the same level; there's no slider while muted, without sound, or on iPhones and iPads, which ignore a page's volume.
+- **The quality menu** is for the big video; previews and the facecam follow their size.
 - **Remembered.** Each browser keeps its choices in `localStorage`: `xove.share.*` (quality, mode), `xove.camera.*` (quality, mode, device), `xove.watch.*` (quality, volume, muted) and `xove.ambilight.*` (on, brightness).
 
 To see what really happens, open `chrome://webrtc-internals` in the sharer's or a viewer's browser: the codec, frame rate, size, bitrate, and why the quality drops ("cpu": the sharer's computer can't keep up; "bandwidth": the connection can't).
