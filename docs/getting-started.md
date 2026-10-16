@@ -8,7 +8,7 @@ How to run the web app on your own machine. On Windows, do all of this inside WS
 | --- | --- | --- |
 | Git | any recent | |
 | Node.js | 22 (via [nvm](https://github.com/nvm-sh/nvm)) | The web app; Vite 8 needs Node 22 |
-| Docker | Docker Desktop with WSL integration, or Docker Engine on Linux | To build and run the image as the servers do (optional) |
+| Docker | Docker Desktop with WSL integration, or Docker Engine on Linux | To build and run the image (optional) |
 
 ## Clone
 
@@ -33,10 +33,10 @@ The API lives in [`xove-api`](https://github.com/Hbrauveres/xove-api). Its [Gett
 
 ## Run the image in Docker
 
-`app/compose.yaml` is the file the servers deploy. It builds the image and checks it's healthy, as the commit checks do:
+`app/compose.yaml` builds the image (the static build, served by Caddy) and checks it's healthy, as the commit checks do:
 
 ```bash
-docker network create web          # once; shared with the reverse proxy on servers
+docker network create web          # once: the network the compose file joins
 APP_ENV=dev docker compose -f app/compose.yaml up -d --build
 docker compose -f app/compose.yaml ps
 ```
@@ -47,8 +47,8 @@ There's no reverse proxy and no API in front of it locally, so this only shows t
 
 | Name | Used by | Meaning |
 | --- | --- | --- |
-| `APP_ENV` | Compose | `stage`, `prod`, or anything locally; goes into the container's name |
-| `IMAGE_TAG` | Compose | Which published image version to run; set by the deploy, per app. Unset means "build locally" |
+| `APP_ENV` | Compose | The environment's name; anything locally. It goes into the container's name |
+| `IMAGE_TAG` | Compose | Which published image to run. Unset means "build it locally" |
 
 The web app reads no other setting and holds no secret: everything else comes from the API at run time.
 
