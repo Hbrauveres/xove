@@ -175,7 +175,7 @@ async function openMenu(user: User, kind: MenuKind = "Screen") {
     await user.click(within(controls()).getByRole("button", { name: "Settings" }));
   }
   const panel = within(screen.getByRole("dialog", { name: "Settings" }));
-  const tab = panel.getByRole("tab", { name: new RegExp(kind) });
+  const tab = panel.getByRole("tab", { name: (name) => name.startsWith(kind) });
   if (tab.getAttribute("aria-selected") !== "true") await user.click(tab);
   return within(panel.getByRole("tabpanel"));
 }
