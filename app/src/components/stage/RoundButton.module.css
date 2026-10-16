@@ -120,3 +120,28 @@
     transition: none;
   }
 }
+
+/* Screen off (spec 0106): the crossed monitor at rest; "share" (a screen with an arrow up)
+   while the button is pointed at or focused, so it says what a click does. */
+.iconRest,
+.iconHover {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  line-height: 0;
+}
+
+.iconHover {
+  display: none;
+}
+
+.main:hover .iconRest,
+.main:focus-visible .iconRest {
+  display: none;
+}
+
+.main:hover .iconHover,
+.main:focus-visible .iconHover {
+  display: grid;
+}

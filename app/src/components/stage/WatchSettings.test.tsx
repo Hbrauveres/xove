@@ -89,3 +89,14 @@ describe("the viewer's settings (spec 0101)", () => {
     expect(screen.getByRole("button", { name: "Settings" })).toHaveFocus();
   });
 });
+
+describe("the settings button's icon (spec 0106)", () => {
+  it("is a cog", () => {
+    setup();
+
+    const button = screen.getByRole("button", { name: "Settings" });
+
+    expect(button.querySelector("svg")?.getAttribute("data-icon")).toBe("cog");
+  });
+});
+

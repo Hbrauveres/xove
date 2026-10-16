@@ -1064,7 +1064,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     await startSharing(user);
     const started = myLiveStream(server);
     const video = local.screens[0].track;
-    expect(within(stage()).getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription(
+    expect(within(stage()).getByRole("button", { name: "Stop sharing your screen" })).toHaveAccessibleDescription(
       expect.stringMatching(/no sound is being shared/i),
     );
 
@@ -1082,7 +1082,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     expect(local.screens).toHaveLength(1);
     // The new pick has sound: it's sent, and the badge goes.
     await waitFor(() =>
-      expect(within(stage()).getByRole("button", { name: "Stop sharing" })).toHaveAccessibleDescription("Stop sharing"),
+      expect(within(stage()).getByRole("button", { name: "Stop sharing your screen" })).toHaveAccessibleDescription("Stop sharing your screen"),
     );
     expect(local.screenAudio?.track.source).toBe("screen_share_audio");
   });

@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { SharePrefs } from "../../media/preferences";
 import { CAMERA_QUALITIES, MODES, SHARE_QUALITIES } from "../../media/shareSettings";
 import type { CameraDevice, StreamKind } from "../../types";
+import { CameraOffIcon, CameraOnIcon, ScreenOffIcon, ScreenOnIcon, ScreenShareIcon } from "./icons";
 import { MenuGroup, MenuItem, MenuNote, MenuRadio, MenuSeparator, PlayerMenu } from "./PlayerMenu";
 import round from "./RoundButton.module.css";
 import styles from "./PlayerButtons.module.css";
@@ -41,15 +42,17 @@ type Props = {
 /** What the room passes on to my buttons: the stage adds the menu's state and the viewer's part. */
 export type StreamControls = Omit<Props, "onMenuChange" | "before" | "after">;
 
-const LABEL: Record<StreamKind, { start: string; stop: string; options: string }> = {
+const LABEL: Record<StreamKind, { start: string; stop: string; menuStop: string; options: string }> = {
   screen: {
     start: "Share your screen",
-    stop: "Stop sharing",
+    stop: "Stop sharing your screen",
+    menuStop: "Stop sharing",
     options: "Screen options",
   },
   camera: {
     start: "Turn on camera",
     stop: "Turn off camera",
+    menuStop: "Turn off camera",
     options: "Camera options",
   },
 };
@@ -243,7 +246,7 @@ function StreamButton({
               onStop(kind);
             }}
           >
-            {LABEL[kind].stop}
+            {LABEL[kind].menuStop}
           </MenuItem>
         </PlayerMenu>
       )}
@@ -251,28 +254,19 @@ function StreamButton({
   );
 }
 
+/** The design's icons: plain while live; crossed while off, the screen showing "share" on hover and focus. */
 function Icon({ kind, off }: { kind: StreamKind; off: boolean }) {
+  if (kind === "camera") return off ? <CameraOffIcon /> : <CameraOnIcon />;
+  if (!off) return <ScreenOnIcon />;
   return (
-    <svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true">
-      {kind === "screen" ? (
-        <path
-          d="M3 4.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zM7 17.5h6M10 14.5v3"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ) : (
-        <path
-          d="M3 6h9a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM13 9l5-3v8l-5-3"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-      )}
-      {off && <path d="M3 3l14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
-    </svg>
+    <>
+      <span className={round.iconRest}>
+        <ScreenOffIcon />
+      </span>
+      <span className={round.iconHover}>
+        <ScreenShareIcon />
+      </span>
+    </>
   );
 }
+
