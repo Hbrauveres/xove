@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeRoom, ROOM_GAP } from "./makeRoom";
+import { liftButtons, makeRoom, ROOM_GAP } from "./makeRoom";
 
 // The upright full view of a 440 × 956 phone: a 48 px top bar, a sheet over 58% of it.
 const screen = { height: 956, bar: 48, sheet: Math.round(956 * 0.58) };
@@ -26,5 +26,13 @@ describe("making room for the settings sheet (spec 0107, design decision 6)", ()
   it("never moves the player down", () => {
     const band = { top: 60, height: 200 };
     expect(makeRoom({ ...screen, band })).toBe(0);
+  });
+});
+
+describe("the round buttons when the player stays under the sheet", () => {
+  it("move up to just above the sheet, never down", () => {
+    const sheetTop = 956 - Math.round(956 * 0.58);
+    expect(liftButtons({ rowBottom: 900, sheetTop })).toBe(900 - (sheetTop - ROOM_GAP));
+    expect(liftButtons({ rowBottom: sheetTop - 40, sheetTop })).toBe(0);
   });
 });

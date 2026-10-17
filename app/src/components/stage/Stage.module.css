@@ -54,7 +54,9 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    translate var(--unroll);
 }
 
 .frame[data-chrome="hidden"] .controls {

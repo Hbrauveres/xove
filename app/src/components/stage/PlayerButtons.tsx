@@ -67,7 +67,7 @@ export function PlayerButtons(props: Props) {
   const kinds: StreamKind[] = canShareScreen ? ["screen", "camera"] : ["camera"];
   return (
     <div className={styles.row}>
-      <div className={styles.buttons} ref={rowRef}>
+      <div className={styles.buttons} ref={rowRef} data-buttons>
         <ButtonSlot shown={Boolean(before)} side="start">
           {before}
         </ButtonSlot>

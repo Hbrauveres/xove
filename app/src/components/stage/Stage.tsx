@@ -12,7 +12,7 @@ import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
 import { VolumeButton } from "./VolumeButton";
-import { FULL_VIEW_SHEET, makeRoom } from "./makeRoom";
+import { FULL_VIEW_SHEET, liftButtons, makeRoom } from "./makeRoom";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching, STREAM_PLACES } from "./NowWatching";
@@ -130,6 +130,7 @@ export function Stage({
   const topRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
 
   // The upright full view with the settings sheet open (spec 0107, design decision 6): the
   // player, its round buttons included, moves up between the top bar and the sheet at the
@@ -139,18 +140,28 @@ export function Stage({
     const box = boxRef.current;
     const section = stageRef.current;
     if (!box || !section) return;
+    const controls = controlsRef.current;
     const place = () => {
-      if (!makingRoom) {
-        box.style.translate = "";
-        return;
-      }
+      box.style.translate = "";
+      if (controls) controls.style.translate = "";
+      if (!makingRoom) return;
       const top = topRef.current;
       const bar = top
         ? Math.max(0, ...[...top.children].map((c) => (c as HTMLElement).offsetTop + (c as HTMLElement).offsetHeight))
         : 0;
       const height = section.clientHeight;
-      const lift = makeRoom({ height, bar, sheet: height * FULL_VIEW_SHEET, band: { top: box.offsetTop, height: box.offsetHeight } });
-      box.style.translate = lift ? `0 ${-lift}px` : "";
+      const sheet = height * FULL_VIEW_SHEET;
+      const lift = makeRoom({ height, bar, sheet, band: { top: box.offsetTop, height: box.offsetHeight } });
+      if (lift) {
+        box.style.translate = `0 ${-lift}px`;
+        return;
+      }
+      // The player stays under the sheet: its round buttons alone move up above it.
+      if (!controls) return;
+      const sheetTop = section.getBoundingClientRect().top + height - sheet;
+      const row = controls.querySelector("[data-buttons]") ?? controls;
+      const up = liftButtons({ rowBottom: row.getBoundingClientRect().bottom, sheetTop });
+      if (up) controls.style.translate = `0 ${-up}px`;
     };
     place();
     window.addEventListener("resize", place);
@@ -433,7 +444,7 @@ export function Stage({
           {body()}
 
           {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
-          <div className={styles.controls} data-no-swipe>
+          <div ref={controlsRef} className={styles.controls} data-no-swipe>
             {/* Upright and sideways alike: where you are among the people live (specs 0159, 0160). */}
             {(phone || sideways) && (
               <StageDots

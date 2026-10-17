@@ -27,3 +27,11 @@ export function makeRoom({ height, bar, sheet, band }: Sizes): number {
   const top = from + (to - from - band.height) / 2;
   return Math.max(0, band.top - top);
 }
+
+/**
+ * How far to move the round buttons up when the player stays under the sheet (it didn't fit):
+ * just above the sheet, so they're never left behind it (design decision 6). The video stays.
+ */
+export function liftButtons({ rowBottom, sheetTop }: { rowBottom: number; sheetTop: number }): number {
+  return Math.max(0, rowBottom - (sheetTop - ROOM_GAP));
+}
