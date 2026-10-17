@@ -62,7 +62,10 @@ type Props = {
   people?: Friend[];
   meId?: string;
   arrivedAt?: Record<string, number>;
-  /** The settings panel, over the cog inside the player, so it comes along in fullscreen (spec 0107). */
+  /**
+   * The settings panel, over the cog (spec 0107): inside the player, so it comes along in
+   * fullscreen; sideways on the stage, which is the screen, so it sits above the top bar too.
+   */
   settingsPanel?: ReactNode;
   /** The settings sheet is open over the stage: the upright full view makes room for the player. */
   sheetOpen?: boolean;
@@ -229,32 +232,32 @@ export function Stage({
     if (!settingsOpen) held.current.delete("settings");
   }, [settingsOpen]);
   // The settings open over the cog (design decision 9): centred on it, just above the round
-  // buttons. The panel reads where they are from two variables on the frame.
+  // buttons. The panel reads where they are from two variables on what holds it.
   useLayoutEffect(() => {
-    const frame = frameRef.current;
+    const host = sideways ? stageRef.current : frameRef.current;
     const controls = controlsRef.current;
-    if (!settingsOpen || !frame || !controls) return;
+    if (!settingsOpen || !host || !controls) return;
     const place = () => {
       const cog = controls.querySelector('button[aria-label="Settings"]');
       const row = controls.querySelector("[data-buttons]");
-      const f = frame.getBoundingClientRect();
-      if (!cog || !row || !f.width) return;
+      const h = host.getBoundingClientRect();
+      if (!cog || !row || !h.width) return;
       const c = cog.getBoundingClientRect();
-      frame.style.setProperty("--cog-x", `${c.left + c.width / 2 - f.left}px`);
-      frame.style.setProperty("--above-row", `${f.bottom - row.getBoundingClientRect().top + ROW_GAP}px`);
+      host.style.setProperty("--cog-x", `${c.left + c.width / 2 - h.left}px`);
+      host.style.setProperty("--above-row", `${h.bottom - row.getBoundingClientRect().top + ROW_GAP}px`);
     };
     place();
     window.addEventListener("resize", place);
     // The row changes too (the volume comes and goes with who's on the stage).
     const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
-    watch?.observe(frame);
+    watch?.observe(host);
     const row = controls.querySelector("[data-buttons]");
     if (row) watch?.observe(row);
     return () => {
       window.removeEventListener("resize", place);
       watch?.disconnect();
     };
-  }, [settingsOpen]);
+  }, [settingsOpen, sideways]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -503,9 +506,12 @@ export function Stage({
               }
             />
           </div>
-          {settingsPanel}
+          {!sideways && settingsPanel}
         </div>
       </div>
+
+      {/* Sideways the stage is the screen: over the top bar as well (design decision 9). */}
+      {sideways && settingsPanel}
 
       {sideways ? (
         <>

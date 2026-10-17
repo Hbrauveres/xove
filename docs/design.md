@@ -142,7 +142,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 | Switch knob | 180 ms | ease |
 | Stage dots | 180 ms | ease |
 | Dropdown unroll and roll back | 260 ms, by its height | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
-| The settings panel sliding in and out (the drawer from the right, the sheet from the bottom) | 260 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| The settings panel coming in and going out (over the cog: a fade and a 6 px rise; the sheet from the bottom) | 140 ms fade, 180 ms rise; the sheet 260 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | The settings' tab marker; a segmented control's pill | 200 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | A drop-up: the pause before it unrolls | 120 ms resting on the button | — |
 | …its fade and 6 px slide up | 140 ms and 180 ms; a slip outside shorter than 300 ms doesn't close it | ease, `cubic-bezier(0.2, 0.8, 0.2, 1)` |
@@ -207,18 +207,18 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 
 ### The settings panel
 
-![The settings drawer on the Camera tab, its picker open](images/design/settings-drawer.png) ![The settings sheet on a phone](images/design/settings-sheet.png) ![The settings drawer on a phone held sideways, on the screen's edge](images/design/settings-sideways.png)
+![The settings over the cog on desktop, Screen tab](images/design/settings-popover.png) ![The settings sheet on a phone](images/design/settings-sheet.png) ![The settings over the cog on a phone held sideways, in two columns](images/design/settings-sideways.png)
 
 The settings for what you send, from the cog.
 
-- **Desktop, tablets and phones held sideways:** a **300 px drawer**, 10 px from the right edge. **A phone held upright** (its full-screen view too): a **bottom sheet**, no pull handle; the ✕, the cog or Escape closes it.
-- Frosted like the dropdown panels (the panel colour at 74%, blur 22 px, a 1 px white border at 8%), 16 px corners (20 px on top of the sheet). **One control height:** 30 px in the drawer, 44 px in the sheet.
+- **Desktop, tablets and phones held sideways: over the cog.** A popover **centred on the cog**, like the volume's slider, **10 px above the round buttons** (never behind them) and never past the player's sides; it fades in and rises 6 px. **Every tab has the same height**, the tallest one's, so switching tabs never moves the tabs under the pointer; at least 240 px, at most the room above the buttons (then it scrolls inside). Its width follows the player: a fifth of it, **280 to 320 px**. **Sideways it uses the width:** up to 560 px, in **two columns**, what you pick on the left (the preview and the camera, the window) and how it's sent on the right (Quality, Mode), so no tab scrolls. **One panel over the buttons at a time:** while it's open, the volume's slider stays closed. **A phone held upright** (its full-screen view too): a **bottom sheet**, no pull handle; the ✕, the cog or Escape closes it.
+- Frosted like the dropdown panels (the panel colour at 74%, blur 22 px, a 1 px white border at 8%), 16 px corners (20 px on top of the sheet). **One control height:** 30 px over the cog, 44 px in the sheet.
 - **Tabs Screen and Camera**, with a **red marker** that slides under the chosen one and a **red dot** on the tab of what you're sending. **No Screen tab on phones**, nor where a screen can't be shared.
 - **Screen:** while you share, what's shared and **Change** (and, when the screen has no sound, a line saying how to share it); while you don't, one line saying these are used next time. **No preview**: the stage and the browser's picker already show it. Then Quality and Mode.
 - **Camera:** your camera's preview, centred: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Like any app, the browser asks for the camera the first time; refused or missing, the preview's place says so, and how to allow it. Then the camera's picker, Quality and Mode.
 - **No field descriptions**, except where a setting needs a line to make sense. The body scrolls with the app's slim scrollbar, without arrows.
 - **In the upright full view, the sheet makes room instead of covering:** the player, its round buttons with it, moves up at the same size between the top bar and the sheet. If it doesn't fit (a vertical share), the video stays under the sheet and the round buttons alone move up just above it: **the buttons are never left behind the settings.** The video is never shrunk; everything slides back when the sheet closes.
-- **Side panels hang on the outermost wall**, a rule for every panel that slides in from a side (the settings from the right, the mixer from the left): in **fullscreen** and on a **phone held sideways**, on the screen's own edge, past the black at the player's sides (clearing a notch); in a **window**, on the player's edge, inside the window. Opening one never scrolls the page.
+- **Panels open over the button that opened them** (a rule for the whole app): the settings over the cog, the volume over its button, the drop-ups over their live buttons. Nothing slides in from a side.
 
 ### Buttons
 
@@ -313,7 +313,7 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **No header or footer:** the stage fills the height and hugs the picture, black at its sides where the light glows.
 - **A top bar** over a black gradient: who's on the stage on the left; the people button, the bell and my account on the right.
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
-- **The settings drawer** hangs on the screen's right edge, past the black at the player's side, clear of the notch (side panels hang on the outermost wall).
+- **The settings** open over the cog in two columns, so they fit the short screen without scrolling.
 - Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
 - **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
 
@@ -344,7 +344,7 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 - **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
 - **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, no scrollbar), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
-- **Panels that slide in from a side hang on the outermost wall:** the screen's edge in fullscreen and on a phone sideways, the player's edge in a window. **Panels are frosted, never opaque**; nothing over the video hides the round buttons.
+- **Panels open over the button that opened them,** never from a side; on a wide, short player they use the width (two columns) rather than scroll. **Panels are frosted, never opaque**; nothing over the video hides the round buttons.
 - **Say what effects cost:** blur, canvases and animations run on every frame; keep them to what's here.
 
 ## Keeping this page current

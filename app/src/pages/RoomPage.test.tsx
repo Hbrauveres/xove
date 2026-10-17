@@ -2569,17 +2569,16 @@ describe("room: on a phone sideways (spec 0160)", () => {
     expect(row()).toBeNull();
   });
 
-  it("opens the settings over the cog, inside the player (spec 0107, design decision 9)", async () => {
+  it("opens the settings over the cog, on the stage so they're over the top bar too (spec 0107, design decision 9)", async () => {
     const user = userEvent.setup();
     await sidewaysWith(["Marina"]);
     await user.click(await screen.findByRole("button", { name: "Settings" }));
     const panel = screen.getByRole("dialog", { name: "Settings" });
-    const frame = stageLayer().querySelector("video")!.closest("[data-chrome]") as HTMLElement;
-    expect(frame.contains(panel)).toBe(true);
     expect(panel).toHaveAttribute("data-variant", "popover");
+    expect(panel.parentElement).toBe(stageLayer());
     // The stage tells it where the cog and the round buttons are.
-    expect(frame.style.getPropertyValue("--cog-x")).toMatch(/px$/);
-    expect(frame.style.getPropertyValue("--above-row")).toMatch(/px$/);
+    expect(stageLayer().style.getPropertyValue("--cog-x")).toMatch(/px$/);
+    expect(stageLayer().style.getPropertyValue("--above-row")).toMatch(/px$/);
   });
 });
 
