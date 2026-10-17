@@ -36,12 +36,20 @@ describe("the volume mixer (spec 0108)", () => {
     const onClose = vi.fn();
     render(<Harness onClose={onClose} />);
     fireEvent.click(screen.getByRole("button", { name: "Mute Screen sound" }));
-    expect(screen.getByRole("button", { name: "Unmute Screen sound" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Mute Screen sound" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.change(screen.getByRole("slider", { name: "Screen sound volume" }), { target: { value: "0.3" } });
     expect(screen.getByRole("slider", { name: "Screen sound volume" })).toHaveValue("0.3");
     expect(screen.getByRole("button", { name: "Mute Screen sound" })).toBeInTheDocument();
     // Muting never closes it.
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("crosses a sound's icon when it's muted or at zero, as the volume button", () => {
+    render(<Harness />);
+    const icon = () => screen.getByRole("button", { name: "Mute Screen sound" }).querySelector("svg")!.getAttribute("data-icon");
+    expect(icon()).toBe("sound");
+    fireEvent.change(screen.getByRole("slider", { name: "Screen sound volume" }), { target: { value: "0" } });
+    expect(icon()).toBe("volume-off");
   });
 
   it("draws the voice greyed in its place: its reason, nothing to grab, nothing changes", () => {
@@ -90,10 +98,10 @@ describe("the volume mixer (spec 0108)", () => {
     render(<Harness canSetVolume={false} />);
     expect(screen.queryAllByRole("slider")).toHaveLength(0);
     expect(mixer()).toHaveAttribute("data-pill", "true");
-    const sound = screen.getByRole("button", { name: "Screen sound" });
-    expect(sound).toHaveAttribute("aria-pressed", "true");
+    const sound = screen.getByRole("button", { name: "Mute Screen sound" });
+    expect(sound).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(sound);
-    expect(screen.getByRole("button", { name: "Screen sound" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Mute Screen sound" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: `Voice: ${NO_VOICE_YET}` })).toHaveAttribute("aria-disabled", "true");
   });
 });

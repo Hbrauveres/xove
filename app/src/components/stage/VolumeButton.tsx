@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef } from "react";
 import { showToast } from "../ui/toast";
 import { VolumeIcon, VolumeOffIcon } from "./icons";
 import round from "./RoundButton.module.css";
@@ -30,6 +30,11 @@ export function VolumeButton({ channels, canSetVolume, open, onOpenChange }: Pro
   const heard = channels.filter((c) => !c.unavailable);
   const locked = heard.length === 0;
   const shown = open && !locked;
+  // Closing with the focus inside (4 s idle, Escape) gives it back to the button.
+  const close = () => {
+    if (control.current?.contains(document.activeElement) && document.activeElement !== button.current) button.current?.focus();
+    onOpenChange(false);
+  };
 
   // A press anywhere else closes it (the button's own press toggles it).
   useEffect(() => {
@@ -37,23 +42,26 @@ export function VolumeButton({ channels, canSetVolume, open, onOpenChange }: Pro
     const outside = (e: PointerEvent) => {
       if (!control.current?.contains(e.target as Node)) onOpenChange(false);
     };
+    // Escape closes it wherever the focus is (a touch or Safari's click focuses nothing).
+    const escape = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (control.current?.contains(document.activeElement)) button.current?.focus();
+      onOpenChange(false);
+    };
     document.addEventListener("pointerdown", outside, true);
-    return () => document.removeEventListener("pointerdown", outside, true);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside, true);
+      document.removeEventListener("keydown", escape);
+    };
   }, [shown, onOpenChange]);
 
   const silent = locked || heard.every((c) => c.muted || c.volume === 0);
   const label = locked ? NO_SOUND_HERE : silent ? "Volume, all muted" : "Volume";
   const pointer = useRef("");
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== "Escape" || !shown) return;
-    e.stopPropagation();
-    onOpenChange(false);
-    button.current?.focus();
-  };
-
   return (
-    <div ref={control} className={styles.control} onKeyDown={onKeyDown}>
+    <div ref={control} className={styles.control}>
       <div className={`${round.pill} ${locked ? round.disabled : ""}`} data-open={shown || undefined}>
         <button
           ref={button}
@@ -67,8 +75,10 @@ export function VolumeButton({ channels, canSetVolume, open, onOpenChange }: Pro
             pointer.current = e.pointerType;
           }}
           onClick={() => {
+            const touched = pointer.current === "touch" || pointer.current === "pen";
+            pointer.current = "";
             if (!locked) onOpenChange(!shown);
-            else if (pointer.current === "touch" || pointer.current === "pen") showToast(NO_SOUND_HERE, <VolumeOffIcon />);
+            else if (touched) showToast(NO_SOUND_HERE, <VolumeOffIcon />);
           }}
         >
           {silent ? <VolumeOffIcon /> : <VolumeIcon />}
@@ -78,7 +88,7 @@ export function VolumeButton({ channels, canSetVolume, open, onOpenChange }: Pro
         </span>
       </div>
       {/* After the button, so Tab goes button, then the mixer. */}
-      {!locked && <VolumeMixer channels={channels} canSetVolume={canSetVolume} open={shown} onClose={() => onOpenChange(false)} />}
+      {!locked && <VolumeMixer channels={channels} canSetVolume={canSetVolume} open={shown} onClose={close} />}
     </div>
   );
 }

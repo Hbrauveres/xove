@@ -613,7 +613,7 @@ describe("room: the viewer's quality and volume", () => {
     view.unmount();
     await watchBruno({ withSound: true });
     await user.click(within(stage()).getByRole("button", { name: "Volume, all muted" }));
-    await user.click(screen.getByRole("button", { name: "Unmute Screen sound" }));
+    await user.click(screen.getByRole("button", { name: "Mute Screen sound" }));
     expect(bar()).toHaveValue("0.3");
   });
 
@@ -629,6 +629,31 @@ describe("room: the viewer's quality and volume", () => {
     await user.click(within(stage()).getByRole("button", { name: "Volume" }));
     expect(mixerOpen()).toBe(true);
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
+  });
+
+  it("the mixer goes when there's nothing left to hear, and doesn't come back by itself (spec 0108)", async () => {
+    await watchBruno({ withSound: true });
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    act(() => {
+      lastRoom().unpublish("user-7", "screen_share_audio");
+    });
+    await within(stage()).findByRole("button", { name: "No sound in this stream" });
+    act(() => {
+      lastRoom().publishSound("user-7");
+    });
+    const volume = await within(stage()).findByRole("button", { name: "Volume" });
+    expect(volume).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opening the settings any way closes the mixer (spec 0108)", async () => {
+    await watchBruno({ withSound: true });
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    // A click with no press before it: only the settings opening closes the mixer.
+    fireEvent.click(within(stage()).getByRole("button", { name: "Settings" }));
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "Volume" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("gives the sharer's own player no volume; the cog opens the settings for what I send", async () => {

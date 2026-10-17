@@ -350,8 +350,14 @@ export function Stage({
   // sharer's cap changes: Auto never asks for more than the cap, so LiveKit stops sending
   // the layers above it.
   const remote = big?.isMe ? undefined : main?.remote;
-  // Nobody else's stream to hear: the mixer goes with its button.
-  if (mixerOpen && !(remote && big)) setMixerOpen(false);
+  // Nothing to hear any more (nobody else's stream, or one without sound): the mixer goes,
+  // and a new stream starts with it closed.
+  const canHear = Boolean(remote && big?.screen && big.hasSound);
+  const [heardId, setHeardId] = useState(bigId);
+  if (heardId !== bigId) {
+    setHeardId(bigId);
+    if (mixerOpen) setMixerOpen(false);
+  } else if (mixerOpen && !canHear) setMixerOpen(false);
   // A new function arrives with every LiveKit update; the video it's about is what matters.
   const setQuality = useRef(remote?.setQuality);
   useEffect(() => {

@@ -79,10 +79,14 @@ export function VolumeMixer({ channels, canSetVolume, open, onClose }: Props) {
     >
       <div className={styles.inner}>
         {channels.map((c) => {
-          const icon = c.unavailable || c.muted ? ICONS[c.id].off : ICONS[c.id].on;
+          // Crossed when it can't be heard: muted, at zero, or not there (as the volume button).
+          const silent = Boolean(c.unavailable) || c.muted || (canSetVolume && c.volume === 0);
+          const icon = silent ? ICONS[c.id].off : ICONS[c.id].on;
           const toggle = () => {
+            const touched = pointer.current === "touch" || pointer.current === "pen";
+            pointer.current = "";
             if (c.unavailable) {
-              if (pointer.current === "touch" || pointer.current === "pen") showToast(c.unavailable, ICONS[c.id].off);
+              if (touched) showToast(c.unavailable, ICONS[c.id].off);
               return;
             }
             c.onChange?.({ volume: c.volume, muted: !c.muted });
@@ -119,11 +123,9 @@ export function VolumeMixer({ channels, canSetVolume, open, onClose }: Props) {
               <button
                 type="button"
                 className={styles.mute}
-                aria-label={
-                  c.unavailable ? `${c.label}: ${c.unavailable}` : canSetVolume ? `${c.muted ? "Unmute" : "Mute"} ${c.label}` : c.label
-                }
-                // Mixer: pressed means muted. iPhone's on/off: pressed means on.
-                aria-pressed={c.unavailable ? undefined : canSetVolume ? c.muted : !c.muted}
+                // One name; pressed means muted, in the mixer and in the iPhone's pill alike.
+                aria-label={c.unavailable ? `${c.label}: ${c.unavailable}` : `Mute ${c.label}`}
+                aria-pressed={c.unavailable ? undefined : c.muted}
                 aria-disabled={c.unavailable ? true : undefined}
                 onPointerDown={onPointerDown}
                 onClick={toggle}

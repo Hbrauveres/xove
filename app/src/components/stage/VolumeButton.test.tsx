@@ -3,7 +3,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearToast, currentToast } from "../ui/toast";
 import { VolumeButton } from "./VolumeButton";
-import { NO_VOICE_YET, type Channel, type ChannelSound } from "./VolumeMixer";
+import { MIXER_IDLE_MS, NO_VOICE_YET, type Channel, type ChannelSound } from "./VolumeMixer";
 
 /** The button with its own state, as the stage uses it: the screen's sound and the voice greyed. */
 function Harness({
@@ -80,6 +80,24 @@ describe("volume button (specs 0101 and 0108)", () => {
     expect(button()).toHaveFocus();
   });
 
+  it("closing by itself with the focus inside gives the focus back to the button", () => {
+    vi.useFakeTimers();
+    render(<Harness />);
+    fireEvent.click(button());
+    screen.getByRole("slider", { name: "Screen sound volume" }).focus();
+    act(() => vi.advanceTimersByTime(MIXER_IDLE_MS));
+    expect(mixerOpen()).toBe(false);
+    expect(button()).toHaveFocus();
+    vi.useRealTimers();
+  });
+
+  it("Escape closes it wherever the focus is", () => {
+    render(<Harness />);
+    fireEvent.click(button());
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(mixerOpen()).toBe(false);
+  });
+
   it("a press outside closes it; a press inside doesn't", () => {
     render(
       <>
@@ -133,7 +151,7 @@ describe("volume button (specs 0101 and 0108)", () => {
     render(<Harness canSetVolume={false} />);
     fireEvent.click(button());
     expect(screen.queryAllByRole("slider")).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "Screen sound" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mute Screen sound" }));
     expect(icon()).toBe("volume-off");
   });
 });
