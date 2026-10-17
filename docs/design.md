@@ -223,7 +223,7 @@ The settings for what you send, from the cog.
 - **Screen:** while you share, what's shared and **Change** (and, when the screen has no sound, a line saying how to share it); while you don't, one line saying these are used next time. **No preview**: the stage and the browser's picker already show it. Then Quality and Mode.
 - **Camera:** your camera's preview under its own **Preview** heading, like every other group, centred under it: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Like any app, the browser asks for the camera the first time; refused or missing, the preview's place says so, and how to allow it. Then the camera's picker, Quality and Mode. **Sideways**, the preview is alone in the left column; the camera's picker, Quality and Mode are in the right one.
 - **No field descriptions**, except where a setting needs a line to make sense. The body scrolls with the app's slim scrollbar, without arrows.
-- **In the upright full view, the sheet makes room instead of covering:** the player, its round buttons with it, moves up at the same size between the top bar and the sheet. If it doesn't fit (a vertical share), the video stays under the sheet and the round buttons alone move up just above it: **the buttons are never left behind the settings.** The video is never shrunk; everything slides back when the sheet closes.
+- **In the upright full view, the sheet makes room instead of covering:** the round buttons and the fullscreen button, which sit at the bottom of the screen there, move up together to just above the sheet (8 px), never behind it; the video moves up at the same size between the top bar and the sheet when it fits, and stays where it is (under the sheet) when it doesn't (a vertical share). The video is never shrunk; everything slides back when the sheet closes. The sheet's top is read from the sheet itself.
 - **Panels open over the button that opened them** (a rule for the whole app): the settings over the cog, the volume over its button, the drop-ups over their live buttons. Nothing slides in from a side.
 
 ### Buttons
@@ -326,7 +326,9 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
 - **The settings** open over the cog in two columns, so they fit the short screen without scrolling: on Camera, the preview alone on the left, the camera's picker, Quality and Mode on the right.
 - Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
-- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
+- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice. There the round buttons and the fullscreen button are the **screen's**, at its bottom (12 px up, above the iPhone's home indicator), not the player band's, so they're where the thumb is whatever the shape of the share; an open streams row covers them, as held sideways.
+
+![The full view with the settings open: the buttons above the sheet, the vertical share under it](images/design/full-view-sheet.png)
 
 ### Tablet, upright
 

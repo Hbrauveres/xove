@@ -12,7 +12,7 @@ import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
 import { VolumeButton } from "./VolumeButton";
-import { FULL_VIEW_SHEET, liftButtons, makeRoom } from "./makeRoom";
+import { liftButtons, makeRoom } from "./makeRoom";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching, STREAM_PLACES } from "./NowWatching";
@@ -142,37 +142,45 @@ export function Stage({
   const stageRef = useRef<HTMLElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
+  const screenChromeRef = useRef<HTMLDivElement>(null);
+  // The fullscreen button and the round buttons. In the upright full view they're the
+  // screen's, at its bottom, not the player band's (spec 0112); elsewhere, the player's.
+  const onScreen = sideways && Boolean(fullView?.on && !fullView.hidden);
 
-  // The upright full view with the settings sheet open (spec 0107, design decision 6): the
-  // player, its round buttons included, moves up between the top bar and the sheet at the
-  // same size, if it fits there; if not, the sheet covers it. Only a translate moves it.
+  // The upright full view with the settings sheet open (spec 0107, design decision 6; spec 0112):
+  // the round buttons and the fullscreen button, at the bottom of the screen, move up together
+  // to just above the sheet; the video moves up between the top bar and the sheet at the same
+  // size if it fits there, and stays (never shrunk) if not. The sheet's top is read from the
+  // sheet itself: the visible screen isn't always the stage's height on a real phone.
   const makingRoom = sideways && Boolean(fullView?.on && !fullView.hidden) && sheetOpen;
   useLayoutEffect(() => {
     const box = boxRef.current;
     const section = stageRef.current;
     if (!box || !section) return;
-    const controls = controlsRef.current;
     const place = () => {
+      const buttons = screenChromeRef.current;
       box.style.translate = "";
-      if (controls) controls.style.translate = "";
+      if (buttons) buttons.style.translate = "";
       if (!makingRoom) return;
+      const sheet = document.querySelector<HTMLElement>('[role="dialog"][data-variant="sheet"]');
+      if (!sheet) return;
+      // Fixed to the screen: its layout top, which its slide-in (a transform) doesn't change.
+      const sheetTop = sheet.offsetTop;
+      const s = section.getBoundingClientRect();
       const top = topRef.current;
       const bar = top
         ? Math.max(0, ...[...top.children].map((c) => (c as HTMLElement).offsetTop + (c as HTMLElement).offsetHeight))
         : 0;
-      const height = section.clientHeight;
-      const sheet = height * FULL_VIEW_SHEET;
-      const lift = makeRoom({ height, bar, sheet, band: { top: box.offsetTop, height: box.offsetHeight } });
-      if (lift) {
-        box.style.translate = `0 ${-lift}px`;
-        return;
-      }
-      // The player stays under the sheet: its round buttons alone move up above it.
-      if (!controls) return;
-      const sheetTop = section.getBoundingClientRect().top + height - sheet;
-      const row = controls.querySelector("[data-buttons]") ?? controls;
-      const up = liftButtons({ rowBottom: row.getBoundingClientRect().bottom, sheetTop });
-      if (up) controls.style.translate = `0 ${-up}px`;
+      const lift = makeRoom({ height: s.height, bar, sheet: s.bottom - sheetTop, band: { top: box.offsetTop, height: box.offsetHeight } });
+      if (lift) box.style.translate = `0 ${-lift}px`;
+      const row = buttons?.querySelector<HTMLElement>("[data-buttons]");
+      if (!buttons || !row) return;
+      // Where the row sits without any lift (layout, not the screen: a lift still sliding would
+      // otherwise be measured as already done).
+      let y = row.offsetHeight;
+      for (let n: HTMLElement | null = row; n && n !== section; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+      const up = liftButtons({ rowBottom: s.top + y, sheetTop });
+      if (up) buttons.style.translate = `0 ${-up}px`;
     };
     place();
     window.addEventListener("resize", place);
@@ -189,6 +197,7 @@ export function Stage({
     held.current.size > 0 ||
     (frameRef.current?.contains(document.activeElement) ?? false) ||
     (topRef.current?.contains(document.activeElement) ?? false) ||
+    (screenChromeRef.current?.contains(document.activeElement) ?? false) ||
     Boolean(topRef.current?.querySelector('[aria-expanded="true"]'));
   const showChrome = useCallback(() => {
     setChromeShown(true);
@@ -240,29 +249,39 @@ export function Stage({
   // buttons. The panel reads where they are from two variables on what holds it.
   useLayoutEffect(() => {
     const host = sideways ? stageRef.current : frameRef.current;
-    const controls = controlsRef.current;
-    if (!settingsOpen || !host || !controls) return;
+    if (!settingsOpen || !host || !controlsRef.current) return;
     const place = () => {
+      // Read each time: turning the phone in the full view moves the buttons to another layer.
+      const controls = controlsRef.current;
+      if (!controls) return;
       const cog = controls.querySelector('button[aria-label="Settings"]');
       const row = controls.querySelector("[data-buttons]");
       const h = host.getBoundingClientRect();
       if (!cog || !row || !h.width) return;
+      // The panel goes where the buttons end up: if the player is still sliding back (turning
+      // the phone in the full view with the settings open), take its slide out.
+      const box = boxRef.current;
+      const sliding = box && host !== frameRef.current && box.contains(row) ? box.getBoundingClientRect().top - h.top - box.offsetTop : 0;
       const c = cog.getBoundingClientRect();
       host.style.setProperty("--cog-x", `${c.left + c.width / 2 - h.left}px`);
-      host.style.setProperty("--above-row", `${h.bottom - row.getBoundingClientRect().top + ROW_GAP}px`);
+      host.style.setProperty("--above-row", `${h.bottom - (row.getBoundingClientRect().top - sliding) + ROW_GAP}px`);
     };
     place();
     window.addEventListener("resize", place);
     // The row changes too (the volume comes and goes with who's on the stage).
     const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
     watch?.observe(host);
-    const row = controls.querySelector("[data-buttons]");
+    const row = controlsRef.current.querySelector("[data-buttons]");
     if (row) watch?.observe(row);
+    // And once the player has finished sliding (a slide doesn't resize anything).
+    const box = boxRef.current;
+    box?.addEventListener("transitionend", place);
     return () => {
       window.removeEventListener("resize", place);
       watch?.disconnect();
+      box?.removeEventListener("transitionend", place);
     };
-  }, [settingsOpen, sideways]);
+  }, [settingsOpen, sideways, onScreen]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -438,6 +457,52 @@ export function Stage({
     );
   };
 
+  const chromeLayer = (
+    <>
+      {/* Over a stream and over the empty stage alike, so stopping the only stream in
+          fullscreen never strands you there (spec 0111). */}
+      {fullView ? (
+        <StageOverlay view fullscreen={fullView.on} onFullscreen={fullView.toggle} hidden={fullView.hidden} />
+      ) : (
+        <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+      )}
+
+      {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
+      <div ref={controlsRef} className={styles.controls} data-no-swipe>
+        {/* Upright and sideways alike: where you are among the people live (specs 0159, 0160). */}
+        {(phone || sideways) && (
+          <StageDots
+            people={sharers.map((s) => s.person)}
+            meId={meId}
+            onStage={bigId}
+            onPick={(id) => pick(id)}
+          />
+        )}
+        <PlayerButtons
+          {...controls}
+          onSettings={toggleSettings}
+          onMenuChange={onMenuChange}
+          // Watching someone else: their volume first (spec 0101).
+          before={
+            remote &&
+            big && (
+              <VolumeButton
+                prefs={watch}
+                onChange={changeWatch}
+                canSetVolume={canSetVolume()}
+                // Only a screen can be shared without sound; a camera never has any to lock.
+                hasSound={!big.screen || Boolean(big.hasSound)}
+                onOpenChange={onVolumeOpen}
+                // One panel over the buttons at a time: the slider waits while the settings are open.
+                closed={settingsOpen}
+              />
+            )
+          }
+        />
+      </div>
+    </>
+  );
+
   return (
     <section
       ref={stageRef}
@@ -472,52 +537,19 @@ export function Stage({
           onFocus={showChrome}
         >
           {body()}
-          {/* Over a stream and over the empty stage alike, so stopping the only stream in
-              fullscreen never strands you there (spec 0111). */}
-          {fullView ? (
-            <StageOverlay view fullscreen={fullView.on} onFullscreen={fullView.toggle} hidden={fullView.hidden} />
-          ) : (
-            <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
-          )}
-
-          {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
-          <div ref={controlsRef} className={styles.controls} data-no-swipe>
-            {/* Upright and sideways alike: where you are among the people live (specs 0159, 0160). */}
-            {(phone || sideways) && (
-              <StageDots
-                people={sharers.map((s) => s.person)}
-                meId={meId}
-                onStage={bigId}
-                onPick={(id) => pick(id)}
-              />
-            )}
-            <PlayerButtons
-              {...controls}
-              onSettings={toggleSettings}
-              onMenuChange={onMenuChange}
-              // Watching someone else: their volume first (spec 0101).
-              before={
-                remote &&
-                big && (
-                  <VolumeButton
-                    prefs={watch}
-                    onChange={changeWatch}
-                    canSetVolume={canSetVolume()}
-                    // Only a screen can be shared without sound; a camera never has any to lock.
-                    hasSound={!big.screen || Boolean(big.hasSound)}
-                    onOpenChange={onVolumeOpen}
-                    // One panel over the buttons at a time: the slider waits while the settings are open.
-                    closed={settingsOpen}
-                  />
-                )
-              }
-            />
-          </div>
+          {!onScreen && chromeLayer}
           {!sideways && settingsPanel}
           {/* A short message to the user, at the top centre of the player (design decision 10). */}
           {!sideways && <Toast />}
         </div>
       </div>
+
+      {/* The upright full view: at the bottom of the screen, moving up together above the sheet. */}
+      {onScreen && (
+        <div ref={screenChromeRef} className={styles.screenChrome} onFocus={showChrome}>
+          {chromeLayer}
+        </div>
+      )}
 
       {/* Sideways the stage is the screen: over the top bar as well (design decision 9). */}
       {sideways && settingsPanel}

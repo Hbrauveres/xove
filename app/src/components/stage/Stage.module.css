@@ -75,9 +75,40 @@
   pointer-events: auto;
 }
 
+/*
+ * The upright full view (spec 0112): the fullscreen button and the round buttons are the
+ * screen's, at its bottom, over the player band and the black around it; they fade with the
+ * top bar and move up together above the settings sheet.
+ */
+.screenChrome {
+  position: absolute;
+  /* Clear of the iPhone's home indicator, like the streams row's arrow. */
+  inset: 0 0 env(safe-area-inset-bottom, 0px);
+  z-index: 4;
+  pointer-events: none;
+  transition: translate var(--unroll);
+}
+
+.stage[data-chrome="hidden"] .screenChrome .controls {
+  opacity: 0;
+}
+
+.stage[data-chrome="hidden"] .screenChrome :is(button, input) {
+  pointer-events: none;
+}
+
+.stage[data-chrome="hidden"]:focus-within .screenChrome .controls {
+  opacity: 1;
+}
+
+.stage[data-chrome="hidden"]:focus-within .screenChrome :is(button, input) {
+  pointer-events: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .box,
-  .controls {
+  .controls,
+  .screenChrome {
     transition: none;
   }
 }

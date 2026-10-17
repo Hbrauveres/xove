@@ -10,7 +10,7 @@ type Sizes = {
   bar: number;
   /** The open sheet's height. */
   sheet: number;
-  /** The player's band (the video, with its round buttons over its bottom), where it is now. */
+  /** The player's band (the video), where it is now. */
   band: { top: number; height: number };
 };
 
@@ -29,8 +29,8 @@ export function makeRoom({ height, bar, sheet, band }: Sizes): number {
 }
 
 /**
- * How far to move the round buttons up when the player stays under the sheet (it didn't fit):
- * just above the sheet, so they're never left behind it (design decision 6). The video stays.
+ * How far to move the round buttons (and the fullscreen button with them) up from the bottom of
+ * the screen: to just above the sheet, so they're never left behind it (design decision 6).
  */
 export function liftButtons({ rowBottom, sheetTop }: { rowBottom: number; sheetTop: number }): number {
   return Math.max(0, rowBottom - (sheetTop - ROOM_GAP));

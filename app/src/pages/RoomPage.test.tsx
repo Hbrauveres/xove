@@ -2728,6 +2728,42 @@ describe("room: the full-screen view on a phone (spec 0171)", () => {
     expect(facecam().style.top).toBe("18%");
   });
 
+  it("draws the round buttons and the fullscreen button on the screen, not the player, in the full view (spec 0112)", async () => {
+    const { video } = await upright();
+    const frame = video.closest("[data-chrome]") as HTMLElement;
+    expect(frame.querySelector("[data-buttons]")).not.toBeNull();
+    await userEvent.setup().click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    const buttons = stage().querySelector("[data-buttons]")!;
+    const exit = within(stage()).getByRole("button", { name: "Exit full-screen view" });
+    expect(frame.contains(buttons)).toBe(false);
+    expect(frame.contains(exit)).toBe(false);
+    // One layer, so they move up together above the settings sheet.
+    expect(buttons.closest("[class*=screenChrome]")).toBe(exit.closest("[class*=screenChrome]"));
+  });
+
+  it("moves them up together to just above the settings sheet, read from the sheet, and back on closing (spec 0112)", async () => {
+    await upright();
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    const layer = stage().querySelector("[class*=screenChrome]") as HTMLElement;
+    // A 915 px screen, the sheet's top at 415; the row 48 px tall, its bottom at 903.
+    vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (this: HTMLElement) {
+      return this.dataset.variant === "sheet" ? 415 : this.hasAttribute("data-buttons") ? 855 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute("data-buttons") ? 48 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ top: 0, bottom: 915, left: 0, right: 412, width: 412, height: 915, x: 0, y: 0 } as DOMRect);
+    await user.click(within(stage()).getByRole("button", { name: "Settings" }));
+    // 903 - (415 - 8) = 496 px up.
+    await waitFor(() => expect(layer.style.translate).toBe("0 -496px"));
+    // Measured again (the address bar, the keyboard, another stream): the lift stays.
+    act(() => window.dispatchEvent(new Event("resize")));
+    expect(layer.style.translate).toBe("0 -496px");
+    await user.click(screen.getByRole("button", { name: "Close settings" }));
+    await waitFor(() => expect(layer.style.translate).toBe(""));
+  });
+
   it("never asks the browser for the player's fullscreen on a phone", async () => {
     await upright();
     const frame = screen.getByLabelText("Marina's shared screen").closest("[data-chrome]") as HTMLElement;
