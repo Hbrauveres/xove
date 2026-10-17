@@ -36,3 +36,10 @@ describe("the round buttons when the player stays under the sheet", () => {
     expect(liftButtons({ rowBottom: sheetTop - 40, sheetTop })).toBe(0);
   });
 });
+
+describe("the round buttons in the upright normal view (spec 0118)", () => {
+  it("stop at the player's top edge rather than leave it", () => {
+    expect(liftButtons({ rowBottom: 600, sheetTop: 100, max: 300 })).toBe(300);
+    expect(liftButtons({ rowBottom: 600, sheetTop: 400, max: 300 })).toBe(600 - (400 - ROOM_GAP));
+  });
+});
