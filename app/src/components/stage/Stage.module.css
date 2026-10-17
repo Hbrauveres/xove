@@ -275,3 +275,9 @@
     transition: none;
   }
 }
+
+/* The toast sideways: the screen's top centre, over the top bar (design decision 10). */
+.toastTop {
+  --toast-top: calc(10px + env(safe-area-inset-top, 0px));
+  display: contents;
+}

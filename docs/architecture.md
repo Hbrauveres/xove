@@ -26,7 +26,7 @@ Everything is in `app/src`:
 | `media/` | How screens and cameras are sent (`shareSettings.ts`), the ambilight's drawing (`ambilight.ts`), who is big by default (`stagePick.ts`), choices kept in the browser (`preferences.ts`) |
 | `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons (their icons in `icons.tsx`, the ones that come and go in `ButtonSlot`, the drop-ups on live ones), the settings panel (`SettingsPanel`, and `makeRoom`, which moves the player up for its sheet in the upright full view), the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
 | `components/room/` | The room around the stage: header, footer, people, activity (pill, bell, list), account menu, the waiting screen and the seat offer |
-| `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage` |
+| `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage`, `Toast` (a short message any component shows with `showToast`) |
 | `components/brand/`, `brand/` | The mark: its geometry and animation timeline (`brand/`), and the components that draw it (`XoveMark`, `XoveIcon`) |
 | `install/` | Phones and tablets: which device it is, and the browser's install prompt |
 | `styles/` | The design tokens (`global.css`) and the tests that check them |

@@ -19,6 +19,7 @@ import { NowWatching, STREAM_PLACES } from "./NowWatching";
 // The component, not the type of the same name from ../../types.
 import { LiveFeed as LiveNowFeed } from "./LiveFeed";
 import { HereCards } from "./HereCards";
+import { Toast } from "../ui/Toast";
 import { MUTED, type PreviewSound } from "./previewSound";
 import { useVideoShape } from "../../hooks/useVideoShape";
 import { useStageSwipe } from "../../hooks/useStageSwipe";
@@ -507,11 +508,19 @@ export function Stage({
             />
           </div>
           {!sideways && settingsPanel}
+          {/* A short message to the user, at the top centre of the player (design decision 10). */}
+          {!sideways && <Toast />}
         </div>
       </div>
 
       {/* Sideways the stage is the screen: over the top bar as well (design decision 9). */}
       {sideways && settingsPanel}
+      {/* Sideways at the top centre of the screen, over the top bar's empty middle. */}
+      {sideways && (
+        <div className={styles.toastTop}>
+          <Toast />
+        </div>
+      )}
 
       {sideways ? (
         <>

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -8,6 +8,7 @@ import { CAMERA_BLOCKED } from "../../hooks/useLiveKitRoom";
 import { NO_SOUND } from "./PlayerButtons";
 import { SettingsPanel } from "./SettingsPanel";
 import { NO_SCREEN } from "./PlayerButtons";
+import { clearToast, currentToast } from "../ui/toast";
 
 const PREFS: Record<StreamKind, SharePrefs> = {
   screen: { quality: "1080p", mode: "smooth" },
@@ -64,6 +65,15 @@ describe("the settings panel: tabs", () => {
     await user.click(screenTab);
     expect(within(panel()).getByRole("tab", { name: "Camera" })).toHaveAttribute("aria-selected", "true");
     expect(within(panel()).queryByRole("tabpanel", { name: "Screen" })).not.toBeInTheDocument();
+  });
+
+  it("says why in a toast when a finger touches the greyed-out Screen tab (design decision 10)", () => {
+    setup({ screenTab: false });
+    const screenTab = within(panel()).getByRole("tab", { name: "Screen" });
+    fireEvent.pointerDown(screenTab, { pointerType: "touch" });
+    fireEvent.click(screenTab);
+    expect(currentToast()?.text).toBe(NO_SCREEN);
+    act(() => clearToast());
   });
 
   it("marks with a red dot the tab of what I'm sending", () => {

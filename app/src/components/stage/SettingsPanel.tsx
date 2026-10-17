@@ -5,7 +5,8 @@ import { CAMERA_QUALITIES, MODE_OPTIONS, SHARE_QUALITIES, type ShareMode, type S
 import type { CameraDevice, MediaTrack, StreamKind } from "../../types";
 import { Picker } from "../ui/Picker";
 import { Segmented } from "../ui/Segmented";
-import { CameraOnIcon, CloseIcon, ScreenShareIcon, WindowIcon } from "./icons";
+import { showToast } from "../ui/toast";
+import { CameraOnIcon, CloseIcon, ScreenOffIcon, ScreenShareIcon, WindowIcon } from "./icons";
 import { NO_SCREEN, NO_SOUND } from "./PlayerButtons";
 import { FULL_VIEW_SHEET } from "./makeRoom";
 import styles from "./SettingsPanel.module.css";
@@ -99,6 +100,8 @@ export function SettingsPanel(props: Props) {
   // The keyboard: opening moves the focus to the chosen tab; closing gives it back to what
   // opened it (the cog), if it was inside.
   const root = useRef<HTMLDivElement>(null);
+  // A finger has no tooltip: touching the greyed-out tab says why in a toast (design decision 10).
+  const pointer = useRef("mouse");
   const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (open) {
@@ -165,8 +168,12 @@ export function SettingsPanel(props: Props) {
             aria-disabled={!usable.includes(t) || undefined}
             title={usable.includes(t) ? undefined : NO_SCREEN}
             tabIndex={t === tab ? 0 : -1}
+            onPointerDown={(e) => {
+              pointer.current = e.pointerType;
+            }}
             onClick={() => {
               if (usable.includes(t)) setTab(t);
+              else if (pointer.current === "touch" || pointer.current === "pen") showToast(NO_SCREEN, <ScreenOffIcon />);
             }}
           >
             {t === "screen" ? <ScreenShareIcon /> : <CameraOnIcon />}

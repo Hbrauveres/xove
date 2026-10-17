@@ -143,6 +143,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 | Stage dots | 180 ms | ease |
 | Dropdown unroll and roll back | 260 ms, by its height | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | The settings panel coming in and going out (over the cog: a fade and a 6 px rise; the sheet from the bottom) | 140 ms fade, 180 ms rise; the sheet 260 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| The toast coming in and going out (a fade and a 6 px drop), and how long it stays | 160 ms fade, 200 ms drop; stays 3 s | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | The settings' tab marker; a segmented control's pill | 200 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | A drop-up: the pause before it unrolls | 120 ms resting on the button | — |
 | …its fade and 6 px slide up | 140 ms and 180 ms; a slip outside shorter than 300 ms doesn't close it | ease, `cubic-bezier(0.2, 0.8, 0.2, 1)` |
@@ -275,7 +276,10 @@ A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, a
 - **Stage messages** (`StageNotice`): centred over the stage, a title in `--text-lg` and a line under it (up to 42 characters wide, `--text-sm`), with a 22 px spinner while something loads ("Loading Marina's screen…").
 - **The seat offer:** when a seat frees up for someone in the queue, a dialog (up to 400 px, `--radius-md`) offers it for 60 seconds, with the time running down.
 - **The waiting room:** the place in the queue, in plain words, while the room is full.
-- **Tooltips** say why a control can't be used.
+- **Tooltips** say why a control can't be used, with a mouse or the keyboard (a finger leaves a button "hovered" after a tap, so touch screens don't show them on hover).
+- **The toast** (`components/ui/Toast`, called with `showToast`): a short message to the user, the app's one way to announce something briefly. The round buttons' glass (frosted, 8 px blur, their shadow), a pill up to 360 px wide and two lines, 13 px text, with the icon of what it's about (the control you touched, crossed out) and no alert sign. At the top centre of the player; on a phone held sideways and in the full view, the top centre of the screen, over the top bar's empty middle. It fades in and drops 6 px, stays **3 s** and fades out by itself; one at a time, the newest replacing it; screen readers hear it once. Today it says why a greyed-out control can't be used when a finger or a pen touches it ("This browser can't share a screen", the full room).
+
+![The toast on a phone held sideways](images/design/toast.png)
 
 ## Screens and layouts
 
@@ -344,7 +348,7 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 - **Unavailable, not hidden.** An option that can't be used here stays in its place, greyed out (the faint text colour at 50%), with its reason in its tooltip, so a panel looks the same on every device.
 - **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
-- **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, no scrollbar), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
+- **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`, `Toast`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, no scrollbar), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
 - **Panels open over the button that opened them,** never from a side; on a wide, short player they use the width (two columns) rather than scroll. **Panels are frosted, never opaque**; nothing over the video hides the round buttons.
 - **Say what effects cost:** blur, canvases and animations run on every frame; keep them to what's here.
 

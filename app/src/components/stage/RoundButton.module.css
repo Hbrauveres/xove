@@ -80,7 +80,14 @@
   z-index: 3;
 }
 
-.pill:hover .tip,
+/* Pointed at with a mouse, or reached with the keyboard. A finger leaves the button "hovered"
+   after a tap, so touch screens get the toast instead (design decision 10). */
+@media (hover: hover) {
+  .pill:hover .tip {
+    opacity: 1;
+  }
+}
+
 .pill:has(:focus-visible) .tip {
   opacity: 1;
 }

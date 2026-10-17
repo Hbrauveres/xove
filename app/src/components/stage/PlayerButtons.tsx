@@ -1,10 +1,11 @@
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import type { ScreenSurface } from "../../hooks/useLiveKitRoom";
 import { usePinnedRow } from "../../hooks/usePinnedRow";
 import type { CameraDevice, StreamKind } from "../../types";
 import { DropUp } from "../ui/DropUp";
 import drop from "../ui/DropUp.module.css";
 import { Picker } from "../ui/Picker";
+import { showToast } from "../ui/toast";
 import { ButtonSlot } from "./ButtonSlot";
 import { CameraOffIcon, CameraOnIcon, CogIcon, ScreenOffIcon, ScreenOnIcon, ScreenShareIcon, WindowIcon } from "./icons";
 import round from "./RoundButton.module.css";
@@ -128,6 +129,8 @@ function StreamButton({
   // Counts what's been done from the drop-up (Change, a camera picked): each one closes it.
   const [done, setDone] = useState(0);
 
+  // A finger has no tooltip: touching a greyed-out button says why in a toast (design decision 10).
+  const pointer = useRef("mouse");
   const button = (
     <div className={styles.control}>
       <div className={`${round.pill} ${live ? round.live : ""} ${full ? round.disabled : ""}`}>
@@ -138,7 +141,13 @@ function StreamButton({
           aria-pressed={live}
           aria-disabled={blocked || undefined}
           aria-describedby={tipId}
+          onPointerDown={(e) => {
+            pointer.current = e.pointerType;
+          }}
           onClick={() => {
+            if (full && (pointer.current === "touch" || pointer.current === "pen")) {
+              showToast(tip, kind === "camera" ? <CameraOffIcon /> : <ScreenOffIcon />);
+            }
             if (blocked) return;
             if (live) onStop(kind);
             else onStart(kind);

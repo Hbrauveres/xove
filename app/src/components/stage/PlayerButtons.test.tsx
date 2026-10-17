@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HOLD_MS, OPEN_DELAY_MS } from "../ui/DropUp";
 import { FULL_ROOM, NO_SCREEN, NO_SOUND, PlayerButtons } from "./PlayerButtons";
+import { clearToast, currentToast } from "../ui/toast";
 
 const CAMERAS = [
   { deviceId: "cam-1", label: "Logitech C920" },
@@ -51,7 +52,10 @@ function rest(button: HTMLElement) {
 }
 const dropUp = (button: HTMLElement) => button.closest("[data-dropup]") as HTMLElement | null;
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  act(() => clearToast());
+});
 
 describe("stream buttons: off and live", () => {
   it("shows a screen and a camera button, off, each saying what a click does", () => {
@@ -222,6 +226,23 @@ describe("stream buttons: when they can't be used", () => {
     await user.click(share);
     expect(onStart).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Turn on your camera" })).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("says why in a toast when a finger touches a greyed-out button, not when a mouse clicks it (design decision 10)", () => {
+    setup({ canShareScreen: false, free: 0 });
+    const share = screen.getByRole("button", { name: "Share your screen" });
+    fireEvent.pointerDown(share, { pointerType: "mouse" });
+    fireEvent.click(share);
+    expect(currentToast()).toBeNull();
+
+    fireEvent.pointerDown(share, { pointerType: "touch" });
+    fireEvent.click(share);
+    expect(currentToast()?.text).toBe(NO_SCREEN);
+
+    const camera = screen.getByRole("button", { name: "Turn on your camera" });
+    fireEvent.pointerDown(camera, { pointerType: "touch" });
+    fireEvent.click(camera);
+    expect(currentToast()?.text).toBe(FULL_ROOM);
   });
 });
 
