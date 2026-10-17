@@ -231,16 +231,12 @@
 
 /*
  * The fullscreen button sits level with the round buttons' row on every layout (spec 0111):
- * the row's buttons are 48 px, 44 px on a phone held upright, 42 px sideways on a narrow screen.
+ * the row's buttons are 48 px, 44 px on a phone held upright. (A 42 px size for narrow
+ * sideways screens was assumed here before; the buttons never had it, so it put the button
+ * 3 px off in a phone's full view.)
  */
 .stage[data-layout="phone"] [data-overlay] {
   --btn: 44px;
-}
-
-@media (max-width: 520px) {
-  .stage[data-layout="sideways"] [data-overlay] {
-    --btn: 42px;
-  }
 }
 
 /* Fading sideways: the top bar and the row's arrow button go with the round buttons (FR-8). */

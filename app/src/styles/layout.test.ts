@@ -84,7 +84,8 @@ describe("the fullscreen button in the full-screen view (specs 0171 and 0111)", 
     const stage = sheet("components/stage/Stage.module.css");
     // The place is the overlay's own rule, for every layout; a layout only gives its buttons' size.
     expect(stage).toMatch(/\.stage\[data-layout="phone"\] \[data-overlay\] \{\s*--btn:\s*44px/);
-    expect(stage).toMatch(/@media \(max-width: 520px\) \{\s*\.stage\[data-layout="sideways"\] \[data-overlay\] \{\s*--btn:\s*42px/);
+    // The round buttons have no narrow-screen size of their own, so the fullscreen button has none either.
+    expect(stage).not.toMatch(/--btn:\s*42px/);
   });
 });
 
