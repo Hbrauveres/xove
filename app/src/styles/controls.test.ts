@@ -202,6 +202,8 @@ describe("the cue: how the app points at a control (spec 0115, design decision 2
   it("is a sharp 1.5 px red border pulsing in place, with a slight glow, twice for 1 s", () => {
     expect(cue).toMatch(/0 0 0 1\.5px rgba\(239, 75, 75, 0\.95\), 0 0 14px rgba\(239, 75, 75, 0\.35\)/);
     expect(rule(cue, ".cue")).toMatch(/animation:\s*pulse 1s ease-in-out 2/);
+    // A ring of its own over the control, following its corners, never catching the pointer.
+    expect(rule(cue, ".cue")).toMatch(/position:\s*absolute;[\s\S]*inset:\s*0;[\s\S]*border-radius:\s*inherit;[\s\S]*pointer-events:\s*none/);
     // No spreading ring: the border's width never changes.
     expect(cue).not.toMatch(/0 0 0 [2-9]px/);
   });

@@ -242,9 +242,11 @@ describe("the settings panel: going to a setting (spec 0115)", () => {
     rerender({ ...all, goTo: { kind: "screen", n: 1 } });
     expect(within(panel()).getByRole("tab", { name: /Screen/ })).toHaveAttribute("aria-selected", "true");
     const change = within(panel()).getByRole("button", { name: "Change" });
-    expect(change.className).toMatch(/\bcue\b/);
+    expect(change.querySelector("[data-cue]")).not.toBeNull();
     act(() => vi.advanceTimersByTime(CUE_MS));
-    expect(within(panel()).getByRole("button", { name: "Change" }).className).not.toMatch(/\bcue\b/);
+    expect(change.querySelector("[data-cue]")).toBeNull();
+    // Change itself stays: its focus isn't lost to a cue.
+    expect(within(panel()).getByRole("button", { name: "Change" })).toBe(change);
     vi.useRealTimers();
   });
 
@@ -255,17 +257,39 @@ describe("the settings panel: going to a setting (spec 0115)", () => {
     rerender({ ...all, goTo: { kind: "camera", n: 1 } });
     const pill = within(panel()).getByRole("button", { name: /^Camera: / });
     expect(pill).toHaveAttribute("aria-expanded", "true");
-    expect(pill.closest("[data-picker]")!.parentElement!.className).toMatch(/\bcue\b/);
+    expect(pill.closest("[data-picker]")!.parentElement!.querySelector("[data-cue]")).not.toBeNull();
     act(() => vi.advanceTimersByTime(CUE_MS));
     expect(within(panel()).getByRole("button", { name: /^Camera: / })).toHaveAttribute("aria-expanded", "true");
     vi.useRealTimers();
+  });
+
+  it("a second request starts the camera's cue over", () => {
+    vi.useFakeTimers();
+    const all = { mine: { screen: false, camera: true }, cameraVideo: track() };
+    const { rerender } = setup({ ...all, goTo: undefined });
+    rerender({ ...all, goTo: { kind: "camera", n: 1 } });
+    const first = panel().querySelector("[data-cue]");
+    act(() => vi.advanceTimersByTime(CUE_MS / 2));
+    rerender({ ...all, goTo: { kind: "camera", n: 2 } });
+    const second = panel().querySelector("[data-cue]");
+    expect(second).not.toBeNull();
+    expect(second).not.toBe(first);
+    vi.useRealTimers();
+  });
+
+  it("in the sheet, going from Screen to Camera still opens its list", () => {
+    const all = { variant: "sheet" as const, mine: { screen: true, camera: true }, cameraVideo: track() };
+    const { rerender } = setup({ ...all, goTo: undefined });
+    expect(within(panel()).getByRole("tab", { name: /Screen/ })).toHaveAttribute("aria-selected", "true");
+    rerender({ ...all, goTo: { kind: "camera", n: 1 } });
+    expect(within(panel()).getByRole("button", { name: /^Camera: / })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("never goes to a tab that can't be used (Screen on a phone)", () => {
     const { rerender } = setup({ screenTab: false, goTo: undefined });
     rerender({ screenTab: false, goTo: { kind: "screen", n: 1 } });
     expect(within(panel()).getByRole("tab", { name: "Camera" })).toHaveAttribute("aria-selected", "true");
-    expect([...panel().querySelectorAll("*")].some((e) => e.classList.contains("cue"))).toBe(false);
+    expect(panel().querySelector("[data-cue]")).toBeNull();
   });
 });
 

@@ -119,6 +119,8 @@ export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, r
   // ---- a finger (or a pen): press and hold the button
   const onTriggerDown = (e: ReactPointerEvent) => {
     if (!touchLike(e)) return;
+    // A hold's tap may never come (a long press often ends with no click): a new press starts clean.
+    swallow.current = false;
     if (open && byTouch) {
       // Pressed again: closes, and this tap doesn't stop the stream.
       swallow.current = true;

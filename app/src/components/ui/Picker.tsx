@@ -96,7 +96,8 @@ export function Picker<T extends string>({
   }
 
   // Asked to open from elsewhere (a live button with the settings open).
-  const [lastOpenSignal, setLastOpenSignal] = useState(openSignal);
+  // Starts unset, so a picker that mounts already asked (a tab drawn on its own) still opens.
+  const [lastOpenSignal, setLastOpenSignal] = useState<number | undefined>(undefined);
   if (openSignal !== lastOpenSignal) {
     setLastOpenSignal(openSignal);
     if (openSignal !== undefined && !disabled) setOpenState(true);

@@ -1,7 +1,8 @@
 /*
  * The cue (spec 0115, design decision 2): how the app points at a control. A sharp red border
  * pulsing in place, with no spreading ring, and a slight glow around it like the stage's
- * ambilight; two slow 1 s pulses, then still. Added for 2 s (CUE_MS), then taken off.
+ * ambilight; two slow 1 s pulses, then still. A ring of its own over the control (whose box is
+ * `position: relative`), drawn for 2 s (CUE_MS), so the control keeps its own shadow and focus.
  */
 @keyframes pulse {
   0%,
@@ -17,6 +18,10 @@
 }
 
 .cue {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
   animation: pulse 1s ease-in-out 2;
 }
 

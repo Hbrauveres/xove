@@ -221,7 +221,7 @@ export function SettingsPanel(props: Props) {
             aria-hidden={t !== tab || undefined}
             inert={t !== tab || undefined}
           >
-            {t === "screen" ? <ScreenTab {...props} cue={cue?.kind === "screen" ? cue.n : undefined} seq={lastGoTo} /> : <CameraTab {...props} cue={cue?.kind === "camera" ? cue.n : undefined} seq={lastGoTo} />}
+            {t === "screen" ? <ScreenTab {...props} cue={cue?.kind === "screen" ? cue.n : undefined} /> : <CameraTab {...props} cue={cue?.kind === "camera" ? cue.n : undefined} />}
           </div>
         ))}
       </div>
@@ -259,8 +259,13 @@ function QualityAndMode({ kind, prefs, onPrefsChange, busy }: { kind: StreamKind
   );
 }
 
-/** `cue`: cued now (its request); `seq`: the last request, so a new cue starts its pulses over. */
-function ScreenTab(props: Props & { cue?: number; seq?: number }) {
+/** The cue's ring over a control, drawn anew for each request so its pulses start over. */
+function CueRing({ n }: { n?: number }) {
+  return n ? <span key={n} className={cueStyles.cue} aria-hidden="true" data-cue /> : null;
+}
+
+/** `cue`: the request the tab's control is cued for, if any. */
+function ScreenTab(props: Props & { cue?: number }) {
   const { mine, screenSurface, onChangeWindow, busy, noSound } = props;
   return (
     <>
@@ -276,13 +281,12 @@ function ScreenTab(props: Props & { cue?: number; seq?: number }) {
               </span>
               <button
                 type="button"
-                // Re-keyed with each cue so its pulses start over.
-                key={props.seq}
-                className={`${styles.button} ${props.cue ? cueStyles.cue : ""}`}
+                className={styles.button}
                 title="Pick another window or tab; viewers keep watching the same stream"
                 disabled={busy}
                 onClick={onChangeWindow}
               >
+                <CueRing n={props.cue} />
                 Change
               </button>
             </div>
@@ -300,7 +304,7 @@ function ScreenTab(props: Props & { cue?: number; seq?: number }) {
   );
 }
 
-function CameraTab(props: Props & { cue?: number; seq?: number }) {
+function CameraTab(props: Props & { cue?: number }) {
   const { mine, cameras, cameraId, onPickCamera, cameraVideo, busy, cameraProblem } = props;
   const problem = !cameraVideo && cameraProblem ? (cameraProblem === "blocked" ? CAMERA_BLOCKED : "No camera found.") : null;
   return (
@@ -326,7 +330,9 @@ function CameraTab(props: Props & { cue?: number; seq?: number }) {
       {cameras.length > 0 && (
         <div className={styles.group}>
           <p className={styles.heading}>Camera</p>
-          <div className={`${styles.cueBox} ${props.cue ? cueStyles.cue : ""}`}>
+          <div className={styles.cueBox}>
+            {/* Before the picker, so its floating list paints over the glow. */}
+            <CueRing n={props.cue} />
             <Picker
               label="Camera"
               options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}

@@ -221,6 +221,26 @@ describe("DropUp redirected: another panel shows the setting (spec 0115)", () =>
     expect(onStop).toHaveBeenCalledOnce();
   });
 
+  it("a hold that ends with no click doesn't eat the next tap", () => {
+    hover = false;
+    const onStop = vi.fn();
+    render(
+      <DropUp label="Your camera" enabled redirect={vi.fn()} trigger={<button onClick={onStop}>Turn off your camera</button>}>
+        <button>Integrated Webcam</button>
+      </DropUp>,
+    );
+    const trigger = screen.getByRole("button", { name: "Turn off your camera" });
+    fireEvent.pointerDown(trigger, touch);
+    act(() => vi.advanceTimersByTime(HOLD_MS));
+    fireEvent.pointerUp(trigger, touch);
+    // No click after the long press; the next short tap stops the stream.
+    fireEvent.pointerDown(trigger, touch);
+    act(() => vi.advanceTimersByTime(100));
+    fireEvent.pointerUp(trigger, touch);
+    fireEvent.click(trigger);
+    expect(onStop).toHaveBeenCalledOnce();
+  });
+
   it("the keyboard's focus doesn't redirect, nor open it", () => {
     const redirect = vi.fn();
     const { wrap, shown } = setup({ redirect });

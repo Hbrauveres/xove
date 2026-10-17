@@ -963,7 +963,7 @@ describe("room: change window and pick a camera (spec 0098)", () => {
     const stop = within(stage()).getByRole("button", { name: "Stop sharing your screen" });
     fireEvent.pointerEnter(stop.closest("[data-dropup]")!, { pointerType: "mouse" });
     await waitFor(() => expect(panel.getByRole("tab", { name: (n) => n.startsWith("Screen") })).toHaveAttribute("aria-selected", "true"));
-    expect(panel.getByRole("button", { name: "Change" }).className).toMatch(/\bcue\b/);
+    expect(panel.getByRole("button", { name: "Change" }).querySelector("[data-cue]")).not.toBeNull();
     expect(stop.closest("[data-dropup]")).toHaveAttribute("data-open", "false");
     vi.restoreAllMocks();
   });

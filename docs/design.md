@@ -170,7 +170,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 ![The round buttons over the stage](images/design/round-buttons.png)
 
 - **48 px** circles in a pill (44 px on a phone held upright, 48 px again in its full-screen view and held sideways), 10 px apart (8 px on the upright phone), dark frosted glass (`rgba(10, 10, 11, 0.72)`, blur 8 px, shadow `0 4px 16px` black at 35%), with a 20 px icon.
-- **One state system, on every round button:** **sending** (your screen, your camera) is a red pill (`--accent`) with the plain icon in deep red (`--accent-ink`); **off** is dark glass with the crossed icon in white; **unavailable** is 45% opacity, with the reason in the tooltip. Red means live, nothing else.
+- **One state system, on every round button:** **sending** (your screen, your camera) is a red pill (`--accent`) with the plain icon in deep red (`--accent-ink`); **off** is dark glass with the crossed icon in white; **unavailable** is 45% opacity, with the reason in the tooltip. Red means live (and, elsewhere, the brand and [the cue](#rules-for-new-work)).
 - **The icons** (`components/stage/icons.tsx`): the screen is a crossed monitor while you're not sharing, and shows **a screen with an arrow up** while it's pointed at or focused, so it says what a click does (not while it's unavailable); while you share, the plain monitor. The camera is crossed while off, plain while on. The volume is a speaker with its waves, crossed when muted or silent. Settings is **a cog with teeth**.
 - **Order**, centred at the bottom of the stage: volume, screen, camera, settings.
 - **Plain on/off buttons, no arrows.** A click starts or stops; what you send is set in the [settings panel](#the-settings-panel), and while a stream is live, resting the mouse on its button unrolls its [drop-up](#drop-ups). With a mouse, a live button shows its drop-up instead of a tooltip.
@@ -359,9 +359,9 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 
 - **Use the tokens.** A new colour, size or font is a design decision: it needs an approved draft first, then it lands in `global.css` and here.
 - **Red means the brand, live, or the cue.** Don't use it for anything else.
-- **The cue** (`components/ui/cue.module.css`) is how the app points at a control: a sharp 1.5 px red border pulsing in place (never a spreading ring), with a slight glow around it like the stage's ambilight (14 px, the red at 35%); two slow 1 s pulses, then gone. With reduced motion, the border and glow still for the same 2 s.
+- **The cue** (`components/ui/cue.module.css`) is how the app points at a control: a sharp 1.5 px red border pulsing in place (never a spreading ring), with a slight glow around it like the stage's ambilight (14 px, the red at 35%); two slow 1 s pulses, then gone. With reduced motion, the border and glow still for the same 2 s. It's a ring of its own over the control, drawn anew for each request, so the control keeps its shadow and focus.
 
-![The cue on Change](images/design/cue.png)
+  ![The cue on Change](images/design/cue.png)
 - **Unavailable, not hidden.** An option that can't be used here stays in its place, greyed out (the faint text colour at 50%), with its reason in its tooltip, so a panel looks the same on every device.
 - **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
