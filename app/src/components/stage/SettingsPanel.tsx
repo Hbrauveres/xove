@@ -101,7 +101,8 @@ export function SettingsPanel(props: Props) {
   useEffect(() => {
     if (open) {
       opener.current = document.activeElement as HTMLElement | null;
-      root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
+      // Not scrolled into view: the drawer is still sliding in, and the page would jump sideways.
+      root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
       return;
     }
     if (root.current?.contains(document.activeElement)) opener.current?.focus();

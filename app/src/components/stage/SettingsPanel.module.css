@@ -1,6 +1,7 @@
 /*
  * The settings panel (the Player controls design). Desktop, tablets and phones held sideways:
- * a 300 px drawer inside the stage, from its right edge, so it comes along in fullscreen. A
+ * a 300 px drawer from the outermost right edge: the player's in a window, the screen's in
+ * fullscreen and on a phone sideways (it then clears the notch). A
  * phone held upright: a bottom sheet over the page. Frosted like the round buttons' glass,
  * one control height (`--ctl`): 30 px in the drawer, 44 px in the sheet. Only transforms move.
  */
@@ -8,7 +9,7 @@
   --ctl: 30px;
   position: absolute;
   top: 10px;
-  right: 10px;
+  right: calc(10px + env(safe-area-inset-right, 0px));
   bottom: 10px;
   z-index: 6;
   display: flex;

@@ -59,7 +59,10 @@ type Props = {
   people?: Friend[];
   meId?: string;
   arrivedAt?: Record<string, number>;
-  /** The settings panel, as a drawer inside the player, so it comes along in fullscreen (spec 0107). */
+  /**
+   * The settings panel, as a drawer on the outermost edge (spec 0107): inside the player in a
+   * window, so it comes along in fullscreen, where the player is the screen; sideways, the stage's.
+   */
   settingsPanel?: ReactNode;
   /** The settings sheet is open over the stage: the upright full view makes room for the player. */
   sheetOpen?: boolean;
@@ -474,9 +477,12 @@ export function Stage({
               }
             />
           </div>
-          {settingsPanel}
+          {!sideways && settingsPanel}
         </div>
       </div>
+
+      {/* Sideways the screen is the player: the drawer hangs on the screen's own edge (spec 0107). */}
+      {sideways && settingsPanel}
 
       {sideways ? (
         <>

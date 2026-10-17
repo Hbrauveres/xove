@@ -2568,6 +2568,16 @@ describe("room: on a phone sideways (spec 0160)", () => {
     await new Promise((r) => setTimeout(r, 100));
     expect(row()).toBeNull();
   });
+
+  it("hangs the settings drawer on the screen's edge, not the player's (spec 0107)", async () => {
+    const user = userEvent.setup();
+    await sidewaysWith(["Marina"]);
+    await user.click(await screen.findByRole("button", { name: "Settings" }));
+    const drawer = screen.getByRole("dialog", { name: "Settings" });
+    const frame = stageLayer().querySelector("video")!.closest("[data-chrome]")!;
+    expect(frame.contains(drawer)).toBe(false);
+    expect(drawer.parentElement).toBe(stageLayer());
+  });
 });
 
 describe("room: the full-screen view on a phone (spec 0171)", () => {
