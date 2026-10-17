@@ -12,7 +12,7 @@ This repo is the web app: React 19 and TypeScript, talking to [`xove-api`](https
 
 ## What it does
 
-- **Share a screen, a window or a tab**, with its sound, and a camera on top of it or on its own. Never a microphone: voice happens wherever the group already talks.
+- **Share a screen, a window or a tab**, with its sound, and a camera on top of it or on its own. No microphone yet: a voice will come only with a screen or a camera, when its sharer turns it on.
 - **Watch in theater mode:** the picked stream fills the stage in its own shape, with ambilight around it; the others play silently as previews.
 - **On a phone,** as an installed home-screen app: the stage on top and a feed upright, full screen with a row of streams sideways, swipes to change who's on the stage.
 - **Invited only:** sign in with Google, ask for access, an admin approves.
