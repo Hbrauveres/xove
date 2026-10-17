@@ -117,21 +117,32 @@ describe("the footer's coffee link (spec 0121, FR-8)", () => {
   });
 });
 
-describe("the picker: one box with its pill (the Player controls design, decisions 4 and 5)", () => {
+describe("the picker: one box with its pill, floating (the Player controls design; spec 0111)", () => {
   const picker = sheet("components/ui/Picker.module.css");
 
-  it("opens with no gap: the list sits right on the pill, in the pill's own colour", () => {
-    expect(rule(picker, ".list")).toMatch(/background:\s*var\(--pick-bg\)/);
+  it("opens with no gap, floating: the list sits right on the pill, in the pill's own colour", () => {
+    const list = rule(picker, ".list");
+    expect(list).toMatch(/background:\s*var\(--pick-bg\)/);
+    expect(list).toMatch(/position:\s*absolute/);
+    expect(list).toMatch(/top:\s*100%/);
     expect(rule(picker, ".picker[data-opens=\"up\"] .list")).toMatch(/bottom:\s*100%/);
     expect(picker).not.toMatch(/calc\(100% \+ 4px\)/);
   });
 
-  it("has rows as tall as the pill, and scrolls after three and a half with no scrollbar", () => {
+  it("has rows as tall as the pill, and scrolls after three and a half with the app's slim scrollbar", () => {
     expect(rule(picker, ".option")).toMatch(/min-height:\s*var\(--ctl/);
     const list = rule(picker, ".list");
     expect(list).toMatch(/max-height:\s*calc\(var\(--ctl, 38px\) \* 3\.5\)/);
-    expect(list).toMatch(/scrollbar-width:\s*none/);
-    expect(rule(picker, ".list::-webkit-scrollbar")).toMatch(/display:\s*none/);
+    expect(list).not.toMatch(/scrollbar-width:\s*none/);
+    expect(rule(picker, ".list::-webkit-scrollbar")).toMatch(/width:\s*4px/);
+    expect(rule(picker, ".list::-webkit-scrollbar-track")).toMatch(/margin-block:\s*6px/);
+  });
+
+  it("unrolls from the pill in 220 ms and rolls back in 150 ms, its options fading in by their distance", () => {
+    expect(rule(picker, ".list")).toMatch(/clip-path:\s*inset\(0 0 100% 0\)/);
+    expect(rule(picker, ".list[data-unroll]")).toMatch(/transition:\s*clip-path 220ms/);
+    expect(rule(picker, ".list")).toMatch(/transition:\s*clip-path 150ms/);
+    expect(rule(picker, ".list[data-unroll] .option")).toMatch(/calc\(30ms \+ var\(--k, 0\) \* 40ms\)/);
   });
 
   it("keeps each row's hover light inside the row, so a short list never scrolls", () => {
@@ -154,5 +165,20 @@ describe("the drop-up (the Player controls design, decision 3)", () => {
     expect(row).toMatch(/background:\s*var\(--glass\)/);
     expect(row).toMatch(/backdrop-filter:\s*blur\(8px\)/);
     expect(row).toMatch(/0 4px 16px rgba\(0, 0, 0, 0\.35\)/);
+  });
+});
+
+describe("the fullscreen button has one place (spec 0111, design decision 2)", () => {
+  const overlay = sheet("components/stage/StageOverlay.module.css");
+  const stage = sheet("components/stage/Stage.module.css");
+
+  it("sits at the bottom right on every layout, its centre level with the round buttons' row", () => {
+    const o = rule(overlay, ".overlay");
+    expect(o).toMatch(/justify-content:\s*flex-end/);
+    expect(o).toMatch(/padding-bottom:\s*calc\(12px \+ \(var\(--btn, 48px\) - 34px\) \/ 2\)/);
+    expect(rule(overlay, ".top")).toMatch(/justify-content:\s*flex-end/);
+    // The row's button size per layout, nothing else of its own.
+    expect(rule(stage, '.stage[data-layout="phone"] [data-overlay]')).toMatch(/--btn:\s*44px/);
+    expect(stage).not.toMatch(/\[data-overlay\]\s*\{[^}]*justify-content/);
   });
 });

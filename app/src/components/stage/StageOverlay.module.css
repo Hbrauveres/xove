@@ -4,11 +4,17 @@
   inset: 0;
   display: flex;
   flex-direction: column;
+  /*
+   * The fullscreen button has one place on every layout (spec 0111): the bottom right, its
+   * centre level with the round buttons' row (12 px from the bottom, buttons --btn tall).
+   */
+  justify-content: flex-end;
   pointer-events: none;
   padding: 12px;
+  padding-bottom: calc(12px + (var(--btn, 48px) - 34px) / 2);
 }
 
-/* The fullscreen button, top right. */
+/* The fullscreen button, at the right. */
 .top {
   display: flex;
   justify-content: flex-end;

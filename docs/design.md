@@ -148,6 +148,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 | A drop-up: the pause before it unrolls | 120 ms resting on the button | — |
 | …its fade and 6 px slide up | 140 ms and 180 ms; a slip outside shorter than 300 ms doesn't close it | ease, `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | A picker's chevron turning | 200 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
+| A list unrolling from its pill, its options fading in by their distance (40 ms apart), and rolling back | 220 ms; 150 ms back | `cubic-bezier(0.2, 0.8, 0.2, 1)`; ease-in back |
 | The soft light behind an option pointed at | 160 ms | ease |
 | The player moving up for the settings sheet (upright full view) and back | 260 ms | `cubic-bezier(0.2, 0.8, 0.2, 1)` |
 | A new activity in the pill | 350 ms | ease |
@@ -192,8 +193,11 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 
 - **Closed:** a pill as tall as the other controls, the chosen option and a small chevron.
 - **Open, it's one box with its pill:** the pill grows into the list with **no gap and no separate floating box**, in the pill's own colour. **The chosen option stays in the pill and isn't repeated**; the others follow in rows as tall as the pill, their text lined up with the pill's.
-- **In a panel, it opens in place** and pushes what's under it down: a see-through panel takes its colour from what's behind it, so a floating list could never match the pill. **Over the video, it grows upward** in the pill's glass, floating, never taller than the room above it (on a short phone stage it shows fewer rows and scrolls).
-- **No scrollbar in a list:** after three and a half options it scrolls by wheel, swipe or keys, and the half-shown option says there's more. A row's hover light (white at 5%) stays inside its row, so a short list never scrolls.
+- **Every list floats:** nothing moves when one opens. **In a panel** it opens down over the controls under it, in the pill's own see-through colour: what's **right behind it is hidden** while it's open, so through it shows only the panel's frosted glass (a blur can't be told to skip what's under it), and what's **just under its bottom edge fades back in over 30 px**, starting 4 px below it, nearly invisible near the list (8% halfway, 35% at three quarters) and fully there at 30 px. Nothing else hides. **Over the video, it grows upward** in the pill's glass, never taller than the room above it.
+- **A long list has a scrollbar:** after three and a half options it scrolls, with the app's slim scrollbar (4 px, no arrows) inside the list, its track kept clear of the rounded corners. A row's hover light (white at 5%) stays inside its row, so a short list never scrolls.
+- **It unrolls** from its pill (upward from a drop-up's) in 220 ms, each option fading in as the edge reaches it, the nearest first, and **rolls back** in 150 ms; with reduced motion it just appears and goes.
+
+![The camera list open in the settings, floating, the controls under it fading back in](images/design/picker-open.png)
 - The arrow keys move through it; Escape or a click outside closes it.
 
 ### Drop-ups
@@ -216,7 +220,7 @@ The settings for what you send, from the cog.
 - Frosted like the dropdown panels (the panel colour at 74%, blur 22 px, a 1 px white border at 8%), 16 px corners (20 px on top of the sheet). **One control height:** 30 px over the cog, 44 px in the sheet.
 - **Tabs Screen and Camera**, with a **red marker** that slides under the chosen one and a **red dot** on the tab of what you're sending. **On phones the Screen tab is greyed out**, as anywhere a screen can't be shared: it stays in its place, says why ("This browser can't share a screen"), and the panel opens on Camera.
 - **Screen:** while you share, what's shared and **Change** (and, when the screen has no sound, a line saying how to share it); while you don't, one line saying these are used next time. **No preview**: the stage and the browser's picker already show it. Then Quality and Mode.
-- **Camera:** your camera's preview, centred: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Like any app, the browser asks for the camera the first time; refused or missing, the preview's place says so, and how to allow it. Then the camera's picker, Quality and Mode.
+- **Camera:** your camera's preview under its own **Preview** heading, like every other group, centred under it: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Like any app, the browser asks for the camera the first time; refused or missing, the preview's place says so, and how to allow it. Then the camera's picker, Quality and Mode. **Sideways**, the preview is alone in the left column; the camera's picker, Quality and Mode are in the right one.
 - **No field descriptions**, except where a setting needs a line to make sense. The body scrolls with the app's slim scrollbar, without arrows.
 - **In the upright full view, the sheet makes room instead of covering:** the player, its round buttons with it, moves up at the same size between the top bar and the sheet. If it doesn't fit (a vertical share), the video stays under the sheet and the round buttons alone move up just above it: **the buttons are never left behind the settings.** The video is never shrunk; everything slides back when the sheet closes.
 - **Panels open over the button that opened them** (a rule for the whole app): the settings over the cog, the volume over its button, the drop-ups over their live buttons. Nothing slides in from a side.
@@ -237,7 +241,7 @@ Two sizes: **md** (10 × 18 px padding, 15 px text) and **sm** (6 × 12 px, 13 p
 
 ### Switch
 
-A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, and a **20 px knob** that overhangs it: `#bdbdc0` when off, red when on, sliding in 180 ms. The ambilight's on/off in the account menu.
+A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, and a **20 px knob** that overhangs it: `#bdbdc0` when off, red when on, sliding in 180 ms. The ambilight's on/off in the account menu. **In a panel, a switch row** (a label, its description, the switch at the right) **sits 5 px in** from the edge the headings and boxes share, so its text doesn't sit on it.
 
 `styles/controls.test.ts` checks the sliders' and the switch's values.
 
@@ -264,8 +268,10 @@ A slim grey track (**36 × 14 px**, `#3a3a3d`) that looks the same off and on, a
 ![The info row under the stage](images/design/info-row.png)
 
 - **The info row:** on the left, who's on the stage (avatar with its ring, name in the display font, LIVE, what, how long) and who's watching (up to 4 avatars and "N watching", me included, never the sharer); on the right, the other streams as **previews** with a name chip (their screen, or their camera when that's all they share), then a dashed box "N of 6 live · N free · share yours", gone when all 6 are live. When room runs short, the left gives way first, then the previews scroll with a slim scrollbar, and the box stays put.
-- **The facecam:** the camera as a small window over the screen, 24% of the player's width, `--radius-sm`, with 28 px round buttons (swap views, collapse) that fade with the controls; collapsed, a 28 × 44 px tab at the right edge. It can be dragged, or moved with the arrow keys. Swapping also works on your own preview; the swap and the collapse last for the visit only.
-- **The fullscreen button:** top right on desktop; on a phone in the upright full view, bottom right, level with the round buttons.
+- **The facecam:** the camera as a small window over the screen, 24% of the player's width, `--radius-sm`, with 28 px round buttons (swap views, collapse) that fade with the controls; collapsed, a 28 × 44 px tab at the right edge. It **starts at the top right** (just under the top bar where one lies over the player), clear of the round buttons and the fullscreen button. It can be dragged, or moved with the arrow keys. Swapping also works on your own preview; the swap and the collapse last for the visit only.
+- **The fullscreen button has one place:** the **bottom right** of the player, its centre level with the round buttons, to enter and to leave, on desktop and phones alike, over a stream and over the empty stage, so stopping the only stream in fullscreen (or in a phone's full view) never strands you there. Held sideways, a phone has none: the room is always in the full view.
+
+![The empty stage with its fullscreen button at the bottom right](images/design/stage-empty-fullscreen.png)
 - **Stage dots** (phone, more than one live): 6 px dots just above the round buttons, the current one stretched to 14 px; a tap jumps to that person.
 
 ## Notifications and status
@@ -317,7 +323,7 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **No header or footer:** the stage fills the height and hugs the picture, black at its sides where the light glows.
 - **A top bar** over a black gradient: who's on the stage on the left; the people button, the bell and my account on the right.
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
-- **The settings** open over the cog in two columns, so they fit the short screen without scrolling.
+- **The settings** open over the cog in two columns, so they fit the short screen without scrolling: on Camera, the preview alone on the left, the camera's picker, Quality and Mode on the right.
 - Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
 - **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
 
@@ -348,7 +354,7 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 - **Unavailable, not hidden.** An option that can't be used here stays in its place, greyed out (the faint text colour at 50%), with its reason in its tooltip, so a panel looks the same on every device.
 - **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
-- **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`, `Toast`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, no scrollbar), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
+- **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`, `Toast`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, floating, with the slim scrollbar when long), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
 - **Panels open over the button that opened them,** never from a side; on a wide, short player they use the width (two columns) rather than scroll. **Panels are frosted, never opaque**; nothing over the video hides the round buttons.
 - **Say what effects cost:** blur, canvases and animations run on every frame; keep them to what's here.
 

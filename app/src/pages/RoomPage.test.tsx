@@ -838,6 +838,50 @@ describe("room: fullscreen (spec 0098)", () => {
   });
 });
 
+describe("room: fullscreen from the empty stage (spec 0111)", () => {
+  it("has the fullscreen button with nobody live", async () => {
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    expect(await within(stage()).findByRole("button", { name: "Fullscreen" })).toBeInTheDocument();
+  });
+
+  it("keeps it when the only stream stops in fullscreen, and it leaves fullscreen", async () => {
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Bruno Lima", 7)];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-7");
+    });
+    const frame = (await screen.findByLabelText("Bruno's shared screen")).closest("[data-chrome]") as HTMLElement;
+    let current: Element | null = null;
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => current });
+    frame.requestFullscreen = vi.fn(async () => {
+      current = frame;
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    const exit = vi.fn(async () => {
+      current = null;
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    document.exitFullscreen = exit;
+    const user = userEvent.setup();
+    try {
+      await user.click(within(stage()).getByRole("button", { name: "Fullscreen" }));
+      act(() => {
+        server.streams = [];
+        lastRoom().unpublish("user-7", "screen_share");
+      });
+      expect(await screen.findByText("0 of 6 live")).toBeInTheDocument();
+      await user.click(await within(stage()).findByRole("button", { name: "Exit fullscreen" }));
+      expect(exit).toHaveBeenCalled();
+    } finally {
+      delete (document as { fullscreenElement?: unknown }).fullscreenElement;
+    }
+  });
+});
+
 describe("room: the player's fullscreen while the whole page is fullscreen (spec 0160)", () => {
   it("puts the player fullscreen instead of leaving the page's", async () => {
     const server = installFakeApi({ me: member });
@@ -1439,6 +1483,12 @@ describe("room: the facecam", () => {
     expect(within(facecam()!).getByLabelText("Bruno's camera")).toBeInTheDocument();
     expect(within(stage()).getAllByLabelText("Bruno's shared screen")).toHaveLength(1);
     expect(facecam()!.contains(within(stage()).getByLabelText("Bruno's shared screen"))).toBe(false);
+  });
+
+  it("starts at the top right, clear of the round buttons and the fullscreen button (spec 0111)", async () => {
+    await brunoWithBoth();
+    expect(facecam()!.style.left).toBe("73%");
+    expect(facecam()!.style.top).toBe("4%");
   });
 
   it("swaps them with the button, and back", async () => {
@@ -2633,6 +2683,49 @@ describe("room: the full-screen view on a phone (spec 0171)", () => {
     phone.turn();
     phone.turn();
     expect(layoutOf(view)).toBe("phone");
+  });
+
+  it("keeps the button when the only stream stops in the full view, and it leaves it (spec 0111)", async () => {
+    const phone = phoneSideways();
+    phone.turn();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Marina", 2)];
+    const view = renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-2");
+    });
+    await screen.findByLabelText("Marina's shared screen");
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    expect(layoutOf(view)).toBe("sideways");
+    act(() => {
+      server.streams = [];
+      lastRoom().unpublish("user-2", "screen_share");
+    });
+    // The empty stage, still in the full view.
+    expect(await within(stage()).findByText(/with the buttons? below/)).toBeInTheDocument();
+    expect(layoutOf(view)).toBe("sideways");
+    await user.click(within(stage()).getByRole("button", { name: "Exit full-screen view" }));
+    expect(layoutOf(view)).toBe("phone");
+  });
+
+  it("puts the facecam under the top bar on entering the full view (spec 0111)", async () => {
+    const phone = phoneSideways();
+    phone.turn();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Marina", 2, "screen"), someoneSharing("Marina", 2, "camera")];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-2");
+      lastRoom().publishCamera("user-2");
+    });
+    await screen.findByLabelText("Marina's shared screen");
+    const facecam = () => stage().querySelector("[data-facecam]") as HTMLElement;
+    expect(facecam().style.top).toBe("4%");
+    await userEvent.setup().click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    expect(facecam().style.top).toBe("18%");
   });
 
   it("never asks the browser for the player's fullscreen on a phone", async () => {

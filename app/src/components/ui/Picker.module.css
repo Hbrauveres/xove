@@ -1,8 +1,8 @@
 /*
- * The picker (the Player controls design, decisions 4 and 5). Closed: a pill as tall as the
- * panel's controls (`--ctl`). Open: the pill and its list are one box, in the pill's own
- * colour, with no gap. In a panel the list opens in place and pushes what's under it down;
- * over the video it grows upward, floating, in the glass.
+ * The picker (the Player controls design; spec 0111). Closed: a pill as tall as the panel's
+ * controls (`--ctl`). Open: the pill and its list are one box, in the pill's own colour, with
+ * no gap. The list floats: down over its panel (what's behind it is masked, see Picker.tsx),
+ * or upward over the video in the glass. It unrolls from the pill and rolls back.
  */
 .picker {
   --pick-bg: rgba(255, 255, 255, 0.05);
@@ -78,6 +78,11 @@
 }
 
 .list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 10;
   display: grid;
   max-height: calc(var(--ctl, 38px) * 3.5);
   overflow-x: hidden;
@@ -85,25 +90,59 @@
   overscroll-behavior: contain;
   border-radius: 0 0 var(--pick-r) var(--pick-r);
   background: var(--pick-bg);
-  /* No scrollbar: the half-shown option says there's more. */
-  scrollbar-width: none;
+  /* Rolled up into the pill's edge; it unrolls in 220 ms and rolls back in 150 ms. */
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path 150ms ease-in;
 }
 
+.list[data-unroll] {
+  clip-path: inset(0);
+  transition: clip-path 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* A long list scrolls with the app's slim scrollbar, inside it, clear of its rounded corners. */
 .list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.list::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
 }
 
+.list::-webkit-scrollbar-track {
+  margin-block: 6px;
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.list:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .list {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  }
+}
+
 .picker[data-opens="up"] .list {
-  position: absolute;
-  left: 0;
-  right: 0;
+  top: auto;
   bottom: 100%;
-  z-index: 10;
   border-radius: var(--pick-r) var(--pick-r) 0 0;
   backdrop-filter: blur(8px);
   box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.4);
+  clip-path: inset(100% 0 0 0);
+}
+
+.picker[data-opens="up"] .list[data-unroll] {
+  clip-path: inset(0);
 }
 
 .option {
@@ -120,7 +159,18 @@
   font-size: var(--pick-font, var(--text-sm));
   text-align: left;
   cursor: pointer;
-  transition: color 120ms ease;
+  /* Each option fades in as the unrolling edge reaches it, the nearest to the pill first (--k). */
+  opacity: 0;
+  transition:
+    opacity 100ms ease,
+    color 120ms ease;
+}
+
+.list[data-unroll] .option {
+  opacity: 1;
+  transition:
+    opacity 140ms ease calc(30ms + var(--k, 0) * 40ms),
+    color 120ms ease;
 }
 
 /* The soft light, fading only sideways, kept inside its row so a short list never scrolls. */
@@ -152,7 +202,10 @@
 @media (prefers-reduced-motion: reduce) {
   .pill,
   .chevron,
+  .list,
+  .list[data-unroll],
   .option,
+  .list[data-unroll] .option,
   .option::before {
     transition: none;
   }
