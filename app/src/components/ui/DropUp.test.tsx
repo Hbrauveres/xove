@@ -181,3 +181,53 @@ describe("DropUp, the quick-access pill over a live button", () => {
     expect(screen.queryByRole("button", { name: "Change" })).not.toBeInTheDocument();
   });
 });
+
+describe("DropUp redirected: another panel shows the setting (spec 0115)", () => {
+  const touch = { pointerType: "touch", clientX: 10, clientY: 10 };
+
+  it("resting the mouse calls the redirect after the same pause, and nothing opens", () => {
+    const redirect = vi.fn();
+    const { wrap, shown } = setup({ redirect });
+    fireEvent.pointerEnter(wrap, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(OPEN_DELAY_MS - 1));
+    expect(redirect).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(redirect).toHaveBeenCalledOnce();
+    expect(shown()).toBe(false);
+  });
+
+  it("the 500 ms hold calls the redirect, opens nothing, and its tap doesn't stop the stream", () => {
+    hover = false;
+    const redirect = vi.fn();
+    const onStop = vi.fn();
+    render(
+      <DropUp label="Your camera" enabled redirect={redirect} trigger={<button onClick={onStop}>Turn off your camera</button>}>
+        <button>Integrated Webcam</button>
+      </DropUp>,
+    );
+    const trigger = screen.getByRole("button", { name: "Turn off your camera" });
+    fireEvent.pointerDown(trigger, touch);
+    act(() => vi.advanceTimersByTime(HOLD_MS));
+    fireEvent.pointerUp(trigger, touch);
+    fireEvent.click(trigger);
+    expect(redirect).toHaveBeenCalledOnce();
+    expect(onStop).not.toHaveBeenCalled();
+    expect(trigger.closest("[data-dropup]")).toHaveAttribute("data-open", "false");
+    // A short tap still stops it.
+    fireEvent.pointerDown(trigger, touch);
+    act(() => vi.advanceTimersByTime(100));
+    fireEvent.pointerUp(trigger, touch);
+    fireEvent.click(trigger);
+    expect(onStop).toHaveBeenCalledOnce();
+  });
+
+  it("the keyboard's focus doesn't redirect, nor open it", () => {
+    const redirect = vi.fn();
+    const { wrap, shown } = setup({ redirect });
+    const button = wrap.querySelector("button")!;
+    vi.spyOn(button, "matches").mockReturnValue(true);
+    fireEvent.focus(button);
+    expect(redirect).not.toHaveBeenCalled();
+    expect(shown()).toBe(false);
+  });
+});

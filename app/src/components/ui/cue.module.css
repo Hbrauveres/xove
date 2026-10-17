@@ -1,0 +1,28 @@
+/*
+ * The cue (spec 0115, design decision 2): how the app points at a control. A sharp red border
+ * pulsing in place, with no spreading ring, and a slight glow around it like the stage's
+ * ambilight; two slow 1 s pulses, then still. Added for 2 s (CUE_MS), then taken off.
+ */
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1.5px rgba(239, 75, 75, 0),
+      0 0 14px rgba(239, 75, 75, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1.5px rgba(239, 75, 75, 0.95), 0 0 14px rgba(239, 75, 75, 0.35);
+  }
+}
+
+.cue {
+  animation: pulse 1s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue {
+    animation: none;
+    box-shadow: 0 0 0 1.5px rgba(239, 75, 75, 0.95), 0 0 14px rgba(239, 75, 75, 0.35);
+  }
+}
