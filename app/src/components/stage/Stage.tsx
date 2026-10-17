@@ -12,7 +12,7 @@ import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
 import { VolumeButton } from "./VolumeButton";
-import { liftButtons, makeRoom } from "./makeRoom";
+import { liftButtons, makeRoom, ROOM_GAP as SHEET_GAP } from "./makeRoom";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
 import { NowWatching, STREAM_PLACES } from "./NowWatching";
@@ -153,17 +153,33 @@ export function Stage({
   // size if it fits there, and stays (never shrunk) if not. The sheet's top is read from the
   // sheet itself: the visible screen isn't always the stage's height on a real phone.
   const makingRoom = sideways && Boolean(fullView?.on && !fullView.hidden) && sheetOpen;
+  // The upright normal view (spec 0118): the buttons stay over the player's bottom, and rise
+  // over the video to just above the sheet where a tall player reaches under it.
+  const roomInPlayer = phone && sheetOpen;
   useLayoutEffect(() => {
     const box = boxRef.current;
     const section = stageRef.current;
     if (!box || !section) return;
     const place = () => {
       const buttons = screenChromeRef.current;
+      const frame = frameRef.current;
+      const inPlayer = [frame?.querySelector<HTMLElement>("[data-overlay]"), controlsRef.current];
       box.style.translate = "";
       if (buttons) buttons.style.translate = "";
-      if (!makingRoom) return;
+      inPlayer.forEach((el) => el && (el.style.translate = ""));
+      if (!makingRoom && !roomInPlayer) return;
       const sheet = document.querySelector<HTMLElement>('[role="dialog"][data-variant="sheet"]');
       if (!sheet) return;
+      if (roomInPlayer) {
+        const row = controlsRef.current?.querySelector<HTMLElement>("[data-buttons]");
+        if (!frame || !row) return;
+        // In layout, from the player's top: a lift in place or still sliding isn't counted.
+        let y = 0;
+        for (let n: HTMLElement | null = row; n && n !== frame; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+        const up = liftButtons({ rowBottom: frame.getBoundingClientRect().top + y + row.offsetHeight, sheetTop: sheet.offsetTop, max: y - SHEET_GAP });
+        if (up) inPlayer.forEach((el) => el && (el.style.translate = `0 ${-up}px`));
+        return;
+      }
       // Fixed to the screen: its layout top, which its slide-in (a transform) doesn't change.
       const sheetTop = sheet.offsetTop;
       const s = section.getBoundingClientRect();
@@ -192,7 +208,7 @@ export function Stage({
       window.removeEventListener("resize", place);
       watch?.disconnect();
     };
-  }, [makingRoom]);
+  }, [makingRoom, roomInPlayer]);
   const focusInside = () =>
     held.current.size > 0 ||
     (frameRef.current?.contains(document.activeElement) ?? false) ||

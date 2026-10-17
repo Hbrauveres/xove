@@ -2068,6 +2068,7 @@ describe("room: on a phone held upright (spec 0158)", () => {
   const desktopMatchMedia = window.matchMedia;
   afterEach(() => {
     window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
   });
 
   it("has the wordmark, then people, the bell and my account at the far right, and no footer", async () => {
@@ -2117,6 +2118,45 @@ describe("room: on a phone held upright (spec 0158)", () => {
     expect(within(sheet).getByRole("tab", { name: "Camera" })).toHaveAttribute("aria-selected", "true");
     await user.click(within(sheet).getByRole("button", { name: "Close settings" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
+  });
+
+  it("never leaves the round buttons behind the settings sheet with a tall player (spec 0118)", async () => {
+    window.matchMedia = ((query: string) => ({
+      ...desktopMatchMedia(query),
+      matches: [TOUCH_QUERY, SMALL_QUERY, PORTRAIT_QUERY, NARROW_UPRIGHT_QUERY].includes(query),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    installFakeApi({ me: member });
+    renderRoom();
+    await connected();
+    const user = userEvent.setup();
+    const overlay = stage().querySelector("[data-overlay]") as HTMLElement;
+    const controls = stage().querySelector("[data-buttons]")!.closest("[class*=controls]") as HTMLElement;
+    // A tall player: its row's bottom at 600 (the frame from 56, the row 496 px down, 48 px tall);
+    // the sheet's top at 348.
+    let rowTop = 496;
+    vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (this: HTMLElement) {
+      return this.dataset.variant === "sheet" ? 348 : this.hasAttribute("data-buttons") ? rowTop : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute("data-buttons") ? 48 : 0;
+    });
+    const frameTop = 56;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      return { top: frameTop, bottom: frameTop + 560, left: 0, right: 412, width: 412, height: 560, x: 0, y: frameTop } as DOMRect;
+    });
+    await user.click(within(stage()).getByRole("button", { name: "Settings" }));
+    // 600 - (348 - 8) = 260 px up, both layers together.
+    await waitFor(() => expect(controls.style.translate).toBe("0 -260px"));
+    expect(overlay.style.translate).toBe("0 -260px");
+    // A short player (a widescreen stream): already clear, nothing moves.
+    rowTop = 180;
+    act(() => window.dispatchEvent(new Event("resize")));
+    expect(controls.style.translate).toBe("");
+    await user.click(screen.getByRole("button", { name: "Close settings" }));
+    await waitFor(() => expect(overlay.style.translate).toBe(""));
   });
 
   it("puts the footer's items at the end of my account menu", async () => {

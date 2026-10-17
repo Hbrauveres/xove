@@ -32,6 +32,7 @@ export function makeRoom({ height, bar, sheet, band }: Sizes): number {
  * How far to move the round buttons (and the fullscreen button with them) up from the bottom of
  * the screen: to just above the sheet, so they're never left behind it (design decision 6).
  */
-export function liftButtons({ rowBottom, sheetTop }: { rowBottom: number; sheetTop: number }): number {
-  return Math.max(0, rowBottom - (sheetTop - ROOM_GAP));
+export function liftButtons({ rowBottom, sheetTop, max = Infinity }: { rowBottom: number; sheetTop: number; max?: number }): number {
+  // `max`: no higher than the player's top edge (the upright normal view, spec 0118).
+  return Math.max(0, Math.min(max, rowBottom - (sheetTop - ROOM_GAP)));
 }

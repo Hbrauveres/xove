@@ -1,5 +1,8 @@
 .overlay {
-  transition: opacity 0.25s ease;
+  /* The translate: it rises with the round buttons above the settings sheet, together (spec 0118). */
+  transition:
+    opacity 0.25s ease,
+    translate var(--unroll);
   position: absolute;
   inset: 0;
   display: flex;
@@ -54,4 +57,10 @@
 
 :global([data-chrome="hidden"]:focus-within) .overlay button {
   pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    transition: none;
+  }
 }
