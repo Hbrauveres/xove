@@ -79,13 +79,12 @@ describe("no pull-to-refresh in the room", () => {
   });
 });
 
-describe("the fullscreen button in the full-screen view (spec 0171)", () => {
-  it("sits centred on the round buttons' row, at both of their sizes", () => {
+describe("the fullscreen button in the full-screen view (specs 0171 and 0111)", () => {
+  it("sits centred on the round buttons' row, at each of their sizes", () => {
     const stage = sheet("components/stage/Stage.module.css");
-    const at = stage.indexOf('.stage[data-layout="sideways"] [data-overlay] {');
-    expect(at).toBeGreaterThanOrEqual(0);
-    expect(stage.slice(at, stage.indexOf("}", at))).toMatch(/padding-bottom:\s*calc\(12px \+ \(48px - 34px\) \/ 2\)/);
-    expect(stage).toMatch(/@media \(max-width: 520px\) \{\s*\.stage\[data-layout="sideways"\] \[data-overlay\] \{\s*padding-bottom:\s*calc\(12px \+ \(42px - 34px\) \/ 2\)/);
+    // The place is the overlay's own rule, for every layout; a layout only gives its buttons' size.
+    expect(stage).toMatch(/\.stage\[data-layout="phone"\] \[data-overlay\] \{\s*--btn:\s*44px/);
+    expect(stage).toMatch(/@media \(max-width: 520px\) \{\s*\.stage\[data-layout="sideways"\] \[data-overlay\] \{\s*--btn:\s*42px/);
   });
 });
 

@@ -156,3 +156,18 @@ describe("the drop-up (the Player controls design, decision 3)", () => {
     expect(row).toMatch(/0 4px 16px rgba\(0, 0, 0, 0\.35\)/);
   });
 });
+
+describe("the fullscreen button has one place (spec 0111, design decision 2)", () => {
+  const overlay = sheet("components/stage/StageOverlay.module.css");
+  const stage = sheet("components/stage/Stage.module.css");
+
+  it("sits at the bottom right on every layout, its centre level with the round buttons' row", () => {
+    const o = rule(overlay, ".overlay");
+    expect(o).toMatch(/justify-content:\s*flex-end/);
+    expect(o).toMatch(/padding-bottom:\s*calc\(12px \+ \(var\(--btn, 48px\) - 34px\) \/ 2\)/);
+    expect(rule(overlay, ".top")).toMatch(/justify-content:\s*flex-end/);
+    // The row's button size per layout, nothing else of its own.
+    expect(rule(stage, '.stage[data-layout="phone"] [data-overlay]')).toMatch(/--btn:\s*44px/);
+    expect(stage).not.toMatch(/\[data-overlay\]\s*\{[^}]*justify-content/);
+  });
+});

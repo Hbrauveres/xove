@@ -230,18 +230,16 @@
 }
 
 /*
- * Sideways the top belongs to the top bar: the fullscreen button moves to the bottom right,
- * centred on the round buttons' row (12 px from the bottom, buttons 48 px; 42 px on a narrow
- * screen), so the two line up.
+ * The fullscreen button sits level with the round buttons' row on every layout (spec 0111):
+ * the row's buttons are 48 px, 44 px on a phone held upright, 42 px sideways on a narrow screen.
  */
-.stage[data-layout="sideways"] [data-overlay] {
-  justify-content: flex-end;
-  padding-bottom: calc(12px + (48px - 34px) / 2);
+.stage[data-layout="phone"] [data-overlay] {
+  --btn: 44px;
 }
 
 @media (max-width: 520px) {
   .stage[data-layout="sideways"] [data-overlay] {
-    padding-bottom: calc(12px + (42px - 34px) / 2);
+    --btn: 42px;
   }
 }
 

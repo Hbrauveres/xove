@@ -121,7 +121,9 @@ export function Stage({
   // Screen and camera together: the screen big, the camera in the facecam over it,
   // unless the viewer swapped them (for that person). Remembered for this visit only.
   const swapped = big ? Boolean(swappedFor[big.person.id]) : false;
-  const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>({ x: 0.74, y: 0.72 });
+  // It starts at the top right (spec 0111), clear of the round buttons and the fullscreen button
+  // at the bottom right; under the top bar where one lies over the player.
+  const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>(() => ({ x: 0.73, y: layout === "sideways" ? 0.18 : 0.04 }));
   const [facecamCollapsed, setFacecamCollapsed] = useState(false);
   const both = Boolean(big?.screen && big?.camera);
   const main = big ? ((both && swapped ? big.camera : big.screen) ?? big.camera ?? null) : null;
@@ -430,11 +432,6 @@ export function Stage({
             />
           )}
         </div>
-        {fullView ? (
-          <StageOverlay view fullscreen={fullView.on} onFullscreen={fullView.toggle} hidden={fullView.hidden} />
-        ) : (
-          <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
-        )}
       </>
     );
   };
@@ -473,6 +470,13 @@ export function Stage({
           onFocus={showChrome}
         >
           {body()}
+          {/* Over a stream and over the empty stage alike, so stopping the only stream in
+              fullscreen never strands you there (spec 0111). */}
+          {fullView ? (
+            <StageOverlay view fullscreen={fullView.on} onFullscreen={fullView.toggle} hidden={fullView.hidden} />
+          ) : (
+            <StageOverlay fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+          )}
 
           {/* Always there: over the empty stage they never fade; over a stream, with the bars. */}
           <div ref={controlsRef} className={styles.controls} data-no-swipe>
