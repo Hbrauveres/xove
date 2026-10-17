@@ -2068,6 +2068,7 @@ describe("room: on a phone held upright (spec 0158)", () => {
   const desktopMatchMedia = window.matchMedia;
   afterEach(() => {
     window.matchMedia = desktopMatchMedia;
+    vi.restoreAllMocks();
   });
 
   it("has the wordmark, then people, the bell and my account at the far right, and no footer", async () => {
@@ -2120,9 +2121,8 @@ describe("room: on a phone held upright (spec 0158)", () => {
   });
 
   it("never leaves the round buttons behind the settings sheet with a tall player (spec 0118)", async () => {
-    const real = window.matchMedia;
     window.matchMedia = ((query: string) => ({
-      ...real(query),
+      ...desktopMatchMedia(query),
       matches: [TOUCH_QUERY, SMALL_QUERY, PORTRAIT_QUERY, NARROW_UPRIGHT_QUERY].includes(query),
       media: query,
       addEventListener: () => {},
@@ -2143,7 +2143,7 @@ describe("room: on a phone held upright (spec 0158)", () => {
     vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
       return this.hasAttribute("data-buttons") ? 48 : 0;
     });
-    let frameTop = 56;
+    const frameTop = 56;
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
       return { top: frameTop, bottom: frameTop + 560, left: 0, right: 412, width: 412, height: 560, x: 0, y: frameTop } as DOMRect;
     });
@@ -2151,12 +2151,7 @@ describe("room: on a phone held upright (spec 0158)", () => {
     // 600 - (348 - 8) = 260 px up, both layers together.
     await waitFor(() => expect(controls.style.translate).toBe("0 -260px"));
     expect(overlay.style.translate).toBe("0 -260px");
-    // The page scrolls 100 px under the fixed sheet: measured again.
-    frameTop = -44;
-    act(() => window.dispatchEvent(new Event("scroll")));
-    expect(controls.style.translate).toBe("0 -160px");
     // A short player (a widescreen stream): already clear, nothing moves.
-    frameTop = 56;
     rowTop = 180;
     act(() => window.dispatchEvent(new Event("resize")));
     expect(controls.style.translate).toBe("");

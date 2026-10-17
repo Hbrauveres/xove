@@ -200,15 +200,12 @@ export function Stage({
     };
     place();
     window.addEventListener("resize", place);
-    // In the normal view the page scrolls under the fixed sheet: measure again.
-    if (roomInPlayer) window.addEventListener("scroll", place, { passive: true });
     // The picture's shape can change with the sheet open (another stream, its real size
     // arriving, the facecam): measure again. A translate doesn't resize, so this can't loop.
     const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
     watch?.observe(box);
     return () => {
       window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place);
       watch?.disconnect();
     };
   }, [makingRoom, roomInPlayer]);
