@@ -139,7 +139,9 @@ describe("the picker: one box with its pill, floating (the Player controls desig
   });
 
   it("unrolls from the pill in 220 ms and rolls back in 150 ms, its options fading in by their distance", () => {
-    expect(rule(picker, ".list")).toMatch(/clip-path:\s*inset\(0 0 100% 0\)/);
+    // The clip keeps the rounded corners, so the blur behind doesn't show square at them (spec 0114).
+    expect(rule(picker, ".list")).toMatch(/clip-path:\s*inset\(0 0 100% 0 round 0 0 var\(--pick-r\) var\(--pick-r\)\)/);
+    expect(rule(picker, ".picker[data-opens=\"up\"] .list[data-unroll]")).toMatch(/clip-path:\s*inset\(0 round var\(--pick-r\) var\(--pick-r\) 0 0\)/);
     expect(rule(picker, ".list[data-unroll]")).toMatch(/transition:\s*clip-path 220ms/);
     expect(rule(picker, ".list")).toMatch(/transition:\s*clip-path 150ms/);
     expect(rule(picker, ".list[data-unroll] .option")).toMatch(/calc\(30ms \+ var\(--k, 0\) \* 40ms\)/);

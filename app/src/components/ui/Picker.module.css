@@ -100,13 +100,14 @@
   overscroll-behavior: contain;
   border-radius: 0 0 var(--pick-r) var(--pick-r);
   background: var(--pick-bg);
-  /* Rolled up into the pill's edge; it unrolls in 220 ms and rolls back in 150 ms. */
-  clip-path: inset(0 0 100% 0);
+  /* Rolled up into the pill's edge; it unrolls in 220 ms and rolls back in 150 ms. The clip keeps
+     the box's rounded corners, or the blur behind it would show square at them (spec 0114). */
+  clip-path: inset(0 0 100% 0 round 0 0 var(--pick-r) var(--pick-r));
   transition: clip-path 150ms ease-in;
 }
 
 .list[data-unroll] {
-  clip-path: inset(0);
+  clip-path: inset(0 round 0 0 var(--pick-r) var(--pick-r));
   transition: clip-path 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -148,11 +149,11 @@
   border-radius: var(--pick-r) var(--pick-r) 0 0;
   backdrop-filter: blur(8px);
   box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.4);
-  clip-path: inset(100% 0 0 0);
+  clip-path: inset(100% 0 0 0 round var(--pick-r) var(--pick-r) 0 0);
 }
 
 .picker[data-opens="up"] .list[data-unroll] {
-  clip-path: inset(0);
+  clip-path: inset(0 round var(--pick-r) var(--pick-r) 0 0);
 }
 
 .option {
