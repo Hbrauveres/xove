@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadCameraPrefs, loadSharePrefs, saveCameraPrefs, saveSharePrefs, type SharePrefs } from "../media/preferences";
 import type { ActivityEvent, CameraDevice, ConnectionState, Friend, LiveFeed, MediaTrack, Sharer, StreamKind } from "../types";
 import type { LiveStream, RoomSeatsState } from "../api/types";
-import { useLiveKitRoom, type Capture, type ScreenSurface } from "./useLiveKitRoom";
+import { useLiveKitRoom, type CameraProblem, type Capture, type ScreenSurface } from "./useLiveKitRoom";
 import { useStreams } from "./useStreams";
 import { api as client } from "../api/client";
 
@@ -46,6 +46,8 @@ export type RoomSession = {
   pickCamera: (deviceId: string) => void;
   /** What my screen share shows: a window, a tab or the whole screen. */
   screenSurface?: ScreenSurface;
+  /** The camera was refused or there's none: the Camera tab says so. */
+  cameraProblem: CameraProblem;
   /** I'm sharing my screen, but my browser gave no sound with it. */
   noSound: boolean;
   /** False when the API doesn't know I'm in the room (it restarted): enter again. Null until known. */
@@ -482,6 +484,7 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
     cameraId: lk.cameraId,
     pickCamera: (deviceId: string) => void pickCamera(deviceId),
     screenSurface: lk.screenSurface,
+    cameraProblem: lk.cameraProblem,
     // Only while my screen is actually going out.
     noSound: noSound && myLive.screen && lk.publishing.screen,
     seated,

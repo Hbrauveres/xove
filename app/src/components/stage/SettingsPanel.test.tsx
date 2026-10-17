@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { SharePrefs } from "../../media/preferences";
 import type { StreamKind } from "../../types";
+import { CAMERA_BLOCKED } from "../../hooks/useLiveKitRoom";
 import { NO_SOUND } from "./PlayerButtons";
 import { SettingsPanel } from "./SettingsPanel";
 
@@ -141,6 +142,13 @@ describe("the settings panel: the Camera tab", () => {
     rerender({ mine: { screen: false, camera: true } });
     expect(within(tab).getByText("LIVE")).toBeInTheDocument();
     expect(onPreviewCamera).toHaveBeenLastCalledWith(false);
+  });
+
+  it("says in the preview's place when the camera was refused, and how to allow it", async () => {
+    const { user } = setup({ cameraProblem: "blocked" });
+    await user.click(within(panel()).getByRole("tab", { name: /Camera/ }));
+    expect(within(panel()).getByRole("status")).toHaveTextContent(CAMERA_BLOCKED);
+    expect(within(panel()).queryByText("Only you see this")).not.toBeInTheDocument();
   });
 
   it("picks another camera from its picker, opened in place", async () => {

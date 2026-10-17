@@ -1222,6 +1222,17 @@ describe("room: my camera", () => {
     expect(local.publishTrack).not.toHaveBeenCalled();
   });
 
+  it("asks for the camera when the tab opens, and says how to allow it when it's refused", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    lastRoom().localParticipant.nextCamera = "NotAllowedError";
+
+    const tab = await openMenu(user, "Camera");
+
+    expect(await tab.findByRole("status")).toHaveTextContent(/allow it for Xovê in your browser's or phone's settings/i);
+    expect(lastRoom().localParticipant.publishTrack).not.toHaveBeenCalled();
+  });
+
   it("sends the preview's camera as is when the camera button is pressed: no second ask", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();

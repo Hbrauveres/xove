@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
-import type { ScreenSurface } from "../../hooks/useLiveKitRoom";
+import { CAMERA_BLOCKED, type CameraProblem, type ScreenSurface } from "../../hooks/useLiveKitRoom";
 import type { SharePrefs } from "../../media/preferences";
 import { CAMERA_QUALITIES, MODE_OPTIONS, SHARE_QUALITIES, type ShareMode, type ShareQuality } from "../../media/shareSettings";
 import type { CameraDevice, MediaTrack, StreamKind } from "../../types";
@@ -38,6 +38,8 @@ type Props = {
   cameraVideo?: MediaTrack;
   /** Turns the camera on for the preview only, or off again. */
   onPreviewCamera: (on: boolean) => void;
+  /** The camera was refused or there's none: said in the preview's place. */
+  cameraProblem?: CameraProblem;
   busy?: boolean;
   /** I'm sharing my screen without sound: the Screen tab says how to share it. */
   noSound?: boolean;
@@ -239,12 +241,21 @@ function ScreenTab(props: Props) {
 }
 
 function CameraTab(props: Props) {
-  const { mine, cameras, cameraId, onPickCamera, cameraVideo, busy } = props;
+  const { mine, cameras, cameraId, onPickCamera, cameraVideo, busy, cameraProblem } = props;
+  const problem = !cameraVideo && cameraProblem ? (cameraProblem === "blocked" ? CAMERA_BLOCKED : "No camera found.") : null;
   return (
     <>
-      <div className={styles.preview}>
-        <Preview video={cameraVideo} />
-        {mine.camera ? <span className={styles.live}>LIVE</span> : <span className={styles.badge}>Only you see this</span>}
+      <div className={styles.preview} data-problem={problem ? true : undefined}>
+        {problem ? (
+          <p className={styles.problem} role="status">
+            {problem}
+          </p>
+        ) : (
+          <>
+            <Preview video={cameraVideo} />
+            {mine.camera ? <span className={styles.live}>LIVE</span> : <span className={styles.badge}>Only you see this</span>}
+          </>
+        )}
       </div>
       {cameras.length > 0 && (
         <div className={styles.group}>

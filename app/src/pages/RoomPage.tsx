@@ -126,6 +126,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
       onPickCamera={session.pickCamera}
       cameraVideo={session.mine.camera ? session.myCamera : session.cameraPreview}
       onPreviewCamera={session.previewCamera}
+      cameraProblem={session.cameraProblem}
       busy={session.busy}
       fullView={sheet && fullView}
     />

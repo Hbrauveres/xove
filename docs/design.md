@@ -211,10 +211,10 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 The settings for what you send, from the cog.
 
 - **Desktop, tablets and phones held sideways:** a **300 px drawer** inside the player, 10 px from its right edge, so it comes along in fullscreen. **A phone held upright** (its full-screen view too): a **bottom sheet**, no pull handle; the ✕, the cog or Escape closes it.
-- The drawer is frosted like the dropdown panels (the panel colour at 74%, blur 22 px, a 1 px white border at 8%), 16 px corners. The sheet, over the page's feed rather than a video, is **opaque** in the same tint (`#131315`), with 20 px corners on top: the feed never reads through it, and there's no blur to redraw. **One control height:** 30 px in the drawer, 44 px in the sheet.
+- Frosted like the dropdown panels (the panel colour at 74%, blur 22 px, a 1 px white border at 8%), 16 px corners (20 px on top of the sheet). **One control height:** 30 px in the drawer, 44 px in the sheet.
 - **Tabs Screen and Camera**, with a **red marker** that slides under the chosen one and a **red dot** on the tab of what you're sending. **No Screen tab on phones**, nor where a screen can't be shared.
 - **Screen:** while you share, what's shared and **Change** (and, when the screen has no sound, a line saying how to share it); while you don't, one line saying these are used next time. **No preview**: the stage and the browser's picker already show it. Then Quality and Mode.
-- **Camera:** your camera's preview, centred: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Then the camera's picker, Quality and Mode.
+- **Camera:** your camera's preview, centred: **LIVE** while it's sent, **"Only you see this"** while it's off (the camera turns on for you alone while the tab is open). Like any app, the browser asks for the camera the first time; refused or missing, the preview's place says so, and how to allow it. Then the camera's picker, Quality and Mode.
 - **No field descriptions**, except where a setting needs a line to make sense. The body scrolls with the app's slim scrollbar, without arrows.
 - **In the upright full view, the sheet makes room instead of covering:** the player, its round buttons with it, moves up at the same size between the top bar and the sheet. If it doesn't fit (a vertical share), the sheet opens over it. The video is never shrunk; everything slides back when the sheet closes.
 

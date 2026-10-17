@@ -40,7 +40,7 @@ Sound is captured as music: no echo cancellation, no noise suppression, no autom
 - **A camera list** switches the camera being sent (`restartTrack` on the same track).
 - **Stop:** the lit button, or the browser's own "Stop sharing" bar, ends the stream.
 
-**Cameras** are asked for only on that click, or while the settings' Camera tab is open (a preview only the sharer sees, sent as is if the camera button is pressed then, and stopped when the tab closes), never with the microphone, and go up to 720p: enough for a face, and it spares the upload of someone sending a screen too. They're sent like a screen, with a 720p and a 480p layer.
+**Cameras** are asked for only on that click, or while the settings' Camera tab is open (the browser asks for permission the first time, like any app; refused or missing, the room and the Camera tab say so, and how to allow it) (a preview only the sharer sees, sent as is if the camera button is pressed then, and stopped when the tab closes), never with the microphone, and go up to 720p: enough for a face, and it spares the upload of someone sending a screen too. They're sent like a screen, with a 720p and a 480p layer.
 
 ## Quality and modes
 

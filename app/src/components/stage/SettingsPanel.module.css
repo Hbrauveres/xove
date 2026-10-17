@@ -30,11 +30,7 @@
 
 .panel[data-variant="sheet"] {
   --ctl: 44px;
-  /* Over the page's feed, not a video: opaque in the panel's tint, so the feed never reads
-     through, and with no blur to redraw on every frame. */
-  background: #131315;
-  backdrop-filter: none;
-  position: fixed;
+    position: fixed;
   top: auto;
   left: 0;
   right: 0;
@@ -143,6 +139,13 @@
 .tab:hover,
 .tab[aria-selected="true"] {
   color: var(--text);
+}
+
+/* The keyboard's ring sits inside the tab, rounded, clear of the marker. */
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+  border-radius: 8px;
 }
 
 .panel[data-variant="sheet"] .tabs {
@@ -339,6 +342,22 @@
 
 .panel[data-variant="sheet"] .preview {
   max-width: 280px;
+}
+
+/* The camera refused or missing: said in the preview's place, so it's clear how to allow it. */
+.preview[data-problem] {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--line);
+}
+
+.problem {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
 }
 
 .video {
