@@ -277,32 +277,36 @@ function CameraTab(props: Props) {
   const problem = !cameraVideo && cameraProblem ? (cameraProblem === "blocked" ? CAMERA_BLOCKED : "No camera found.") : null;
   return (
     <>
+      {/* What you see: its own column sideways (spec 0111, design decisions 3 and 4). */}
       <div className={styles.lead}>
-        <div className={styles.preview} data-problem={problem ? true : undefined}>
-          {problem ? (
-            <p className={styles.problem} role="status">
-              {problem}
-            </p>
-          ) : (
-            <>
-              <Preview video={cameraVideo} />
-              {mine.camera ? <span className={styles.live}>LIVE</span> : <span className={styles.badge}>Only you see this</span>}
-            </>
-          )}
-        </div>
-        {cameras.length > 0 && (
-          <div className={styles.group}>
-            <p className={styles.heading}>Camera</p>
-            <Picker
-              label="Camera"
-              options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
-              value={cameraId ?? cameras[0].deviceId}
-              disabled={busy}
-              onChange={onPickCamera}
-            />
+        <div className={styles.group}>
+          <p className={styles.heading}>Preview</p>
+          <div className={styles.preview} data-problem={problem ? true : undefined}>
+            {problem ? (
+              <p className={styles.problem} role="status">
+                {problem}
+              </p>
+            ) : (
+              <>
+                <Preview video={cameraVideo} />
+                {mine.camera ? <span className={styles.live}>LIVE</span> : <span className={styles.badge}>Only you see this</span>}
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
+      {cameras.length > 0 && (
+        <div className={styles.group}>
+          <p className={styles.heading}>Camera</p>
+          <Picker
+            label="Camera"
+            options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
+            value={cameraId ?? cameras[0].deviceId}
+            disabled={busy}
+            onChange={onPickCamera}
+          />
+        </div>
+      )}
       <QualityAndMode kind="camera" {...props} />
     </>
   );

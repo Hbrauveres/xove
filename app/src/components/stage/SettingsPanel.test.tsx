@@ -219,6 +219,20 @@ describe("the settings panel: the keyboard", () => {
   });
 });
 
+describe("the settings panel: the Camera tab's preview (spec 0111)", () => {
+  it("has its own Preview heading, like every other group, the camera's picker in the next group", () => {
+    setup({ screenTab: false });
+    const tab = within(panel()).getByRole("tabpanel", { name: "Camera" });
+    const names = ["Preview", "Camera", "Quality", "Mode"];
+    const headings = [...tab.querySelectorAll("p")].map((p) => p.textContent).filter((t) => names.includes(t ?? ""));
+    expect(headings).toEqual(names);
+    // The preview is alone in its group: sideways that group is the left column.
+    const previewGroup = within(tab).getByText("Preview").parentElement!;
+    expect(previewGroup.querySelector("video")).not.toBeNull();
+    expect(within(previewGroup).queryByRole("button", { name: /^Camera:/ })).toBeNull();
+  });
+});
+
 describe("the settings panel: React's development double-mount", () => {
   it("still previews the camera when it mounts open on Camera", () => {
     const onPreviewCamera = vi.fn();
