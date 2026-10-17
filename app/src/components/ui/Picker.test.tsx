@@ -200,3 +200,37 @@ describe("Picker: floating over its panel (spec 0111)", () => {
     expect(order).toEqual(["1", "0"]);
   });
 });
+
+describe("Picker: long names and an upward list (spec 0114)", () => {
+  const LONG = [
+    { value: "studio", label: "EMEET STUDIO Virtual Camera" },
+    { value: "pixy", label: "EMEET PIXY (328f:00c0)" },
+  ];
+
+  it("shows the full name as the pill's tooltip and in its accessible name, and on each option", async () => {
+    const user = userEvent.setup();
+    render(<Picker label="Camera" options={LONG} value="studio" onChange={() => {}} />);
+    const pill = screen.getByRole("button", { name: "Camera: EMEET STUDIO Virtual Camera" });
+    expect(pill).toHaveAttribute("title", "EMEET STUDIO Virtual Camera");
+    await user.click(pill);
+    expect(screen.getByRole("radio", { name: "EMEET PIXY (328f:00c0)" })).toHaveAttribute("title", "EMEET PIXY (328f:00c0)");
+  });
+
+  it("opens an upward list scrolled to the pill's end", async () => {
+    const user = userEvent.setup();
+    const height = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(300);
+    render(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} opens="up" look="glass" />);
+    await user.click(screen.getByRole("button", { name: "Camera: Webcam C920" }));
+    expect(screen.getByRole("radiogroup", { name: "Camera" }).scrollTop).toBe(300);
+    height.mockRestore();
+  });
+
+  it("opens a downward list at its top", async () => {
+    const user = userEvent.setup();
+    const height = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(300);
+    render(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Camera: Webcam C920" }));
+    expect(screen.getByRole("radiogroup", { name: "Camera" }).scrollTop).toBe(0);
+    height.mockRestore();
+  });
+});

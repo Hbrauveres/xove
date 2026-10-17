@@ -11,6 +11,8 @@
   --pick-pad: 12px;
   position: relative;
   display: grid;
+  /* Never wider than its box, whatever the names (spec 0114): the pill and its list stay one width. */
+  min-width: 0;
 }
 
 .picker[data-look="glass"] {
@@ -26,6 +28,7 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
+  min-width: 0;
   height: var(--ctl, 38px);
   padding: 0 var(--pick-pad);
   border: 0;
@@ -49,10 +52,17 @@
   background: var(--pick-hover);
 }
 
-.chosen {
+/* A name too long for its row ends in "…", on one line; the whole name is its tooltip. */
+.chosen,
+.name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chosen {
+  flex: 1;
 }
 
 .chevron {
