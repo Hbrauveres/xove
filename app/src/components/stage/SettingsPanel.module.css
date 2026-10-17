@@ -1,37 +1,51 @@
 /*
  * The settings panel (the Player controls design). Desktop, tablets and phones held sideways:
- * a 300 px drawer from the outermost right edge: the player's in a window, the screen's in
- * fullscreen and on a phone sideways (it then clears the notch). A
- * phone held upright: a bottom sheet over the page. Frosted like the round buttons' glass,
- * one control height (`--ctl`): 30 px in the drawer, 44 px in the sheet. Only transforms move.
+ * a popover over the cog (design decision 9), centred on it like the volume's slider, 10 px
+ * above the round buttons and inside the player; the stage gives it the cog's place
+ * (`--cog-x`) and the row's (`--above-row`). As tall as its tallest tab; a fifth of the
+ * player wide, 280 to 320 px; sideways up to 560 px, in two columns. A phone held upright:
+ * a bottom sheet over the page. Frosted, one control height (`--ctl`): 30 px over the cog,
+ * 44 px in the sheet. Only opacity and transforms move.
  */
 .panel {
   --ctl: 30px;
+  --w: clamp(280px, 20cqw, 320px);
+  --room: var(--above-row, 72px);
   position: absolute;
-  top: 10px;
-  right: calc(10px + env(safe-area-inset-right, 0px));
-  bottom: 10px;
+  left: clamp(10px, calc(var(--cog-x, 50%) - var(--w) / 2), calc(100% - var(--w) - 10px));
+  bottom: var(--room);
   z-index: 6;
   display: flex;
   flex-direction: column;
-  width: 300px;
+  width: var(--w);
   max-width: calc(100% - 20px);
+  max-height: calc(100% - var(--room) - 10px);
+  min-height: min(240px, calc(100% - var(--room) - 10px));
   border: 1px solid var(--panel-line);
   border-radius: 16px;
   background: var(--panel);
   backdrop-filter: blur(22px);
   color: var(--text);
-  transform: translateX(calc(100% + 20px));
-  transition: transform var(--unroll);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .panel[data-open] {
+  opacity: 1;
   transform: none;
+}
+
+/* Sideways the player is wide and short: the panel uses the width, so no tab scrolls. */
+:global([data-layout="sideways"]) .panel[data-variant="popover"] {
+  --w: min(560px, calc(100% - 20px));
 }
 
 .panel[data-variant="sheet"] {
   --ctl: 44px;
-    position: fixed;
+  position: fixed;
   top: auto;
   left: 0;
   right: 0;
@@ -39,9 +53,13 @@
   width: auto;
   max-width: none;
   height: var(--sheet-height, 62%);
+  max-height: none;
+  min-height: 0;
+  opacity: 1;
   border-width: 1px 0 0;
   border-radius: 20px 20px 0 0;
   transform: translateY(100%);
+  transition: transform var(--unroll);
 }
 
 .panel[data-variant="sheet"][data-open] {
@@ -174,11 +192,20 @@
   background: var(--accent);
 }
 
-/* The body scrolls with the app's slim scrollbar: 4 px, no arrows. */
-.body {
+/*
+ * The tabs' panes, in one cell over the cog: the panel takes the tallest one's height and the
+ * hidden ones are invisible. It scrolls, when it must, with the app's slim scrollbar: 4 px, no arrows.
+ */
+.panes {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  display: grid;
+}
+
+.body {
+  grid-area: 1 / 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -187,8 +214,41 @@
   --pick-font: 12px;
 }
 
+.body[data-off] {
+  visibility: hidden;
+}
+
 .body > * {
   flex: none;
+}
+
+/* What you pick: in the flow of the tab, or its own column sideways. */
+.lead {
+  display: contents;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-content: start;
+  column-gap: 18px;
+  row-gap: 12px;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .lead {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  grid-column: 1;
+  grid-row: 1 / span 4;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .body > :not(.lead) {
+  grid-column: 2;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .preview {
+  max-width: none;
 }
 
 .panel[data-variant="sheet"] .body {
@@ -201,31 +261,31 @@
   --seg-pill: #121214;
 }
 
-.body::-webkit-scrollbar {
+.panes::-webkit-scrollbar {
   width: 4px;
 }
 
-.body::-webkit-scrollbar-button {
+.panes::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
 }
 
-.body::-webkit-scrollbar-track {
+.panes::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.body::-webkit-scrollbar-thumb {
+.panes::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
 }
 
-.body:hover::-webkit-scrollbar-thumb {
+.panes:hover::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.28);
 }
 
 @supports not selector(::-webkit-scrollbar) {
-  .body {
+  .panes {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   }

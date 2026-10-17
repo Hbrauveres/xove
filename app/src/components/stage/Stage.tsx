@@ -28,6 +28,9 @@ import { StreamsRow } from "./StreamsRow";
 import { gridFor } from "../../media/ambilight";
 import styles from "./Stage.module.css";
 
+/** The settings over the cog sit this far above the round buttons (design decision 9). */
+const ROW_GAP = 10;
+
 type Props = {
   /** Everyone with a live stream, the longest sharing first. */
   sharers: Sharer[];
@@ -59,10 +62,7 @@ type Props = {
   people?: Friend[];
   meId?: string;
   arrivedAt?: Record<string, number>;
-  /**
-   * The settings panel, as a drawer on the outermost edge (spec 0107): inside the player in a
-   * window, so it comes along in fullscreen, where the player is the screen; sideways, the stage's.
-   */
+  /** The settings panel, over the cog inside the player, so it comes along in fullscreen (spec 0107). */
   settingsPanel?: ReactNode;
   /** The settings sheet is open over the stage: the upright full view makes room for the player. */
   sheetOpen?: boolean;
@@ -227,6 +227,33 @@ export function Stage({
   }, [hold, settingsOpen, onSettings]);
   useEffect(() => {
     if (!settingsOpen) held.current.delete("settings");
+  }, [settingsOpen]);
+  // The settings open over the cog (design decision 9): centred on it, just above the round
+  // buttons. The panel reads where they are from two variables on the frame.
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    const controls = controlsRef.current;
+    if (!settingsOpen || !frame || !controls) return;
+    const place = () => {
+      const cog = controls.querySelector('button[aria-label="Settings"]');
+      const row = controls.querySelector("[data-buttons]");
+      const f = frame.getBoundingClientRect();
+      if (!cog || !row || !f.width) return;
+      const c = cog.getBoundingClientRect();
+      frame.style.setProperty("--cog-x", `${c.left + c.width / 2 - f.left}px`);
+      frame.style.setProperty("--above-row", `${f.bottom - row.getBoundingClientRect().top + ROW_GAP}px`);
+    };
+    place();
+    window.addEventListener("resize", place);
+    // The row changes too (the volume comes and goes with who's on the stage).
+    const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
+    watch?.observe(frame);
+    const row = controls.querySelector("[data-buttons]");
+    if (row) watch?.observe(row);
+    return () => {
+      window.removeEventListener("resize", place);
+      watch?.disconnect();
+    };
   }, [settingsOpen]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
@@ -437,9 +464,6 @@ export function Stage({
           ref={frameRef}
           className={styles.frame}
           data-chrome={chrome}
-          // The drawer covers the player's top right: the fullscreen button steps aside (spec 0107),
-          // but not its way out of fullscreen or of the full view.
-          data-drawer-open={(settingsPanel && settingsOpen && !fullscreen && !fullView?.on) || undefined}
           {...(sideways ? {} : gestures)}
           onPointerLeave={leaveChrome}
           onFocus={showChrome}
@@ -472,17 +496,16 @@ export function Stage({
                     // Only a screen can be shared without sound; a camera never has any to lock.
                     hasSound={!big.screen || Boolean(big.hasSound)}
                     onOpenChange={onVolumeOpen}
+                    // One panel over the buttons at a time: the slider waits while the settings are open.
+                    closed={settingsOpen}
                   />
                 )
               }
             />
           </div>
-          {!sideways && settingsPanel}
+          {settingsPanel}
         </div>
       </div>
-
-      {/* Sideways the screen is the player: the drawer hangs on the screen's own edge (spec 0107). */}
-      {sideways && settingsPanel}
 
       {sideways ? (
         <>

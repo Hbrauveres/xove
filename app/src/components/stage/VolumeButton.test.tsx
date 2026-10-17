@@ -12,12 +12,14 @@ function Harness({
   canSetVolume = true,
   onChange,
   onOpenChange,
+  closed,
 }: {
   initial?: WatchPrefs;
   hasSound?: boolean;
   canSetVolume?: boolean;
   onChange?: (p: WatchPrefs) => void;
   onOpenChange?: (open: boolean) => void;
+  closed?: boolean;
 }) {
   const [prefs, setPrefs] = useState<WatchPrefs>(initial);
   return (
@@ -26,6 +28,7 @@ function Harness({
       hasSound={hasSound}
       canSetVolume={canSetVolume}
       onOpenChange={onOpenChange}
+      closed={closed}
       onChange={(next) => {
         setPrefs(next);
         onChange?.(next);
@@ -75,6 +78,13 @@ describe("volume button (spec 0101)", () => {
       expect(sliderShown()).toBe(false);
       expect(onOpenChange).toHaveBeenLastCalledWith(false);
     });
+  });
+
+  it("stays closed while the settings are open: one panel over the buttons at a time (spec 0107)", async () => {
+    const user = userEvent.setup();
+    render(<Harness closed />);
+    await user.hover(screen.getByRole("button", { name: "Mute" }));
+    expect(sliderShown()).toBe(false);
   });
 
   it("opens on keyboard focus, and the slider is the next stop", async () => {

@@ -10,7 +10,7 @@ import { NO_SOUND } from "./PlayerButtons";
 import { FULL_VIEW_SHEET } from "./makeRoom";
 import styles from "./SettingsPanel.module.css";
 
-/** How long it takes to slide in or out; it leaves the page once it's out. */
+/** How long it takes to come in or go out; it leaves the page once it's out. */
 const PANEL_MS = 260;
 
 const SURFACE: Record<ScreenSurface, string> = { window: "A window", browser: "A tab", monitor: "Your whole screen" };
@@ -18,8 +18,8 @@ const SURFACE: Record<ScreenSurface, string> = { window: "A window", browser: "A
 type Tab = "screen" | "camera";
 
 type Props = {
-  /** A 300 px drawer from the stage's right edge, or a bottom sheet (a phone held upright). */
-  variant: "drawer" | "sheet";
+  /** Over the cog, inside the player (desktop, tablets, a phone held sideways), or a bottom sheet (a phone held upright). */
+  variant: "popover" | "sheet";
   open: boolean;
   onClose: () => void;
   /** False on a phone, or where the browser can't share a screen: only Camera. */
@@ -101,7 +101,7 @@ export function SettingsPanel(props: Props) {
   useEffect(() => {
     if (open) {
       opener.current = document.activeElement as HTMLElement | null;
-      // Not scrolled into view: the drawer is still sliding in, and the page would jump sideways.
+      // Not scrolled into view: the panel is still coming in, and the page would jump.
       root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
       return;
     }
@@ -169,8 +169,23 @@ export function SettingsPanel(props: Props) {
           </button>
         ))}
       </div>
-      <div id={`${tabId(tab)}-panel`} role="tabpanel" aria-labelledby={tabId(tab)} className={styles.body}>
-        {tab === "screen" ? <ScreenTab {...props} /> : <CameraTab {...props} />}
+      {/* Over the cog every tab is drawn in one cell, the hidden ones invisible, so the panel is as
+          tall as its tallest tab and switching never moves the tabs (design decision 9). */}
+      <div className={styles.panes}>
+        {(variant === "popover" ? tabs : [tab]).map((t) => (
+          <div
+            key={t}
+            id={`${tabId(t)}-panel`}
+            role="tabpanel"
+            aria-labelledby={tabId(t)}
+            className={styles.body}
+            data-off={t !== tab || undefined}
+            aria-hidden={t !== tab || undefined}
+            inert={t !== tab || undefined}
+          >
+            {t === "screen" ? <ScreenTab {...props} /> : <CameraTab {...props} />}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -210,32 +225,35 @@ function ScreenTab(props: Props) {
   const { mine, screenSurface, onChangeWindow, busy, noSound } = props;
   return (
     <>
-      {mine.screen ? (
-        <div className={styles.group}>
-          <p className={styles.heading}>Window</p>
-          <div className={styles.fieldRow}>
-            <span className={styles.source}>
-              <WindowIcon />
-              <span>{screenSurface ? SURFACE[screenSurface] : "Your screen"}</span>
-            </span>
-            <button
-              type="button"
-              className={styles.button}
-              title="Pick another window or tab; viewers keep watching the same stream"
-              disabled={busy}
-              onClick={onChangeWindow}
-            >
-              Change
-            </button>
+      {/* What you pick: on its own column sideways (design decision 9). */}
+      <div className={styles.lead}>
+        {mine.screen ? (
+          <div className={styles.group}>
+            <p className={styles.heading}>Window</p>
+            <div className={styles.fieldRow}>
+              <span className={styles.source}>
+                <WindowIcon />
+                <span>{screenSurface ? SURFACE[screenSurface] : "Your screen"}</span>
+              </span>
+              <button
+                type="button"
+                className={styles.button}
+                title="Pick another window or tab; viewers keep watching the same stream"
+                disabled={busy}
+                onClick={onChangeWindow}
+              >
+                Change
+              </button>
+            </div>
+            {noSound && <p className={styles.hint}>{NO_SOUND}</p>}
           </div>
-          {noSound && <p className={styles.hint}>{NO_SOUND}</p>}
-        </div>
-      ) : (
-        <p className={styles.hint}>
-          You're not sharing. These are used the next time you do; the browser shows a preview when you pick what to
-          share.
-        </p>
-      )}
+        ) : (
+          <p className={styles.hint}>
+            You're not sharing. These are used the next time you do; the browser shows a preview when you pick what to
+            share.
+          </p>
+        )}
+      </div>
       <QualityAndMode kind="screen" {...props} />
     </>
   );
@@ -246,30 +264,32 @@ function CameraTab(props: Props) {
   const problem = !cameraVideo && cameraProblem ? (cameraProblem === "blocked" ? CAMERA_BLOCKED : "No camera found.") : null;
   return (
     <>
-      <div className={styles.preview} data-problem={problem ? true : undefined}>
-        {problem ? (
-          <p className={styles.problem} role="status">
-            {problem}
-          </p>
-        ) : (
-          <>
-            <Preview video={cameraVideo} />
-            {mine.camera ? <span className={styles.live}>LIVE</span> : <span className={styles.badge}>Only you see this</span>}
-          </>
+      <div className={styles.lead}>
+        <div className={styles.preview} data-problem={problem ? true : undefined}>
+          {problem ? (
+            <p className={styles.problem} role="status">
+              {problem}
+            </p>
+          ) : (
+            <>
+              <Preview video={cameraVideo} />
+              {mine.camera ? <span className={styles.live}>LIVE</span> : <span className={styles.badge}>Only you see this</span>}
+            </>
+          )}
+        </div>
+        {cameras.length > 0 && (
+          <div className={styles.group}>
+            <p className={styles.heading}>Camera</p>
+            <Picker
+              label="Camera"
+              options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
+              value={cameraId ?? cameras[0].deviceId}
+              disabled={busy}
+              onChange={onPickCamera}
+            />
+          </div>
         )}
       </div>
-      {cameras.length > 0 && (
-        <div className={styles.group}>
-          <p className={styles.heading}>Camera</p>
-          <Picker
-            label="Camera"
-            options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
-            value={cameraId ?? cameras[0].deviceId}
-            disabled={busy}
-            onChange={onPickCamera}
-          />
-        </div>
-      )}
       <QualityAndMode kind="camera" {...props} />
     </>
   );

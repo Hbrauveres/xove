@@ -103,7 +103,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   );
   const watching = stage.big && stage.mainKind ? { personId: stage.big.person.id, kind: stage.mainKind } : null;
 
-  // The settings for what I send (spec 0107), from the cog: a drawer inside the player, or a
+  // The settings for what I send (spec 0107), from the cog: a popover over it, or a
   // bottom sheet on a phone held upright (its full-screen view too). A phone shows only Camera.
   const [settingsOpen, setSettingsOpen] = useState(false);
   const toggleSettings = useCallback(() => setSettingsOpen((open) => !open), []);
@@ -111,7 +111,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   const sheet = layout === "upright";
   const settingsPanel = (
     <SettingsPanel
-      variant={sheet ? "sheet" : "drawer"}
+      variant={sheet ? "sheet" : "popover"}
       open={settingsOpen}
       onClose={closeSettings}
       screenTab={canShareScreen() && !(touch && layout !== "desktop")}

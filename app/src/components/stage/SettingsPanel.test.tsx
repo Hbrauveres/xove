@@ -28,7 +28,7 @@ function setup(props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
   };
   const user = userEvent.setup();
   const all = {
-    variant: "drawer" as const,
+    variant: "popover" as const,
     open: true,
     screenTab: true,
     mine: { screen: false, camera: false },
@@ -73,7 +73,25 @@ describe("the settings panel: tabs", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it("is drawn as a drawer or a sheet, and leaves once closed", async () => {
+  it("over the cog, draws every tab in one cell so it's as tall as the tallest; only the chosen one shows (design decision 9)", async () => {
+    const { user } = setup();
+    const panes = panel().querySelectorAll('[role="tabpanel"]');
+    expect(panes).toHaveLength(2);
+    const hidden = [...panes].filter((p) => p.getAttribute("aria-hidden") === "true");
+    expect(hidden).toHaveLength(1);
+    expect(hidden[0]).toHaveAttribute("inert");
+    expect(within(panel()).getByRole("tabpanel", { name: "Screen" })).toBeInTheDocument();
+    await user.click(within(panel()).getByRole("tab", { name: "Camera" }));
+    expect(within(panel()).getByRole("tabpanel", { name: "Camera" })).not.toHaveAttribute("aria-hidden");
+    expect(panel().querySelector('[role="tabpanel"][aria-hidden="true"]')?.getAttribute("aria-labelledby")).toMatch(/screen$/);
+  });
+
+  it("as a sheet, draws only the chosen tab", () => {
+    setup({ variant: "sheet" });
+    expect(panel().querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
+  });
+
+  it("is drawn over the cog or as a sheet, and leaves once closed", async () => {
     const { rerender } = setup({ variant: "sheet" });
     expect(panel()).toHaveAttribute("data-variant", "sheet");
     rerender({ open: false });
@@ -201,7 +219,7 @@ describe("the settings panel: leaving", () => {
   it("stops the preview when it unmounts", () => {
     const onPreviewCamera = vi.fn();
     const view = render(
-      <SettingsPanel variant="drawer" open screenTab={false} mine={{ screen: false, camera: false }} prefs={PREFS} cameras={CAMERAS} cameraId="cam-1"
+      <SettingsPanel variant="popover" open screenTab={false} mine={{ screen: false, camera: false }} prefs={PREFS} cameras={CAMERAS} cameraId="cam-1"
         onClose={() => {}} onPrefsChange={() => {}} onChangeWindow={() => {}} onPickCamera={() => {}} onPreviewCamera={onPreviewCamera} />,
     );
     expect(onPreviewCamera).toHaveBeenLastCalledWith(true);
