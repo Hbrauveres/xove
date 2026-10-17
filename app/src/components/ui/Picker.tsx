@@ -20,6 +20,8 @@ type Props<T extends string> = {
   onOpenChange?: (open: boolean) => void;
   /** True closes the list (its drop-up was left). */
   closed?: boolean;
+  /** Opens the list each time it changes (asked from elsewhere, spec 0115). */
+  openSignal?: number;
 };
 
 /** How long the list takes to roll back before it leaves (spec 0111, design decision 9). */
@@ -46,6 +48,7 @@ export function Picker<T extends string>({
   disabled = false,
   onOpenChange,
   closed = false,
+  openSignal,
 }: Props<T>) {
   const [open, setOpenState] = useState(false);
   // Drawn while open, and while it rolls back after.
@@ -92,6 +95,13 @@ export function Picker<T extends string>({
     if (closed && open) setOpenState(false);
   }
 
+  // Asked to open from elsewhere (a live button with the settings open).
+  // Starts unset, so a picker that mounts already asked (a tab drawn on its own) still opens.
+  const [lastOpenSignal, setLastOpenSignal] = useState<number | undefined>(undefined);
+  if (openSignal !== lastOpenSignal) {
+    setLastOpenSignal(openSignal);
+    if (openSignal !== undefined && !disabled) setOpenState(true);
+  }
   // A press anywhere else closes it.
   useEffect(() => {
     if (!open) return;

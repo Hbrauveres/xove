@@ -245,3 +245,19 @@ describe("Picker: long names and an upward list (spec 0114)", () => {
     height.mockRestore();
   });
 });
+
+describe("Picker: opened on request (spec 0115)", () => {
+  it("opens when asked, again each time the request changes", async () => {
+    const user = userEvent.setup();
+    const view = render(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} />);
+    const pill = screen.getByRole("button", { name: "Camera: Webcam C920" });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    view.rerender(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} openSignal={1} />);
+    expect(pill).toHaveAttribute("aria-expanded", "true");
+    pill.focus();
+    await user.keyboard("{Escape}");
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    view.rerender(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} openSignal={2} />);
+    expect(pill).toHaveAttribute("aria-expanded", "true");
+  });
+});

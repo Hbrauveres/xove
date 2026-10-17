@@ -35,6 +35,11 @@ type Props = {
   width?: number;
   /** A new value closes it: its action is done (a camera picked, Change). */
   closeSignal?: number;
+  /**
+   * Another panel already shows these controls (the settings, spec 0115): the gestures (resting
+   * the mouse, the 500 ms hold) call this instead of opening, and nothing opens over the button.
+   */
+  redirect?: () => void;
   children: ReactNode;
 };
 
@@ -47,7 +52,7 @@ type Props = {
  * its action done, or the button pressed again. A plain click or tap still does what the
  * button does.
  */
-export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, children }: Props) {
+export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, redirect, children }: Props) {
   const [open, setOpen] = useState(false);
   // Opened by a finger: pinned until a tap outside or its action is done.
   const [byTouch, setByTouch] = useState(false);
@@ -103,7 +108,7 @@ export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, c
     if (touchLike(e)) return;
     window.clearTimeout(leaving.current);
     if (open) return;
-    opening.current = window.setTimeout(() => setOpen(true), OPEN_DELAY_MS);
+    opening.current = window.setTimeout(() => (redirect ? redirect() : setOpen(true)), OPEN_DELAY_MS);
   };
   const onPointerLeave = (e: ReactPointerEvent) => {
     if (touchLike(e) || byTouch) return;
@@ -114,6 +119,8 @@ export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, c
   // ---- a finger (or a pen): press and hold the button
   const onTriggerDown = (e: ReactPointerEvent) => {
     if (!touchLike(e)) return;
+    // A hold's tap may never come (a long press often ends with no click): a new press starts clean.
+    swallow.current = false;
     if (open && byTouch) {
       // Pressed again: closes, and this tap doesn't stop the stream.
       swallow.current = true;
@@ -125,6 +132,10 @@ export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, c
     const timer = window.setTimeout(() => {
       holding.current = null;
       swallow.current = true;
+      if (redirect) {
+        redirect();
+        return;
+      }
       setByTouch(true);
       setOpen(true);
     }, HOLD_MS);
@@ -156,7 +167,8 @@ export function DropUp({ label, enabled, trigger, onLeave, width, closeSignal, c
     } catch {
       keyboard = false;
     }
-    if (keyboard) setOpen(true);
+    // Redirected, the keyboard reaches the panel itself: tabbing past the button moves nothing.
+    if (keyboard && !redirect) setOpen(true);
   };
   const onBlur = (e: FocusEvent) => {
     if (byTouch) return;

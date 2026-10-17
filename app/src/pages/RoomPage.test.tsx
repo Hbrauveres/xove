@@ -950,6 +950,24 @@ describe("room: starting from fullscreen (spec 0101)", () => {
 describe("room: change window and pick a camera (spec 0098)", () => {
   afterEach(() => localStorage.clear());
 
+  it("with the settings open, resting on the live screen button goes to Screen and cues Change (spec 0115)", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    await startSharing(user);
+    const real = window.matchMedia;
+    vi.spyOn(window, "matchMedia").mockImplementation((q: string) =>
+      q.includes("hover: hover") ? ({ ...real(q), matches: true, media: q } as MediaQueryList) : real(q),
+    );
+    await openMenu(user, "Camera");
+    const panel = within(screen.getByRole("dialog", { name: "Settings" }));
+    const stop = within(stage()).getByRole("button", { name: "Stop sharing your screen" });
+    fireEvent.pointerEnter(stop.closest("[data-dropup]")!, { pointerType: "mouse" });
+    await waitFor(() => expect(panel.getByRole("tab", { name: (n) => n.startsWith("Screen") })).toHaveAttribute("aria-selected", "true"));
+    expect(panel.getByRole("button", { name: "Change" }).querySelector("[data-cue]")).not.toBeNull();
+    expect(stop.closest("[data-dropup]")).toHaveAttribute("data-open", "false");
+    vi.restoreAllMocks();
+  });
+
   it("swaps what my screen shares from the settings, on the same stream", async () => {
     const server = installFakeApi({ me: member });
     const user = await readyRoom();

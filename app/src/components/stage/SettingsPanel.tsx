@@ -10,6 +10,7 @@ import { CameraOnIcon, CloseIcon, ScreenOffIcon, ScreenShareIcon, WindowIcon } f
 import { NO_SCREEN, NO_SOUND } from "./PlayerButtons";
 import { FULL_VIEW_SHEET } from "./makeRoom";
 import styles from "./SettingsPanel.module.css";
+import cueStyles from "../ui/cue.module.css";
 
 /** How long it takes to come in or go out; it leaves the page once it's out. */
 const PANEL_MS = 260;
@@ -46,7 +47,13 @@ type Props = {
   noSound?: boolean;
   /** The sheet in the upright full-screen view: a little shorter, so the player can fit above it. */
   fullView?: boolean;
+  /** A live button's gesture with the panel open: go to this setting and cue it (spec 0115). */
+  goTo?: { kind: StreamKind; n: number };
 };
+
+/** How long a control stays cued: two 1 s pulses (design decision 2). */
+export const CUE_MS = 2000;
+type Cue = { kind: Tab; n: number } | null;
 
 /**
  * The settings for what I send (spec 0107): tabs Screen and Camera, a red marker sliding to
@@ -59,6 +66,22 @@ export function SettingsPanel(props: Props) {
   const tabs: Tab[] = ["screen", "camera"];
   const usable: Tab[] = screenTab ? tabs : ["camera"];
   const [chosen, setTab] = useState<Tab>(usable[0]);
+  // Told to go to a setting: its tab, and the control cued for 2 s (never a tab that can't be used).
+  const [cue, setCue] = useState<Cue>(null);
+  const [lastGoTo, setLastGoTo] = useState(props.goTo?.n);
+  if (props.goTo && props.goTo.n !== lastGoTo) {
+    setLastGoTo(props.goTo.n);
+    if (open && usable.includes(props.goTo.kind)) {
+      setTab(props.goTo.kind);
+      setCue({ kind: props.goTo.kind, n: props.goTo.n });
+    }
+  }
+  if (!open && cue) setCue(null);
+  useEffect(() => {
+    if (!cue) return;
+    const off = window.setTimeout(() => setCue(null), CUE_MS);
+    return () => window.clearTimeout(off);
+  }, [cue]);
   const tab = usable.includes(chosen) ? chosen : usable[0];
   const ids = useId();
 
@@ -198,7 +221,7 @@ export function SettingsPanel(props: Props) {
             aria-hidden={t !== tab || undefined}
             inert={t !== tab || undefined}
           >
-            {t === "screen" ? <ScreenTab {...props} /> : <CameraTab {...props} />}
+            {t === "screen" ? <ScreenTab {...props} cue={cue?.kind === "screen" ? cue.n : undefined} /> : <CameraTab {...props} cue={cue?.kind === "camera" ? cue.n : undefined} />}
           </div>
         ))}
       </div>
@@ -236,7 +259,13 @@ function QualityAndMode({ kind, prefs, onPrefsChange, busy }: { kind: StreamKind
   );
 }
 
-function ScreenTab(props: Props) {
+/** The cue's ring over a control, drawn anew for each request so its pulses start over. */
+function CueRing({ n }: { n?: number }) {
+  return n ? <span key={n} className={cueStyles.cue} aria-hidden="true" data-cue /> : null;
+}
+
+/** `cue`: the request the tab's control is cued for, if any. */
+function ScreenTab(props: Props & { cue?: number }) {
   const { mine, screenSurface, onChangeWindow, busy, noSound } = props;
   return (
     <>
@@ -257,6 +286,7 @@ function ScreenTab(props: Props) {
                 disabled={busy}
                 onClick={onChangeWindow}
               >
+                <CueRing n={props.cue} />
                 Change
               </button>
             </div>
@@ -274,7 +304,7 @@ function ScreenTab(props: Props) {
   );
 }
 
-function CameraTab(props: Props) {
+function CameraTab(props: Props & { cue?: number }) {
   const { mine, cameras, cameraId, onPickCamera, cameraVideo, busy, cameraProblem } = props;
   const problem = !cameraVideo && cameraProblem ? (cameraProblem === "blocked" ? CAMERA_BLOCKED : "No camera found.") : null;
   return (
@@ -300,13 +330,19 @@ function CameraTab(props: Props) {
       {cameras.length > 0 && (
         <div className={styles.group}>
           <p className={styles.heading}>Camera</p>
-          <Picker
-            label="Camera"
-            options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
-            value={cameraId ?? cameras[0].deviceId}
-            disabled={busy}
-            onChange={onPickCamera}
-          />
+          <div className={styles.cueBox}>
+            {/* Before the picker, so its floating list paints over the glow. */}
+            <CueRing n={props.cue} />
+            <Picker
+              label="Camera"
+              options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
+              value={cameraId ?? cameras[0].deviceId}
+              disabled={busy}
+              onChange={onPickCamera}
+              // Gone to from the live camera button: its list opens (spec 0115).
+              openSignal={props.cue}
+            />
+          </div>
         </div>
       )}
       <QualityAndMode kind="camera" {...props} />

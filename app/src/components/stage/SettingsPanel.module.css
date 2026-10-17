@@ -367,6 +367,7 @@
 
 /* A button in a row: the dark pill, like a chosen segment. */
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   flex: none;
@@ -477,4 +478,11 @@
   .marker {
     transition: none;
   }
+}
+
+/* The camera's picker, cued (spec 0115): the cue follows its rounded corners. */
+.cueBox {
+  position: relative;
+  display: grid;
+  border-radius: 10px;
 }
