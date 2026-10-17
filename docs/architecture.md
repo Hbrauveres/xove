@@ -128,7 +128,7 @@ Every endpoint, who may call it and what it answers, is in [`xove-api`'s API pag
 
 `useLiveKitRoom` joins the video room for as long as the room page is open:
 
-1. It asks the API for a token (`POST /api/livekit/token`), which names this person (`user-<id>`), the room and what they may send: a screen with its sound, and a camera; never a microphone.
+1. It asks the API for a token (`POST /api/livekit/token`), which names this person (`user-<id>`), the room and what they may send: a screen with its sound, a camera, and a microphone (this app sends none yet).
 2. It connects with `adaptiveStream` and `dynacast` on ([Media](media.md#what-a-viewer-downloads)).
 3. It keeps React state in step with LiveKit's events: who joins and leaves, which tracks arrive, the connection's state ("reconnecting" while LiveKit retries).
 4. Leaving the page disconnects. **One connection per person:** opening the room on a second device disconnects the first.
