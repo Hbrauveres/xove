@@ -6,7 +6,6 @@ import { CAMERA_QUALITIES, DEFAULT_CAMERA, DEFAULT_SHARE, SHARE_QUALITIES, type 
  */
 
 export type SharePrefs = { quality: ShareQuality; mode: ShareMode };
-/** "auto" lets the server send what fits; a quality caps what this viewer receives. */
 /** How I hear what I watch. There's no quality to pick: watching is always Auto (spec 0107). */
 export type WatchPrefs = { volume: number; muted: boolean };
 

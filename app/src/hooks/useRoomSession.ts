@@ -317,6 +317,8 @@ export function useRoomSession(me: Friend, pollMs?: number): RoomSession {
   const start = useCallback(
     async (kind: StreamKind) => {
       markStarting(kind, true);
+      // A preview still asking for the camera is dropped when it answers: this click asks itself.
+      if (kind === "camera") wantPreview.current = false;
       try {
         let capture: Capture | null = null;
         if (kind === "camera" && previewRef.current) {

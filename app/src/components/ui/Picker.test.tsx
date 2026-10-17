@@ -81,5 +81,16 @@ describe("Picker, the app's one-box picker", () => {
     expect(onOpenChange).toHaveBeenLastCalledWith(true);
     rerender(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} onOpenChange={onOpenChange} closed />);
     expect(screen.getByRole("button", { name: "Camera: Webcam C920" })).toHaveAttribute("aria-expanded", "false");
+    // Closed from outside, it says so too: the player lets its controls fade again.
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("says its list closed when it goes away open (its stream stopped)", async () => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    const view = render(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} onOpenChange={onOpenChange} />);
+    await user.click(screen.getByRole("button", { name: "Camera: Webcam C920" }));
+    view.unmount();
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
   });
 });

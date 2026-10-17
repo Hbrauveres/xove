@@ -79,6 +79,15 @@ describe("DropUp, the quick-access pill over a live button", () => {
     expect(document.querySelector("[data-dropup] [role=group]")).toHaveAttribute("inert");
   });
 
+  it("keeps its button, and the keyboard's focus on it, when the stream starts or stops", () => {
+    const view = render(<DropUp label="x" enabled={false} trigger={<button>Turn on your camera</button>}><button>Change</button></DropUp>);
+    const button = screen.getByRole("button", { name: "Turn on your camera" });
+    button.focus();
+    view.rerender(<DropUp label="x" enabled trigger={<button>Turn on your camera</button>}><button>Change</button></DropUp>);
+    expect(screen.getByRole("button", { name: "Turn on your camera" })).toBe(button);
+    expect(button).toHaveFocus();
+  });
+
   it("isn't there at all on a touch screen, or while the stream is off", () => {
     hover = false;
     const first = render(<DropUp label="x" enabled trigger={<button>a</button>}><button>Change</button></DropUp>);

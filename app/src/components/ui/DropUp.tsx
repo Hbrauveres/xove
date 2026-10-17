@@ -52,7 +52,18 @@ export function DropUp({ label, enabled, trigger, onLeave, width, children }: Pr
     if (!enabled) setOpen(false);
   }
 
-  if (!hover || !enabled) return <>{trigger}</>;
+  // Always the same wrapper around the button, so it keeps the keyboard's focus when its
+  // stream starts or stops; only the drop-up and its handlers come and go.
+  const on = hover && enabled;
+  if (!on) {
+    return (
+      <div className={styles.wrap}>
+        <div className={styles.trigger} data-dropup-trigger>
+          {trigger}
+        </div>
+      </div>
+    );
+  }
 
   const close = () => {
     clear();

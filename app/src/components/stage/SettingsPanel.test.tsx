@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { SharePrefs } from "../../media/preferences";
 import type { StreamKind } from "../../types";
@@ -156,6 +157,35 @@ describe("the settings panel: the Camera tab", () => {
     expect(within(within(tab).getByRole("radiogroup", { name: "Camera quality" })).getAllByRole("radio").map((r) => r.textContent)).toEqual(["720p", "480p"]);
     await user.click(within(tab).getByRole("radio", { name: "480p" }));
     expect(onPrefsChange).toHaveBeenLastCalledWith("camera", { quality: "480p", mode: "smooth" });
+  });
+});
+
+describe("the settings panel: the keyboard", () => {
+  it("takes the focus on its chosen tab, moves between tabs with the arrows, and gives the focus back", async () => {
+    const cog = document.createElement("button");
+    document.body.append(cog);
+    cog.focus();
+    const { user, rerender } = setup();
+    expect(within(panel()).getByRole("tab", { name: /Screen/ })).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(within(panel()).getByRole("tab", { name: /Camera/ })).toHaveFocus();
+    expect(within(panel()).getByRole("tab", { name: /Camera/ })).toHaveAttribute("aria-selected", "true");
+    rerender({ open: false });
+    expect(cog).toHaveFocus();
+    cog.remove();
+  });
+});
+
+describe("the settings panel: React's development double-mount", () => {
+  it("still previews the camera when it mounts open on Camera", () => {
+    const onPreviewCamera = vi.fn();
+    render(
+      <StrictMode>
+        <SettingsPanel variant="sheet" open screenTab={false} mine={{ screen: false, camera: false }} prefs={PREFS} cameras={CAMERAS} cameraId="cam-1"
+          onClose={() => {}} onPrefsChange={() => {}} onChangeWindow={() => {}} onPickCamera={() => {}} onPreviewCamera={onPreviewCamera} />
+      </StrictMode>,
+    );
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(true);
   });
 });
 

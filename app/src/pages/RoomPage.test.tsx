@@ -212,6 +212,16 @@ describe("room: sharing", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("names what's shared by what the browser says was picked: a tab, a window, the whole screen", async () => {
+    installFakeApi({ me: member });
+    const user = await readyRoom();
+    lastRoom().localParticipant.nextSurface = "browser";
+    await startSharing(user);
+
+    const tab = await openMenu(user);
+    expect(tab.getByText("A tab")).toBeInTheDocument();
+  });
+
   it("starts with the settings remembered from last time", async () => {
     localStorage.setItem("xove.share.quality", "720p");
     localStorage.setItem("xove.share.mode", "sharp");

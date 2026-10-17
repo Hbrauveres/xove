@@ -86,9 +86,24 @@ export function SettingsPanel(props: Props) {
   useEffect(
     () => () => {
       if (previewing.current) preview.current(false);
+      // React may mount it again (StrictMode, in development): start from off.
+      previewing.current = false;
     },
     [],
   );
+
+  // The keyboard: opening moves the focus to the chosen tab; closing gives it back to what
+  // opened it (the cog), if it was inside.
+  const root = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (open) {
+      opener.current = document.activeElement as HTMLElement | null;
+      root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
+      return;
+    }
+    if (root.current?.contains(document.activeElement)) opener.current?.focus();
+  }, [open, present]);
 
   if (!present) return null;
 
@@ -102,6 +117,7 @@ export function SettingsPanel(props: Props) {
 
   return (
     <div
+      ref={root}
       className={styles.panel}
       role="dialog"
       aria-label="Settings"
@@ -121,6 +137,14 @@ export function SettingsPanel(props: Props) {
       <div
         className={styles.tabs}
         role="tablist"
+        onKeyDown={(e) => {
+          const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+          if (!step || tabs.length < 2) return;
+          e.preventDefault();
+          const next = tabs[(tabs.indexOf(tab) + step + tabs.length) % tabs.length];
+          setTab(next);
+          root.current?.querySelector<HTMLElement>(`#${CSS.escape(tabId(next))}`)?.focus();
+        }}
         style={{ "--n": tabs.length, "--i": tabs.indexOf(tab) } as CSSProperties}
       >
         <span className={styles.marker} aria-hidden="true" />
@@ -132,7 +156,8 @@ export function SettingsPanel(props: Props) {
             role="tab"
             className={styles.tab}
             aria-selected={t === tab}
-            aria-controls={`${tabId(t)}-panel`}
+            aria-controls={t === tab ? `${tabId(t)}-panel` : undefined}
+            tabIndex={t === tab ? 0 : -1}
             onClick={() => setTab(t)}
           >
             {t === "screen" ? <ScreenShareIcon /> : <CameraOnIcon />}

@@ -200,7 +200,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 `components/ui/DropUp`: quick access to a live button's most used action, where the pointer already is. Any later quick action follows these rules.
 
 - **Resting the mouse on a live round button** unrolls one frosted pill above it, centred, after **120 ms**: the round buttons' glass, blur and shadow, **with no box around it**. It fades and slides 6 px; nothing blurred is animated.
-- **Moving up into it keeps it open** (the gap is bridged), and so does an open list inside it. It closes when the pointer leaves, **also right after a click**; a slip outside shorter than **300 ms** doesn't close it. Keyboard focus opens it; a click's focus doesn't keep it open.
+- **Moving up into it keeps it open** (the gap is bridged), and on into an open list inside it. It closes when the pointer leaves, its list with it, **also right after a click**; a slip outside shorter than **300 ms** doesn't close it. Keyboard focus opens it; a click's focus doesn't keep it open.
 - **The button's own click still does what it always does** (stop the stream). **Never on a touch screen:** there, the settings panel has the same controls.
 - **Screen:** what's shared ("A window", "A tab" or "Your whole screen") and **Change**. **Camera:** the camera's picker, growing upward. Their controls are 36 px tall, with 12 px text.
 

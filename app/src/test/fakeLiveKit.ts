@@ -210,9 +210,9 @@ export class Room {
     nextPicker: "share" as "share" | "cancel" | "no-video",
     /** Tests set this to play something happening while the picker is open. */
     duringPicker: undefined as (() => void) | undefined,
-    /** The browser tracks the last pick gave. */
     /** What the next pick is: a window, a tab ("browser") or the whole screen ("monitor"). */
     nextSurface: "window" as string,
+    /** The browser tracks the last pick gave. */
     lastPicked: [] as FakeMediaStreamTrack[],
     /** The last screen captured (whether it was published or not). */
     lastCapture: [] as FakeLocalTrack[],

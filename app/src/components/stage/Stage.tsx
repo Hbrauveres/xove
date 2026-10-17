@@ -154,7 +154,14 @@ export function Stage({
     };
     place();
     window.addEventListener("resize", place);
-    return () => window.removeEventListener("resize", place);
+    // The picture's shape can change with the sheet open (another stream, its real size
+    // arriving, the facecam): measure again. A translate doesn't resize, so this can't loop.
+    const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
+    watch?.observe(box);
+    return () => {
+      window.removeEventListener("resize", place);
+      watch?.disconnect();
+    };
   }, [makingRoom]);
   const focusInside = () =>
     held.current.size > 0 ||
@@ -416,8 +423,9 @@ export function Stage({
           ref={frameRef}
           className={styles.frame}
           data-chrome={chrome}
-          // The drawer covers the player's top right: the fullscreen button steps aside (spec 0107).
-          data-drawer-open={(settingsPanel && settingsOpen) || undefined}
+          // The drawer covers the player's top right: the fullscreen button steps aside (spec 0107),
+          // but not its way out of fullscreen or of the full view.
+          data-drawer-open={(settingsPanel && settingsOpen && !fullscreen && !fullView?.on) || undefined}
           {...(sideways ? {} : gestures)}
           onPointerLeave={leaveChrome}
           onFocus={showChrome}

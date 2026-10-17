@@ -46,10 +46,27 @@ export function Picker<T extends string>({
   const chosen = options.find((o) => o.value === value) ?? options[0];
   const others = options.filter((o) => o !== chosen);
 
-  const setOpen = (next: boolean) => {
-    setOpenState(next);
-    onOpenChange?.(next);
-  };
+  const setOpen = setOpenState;
+
+  // Tells whoever listens each time it opens or closes, however it happened (its drop-up
+  // left, a press outside), and that it's closed when it goes away open.
+  const told = useRef(false);
+  const tell = useRef(onOpenChange);
+  useEffect(() => {
+    tell.current = onOpenChange;
+  });
+  useEffect(() => {
+    if (open === told.current) return;
+    told.current = open;
+    tell.current?.(open);
+  }, [open]);
+  useEffect(
+    () => () => {
+      if (told.current) tell.current?.(false);
+      told.current = false;
+    },
+    [],
+  );
 
   // Closed from outside (its drop-up was left).
   const [wasClosed, setWasClosed] = useState(closed);
@@ -62,14 +79,11 @@ export function Picker<T extends string>({
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) {
-        setOpenState(false);
-        onOpenChange?.(false);
-      }
+      if (!root.current?.contains(e.target as Node)) setOpenState(false);
     };
     document.addEventListener("pointerdown", away);
     return () => document.removeEventListener("pointerdown", away);
-  }, [open, onOpenChange]);
+  }, [open]);
 
   const optionsIn = () => [...(root.current?.querySelectorAll<HTMLButtonElement>("[role=radio]") ?? [])];
 
