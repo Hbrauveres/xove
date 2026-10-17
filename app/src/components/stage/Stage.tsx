@@ -123,7 +123,9 @@ export function Stage({
   const swapped = big ? Boolean(swappedFor[big.person.id]) : false;
   // It starts at the top right (spec 0111), clear of the round buttons and the fullscreen button
   // at the bottom right; under the top bar where one lies over the player.
-  const [facecamPlace, setFacecamPlace] = useState<FacecamPlace>(() => ({ x: 0.73, y: layout === "sideways" ? 0.18 : 0.04 }));
+  // Until it's moved, it follows the layout (turning the phone, the full view keep one stage).
+  const [movedFacecam, setFacecamPlace] = useState<FacecamPlace | null>(null);
+  const facecamPlace = movedFacecam ?? { x: 0.73, y: layout === "sideways" ? 0.18 : 0.04 };
   const [facecamCollapsed, setFacecamCollapsed] = useState(false);
   const both = Boolean(big?.screen && big?.camera);
   const main = big ? ((both && swapped ? big.camera : big.screen) ?? big.camera ?? null) : null;

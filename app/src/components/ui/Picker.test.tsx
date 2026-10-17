@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Picker } from "./Picker";
@@ -127,6 +127,44 @@ describe("Picker: floating over its panel (spec 0111)", () => {
     expect(under.style.maskImage).toMatch(/transparent/);
     expect(screen.getByTestId("far").style.maskImage).toBe("");
     await user.keyboard("{Escape}");
+    // Kept while it rolls back, so nothing shows through it on the way; then gone.
+    expect(under.style.maskImage).toMatch(/transparent/);
+    await waitFor(() => expect(under.style.maskImage).toBe(""));
+    vi.restoreAllMocks();
+  });
+
+  it("fades what's under it back in: hidden, 8% halfway, 35% at three quarters, fully there at 30 px", async () => {
+    const { user, pill } = panel();
+    await user.click(pill);
+    // The list ends at 140, Quality starts at 80: hidden to 60 + 4 px, then the 30 px fade.
+    expect(screen.getByTestId("under").style.maskImage).toBe(
+      "linear-gradient(rgb(0, 0, 0) -40px, transparent -40px, transparent 64px, rgba(0, 0, 0, 0.08) 79px, rgba(0, 0, 0, 0.35) 86.5px, rgb(0, 0, 0) 94px)",
+    );
+    vi.restoreAllMocks();
+  });
+
+  it("closes, and lets go of the masks, when the window changes size or its options change", async () => {
+    const { user, pill } = panel();
+    await user.click(pill);
+    act(() => window.dispatchEvent(new Event("resize")));
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(screen.getByTestId("under").style.maskImage).toBe(""));
+    vi.restoreAllMocks();
+  });
+
+  it("lets go of the masks when it goes away open (its panel closed, its tab switched)", async () => {
+    const user = userEvent.setup();
+    const view = render(
+      <div data-list-host>
+        <Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} />
+        <div data-testid="under">Quality</div>
+      </div>,
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ top: 40, bottom: 140, left: 0, right: 300, width: 300, height: 100, x: 0, y: 40 } as DOMRect);
+    await user.click(screen.getByRole("button", { name: "Camera: Webcam C920" }));
+    const under = screen.getByTestId("under");
+    expect(under.style.maskImage).toMatch(/transparent/);
+    view.rerender(<div data-list-host><div data-testid="under">Quality</div></div>);
     expect(under.style.maskImage).toBe("");
     vi.restoreAllMocks();
   });

@@ -117,12 +117,23 @@ export function Picker<T extends string>({
   }, [open]);
   // Over its panel: what's right behind the list is masked away while it's open, and what's
   // just under it comes back over 30 px, nearly invisible near the list (design decisions 7, 8).
+  // Measured when it opens; kept until it has rolled back, so nothing shows through it on the way.
+  const masked = useRef<HTMLElement[]>([]);
+  const unmask = () => {
+    masked.current.forEach((node) => {
+      node.style.maskImage = "";
+      node.style.removeProperty("-webkit-mask-image");
+    });
+    masked.current = [];
+  };
   useLayoutEffect(() => {
     const el = list.current;
     const host = root.current?.closest("[data-list-host]");
     if (!open || opens !== "down" || !el || !host || !root.current) return;
+    unmask();
     const l = el.getBoundingClientRect();
-    const masked: HTMLElement[] = [];
+    // Each sibling it overlaps gets a band across its whole width: fine while the list is as
+    // wide as its column, as in the settings. An inline mask of the element's own would be lost.
     const walk = (parent: Element) =>
       [...parent.children].forEach((child) => {
         const node = child as HTMLElement;
@@ -137,15 +148,27 @@ export function Picker<T extends string>({
         const mask = `linear-gradient(to bottom, #000 ${top}px, transparent ${top}px, transparent ${bottom}px, rgba(0, 0, 0, 0.08) ${bottom + FADE_PX * 0.5}px, rgba(0, 0, 0, 0.35) ${bottom + FADE_PX * 0.75}px, #000 ${bottom + FADE_PX}px)`;
         node.style.maskImage = mask;
         node.style.setProperty("-webkit-mask-image", mask);
-        masked.push(node);
+        masked.current.push(node);
       });
     walk(host);
-    return () =>
-      masked.forEach((node) => {
-        node.style.maskImage = "";
-        node.style.removeProperty("-webkit-mask-image");
-      });
   }, [open, opens]);
+  useEffect(() => {
+    if (!drawn) unmask();
+  }, [drawn]);
+  useEffect(() => unmask, []);
+  // What the masks were measured against changes (the window, the list of options): it closes.
+  const optionsKey = options.map((o) => o.value).join("|");
+  const [wasKey, setWasKey] = useState(optionsKey);
+  if (optionsKey !== wasKey) {
+    setWasKey(optionsKey);
+    if (open) setOpenState(false);
+  }
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpenState(false);
+    window.addEventListener("resize", close);
+    return () => window.removeEventListener("resize", close);
+  }, [open]);
   useLayoutEffect(() => {
     const el = list.current;
     if (!open || opens !== "up" || !el) return;

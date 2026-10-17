@@ -2710,6 +2710,24 @@ describe("room: the full-screen view on a phone (spec 0171)", () => {
     expect(layoutOf(view)).toBe("phone");
   });
 
+  it("puts the facecam under the top bar on entering the full view (spec 0111)", async () => {
+    const phone = phoneSideways();
+    phone.turn();
+    const server = installFakeApi({ me: member });
+    server.streams = [someoneSharing("Marina", 2, "screen"), someoneSharing("Marina", 2, "camera")];
+    renderRoom();
+    await connected();
+    act(() => {
+      lastRoom().publishScreen("user-2");
+      lastRoom().publishCamera("user-2");
+    });
+    await screen.findByLabelText("Marina's shared screen");
+    const facecam = () => stage().querySelector("[data-facecam]") as HTMLElement;
+    expect(facecam().style.top).toBe("4%");
+    await userEvent.setup().click(within(stage()).getByRole("button", { name: "Full-screen view" }));
+    expect(facecam().style.top).toBe("18%");
+  });
+
   it("never asks the browser for the player's fullscreen on a phone", async () => {
     await upright();
     const frame = screen.getByLabelText("Marina's shared screen").closest("[data-chrome]") as HTMLElement;
