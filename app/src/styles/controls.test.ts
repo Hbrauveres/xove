@@ -139,7 +139,9 @@ describe("the picker: one box with its pill, floating (the Player controls desig
   });
 
   it("unrolls from the pill in 220 ms and rolls back in 150 ms, its options fading in by their distance", () => {
-    expect(rule(picker, ".list")).toMatch(/clip-path:\s*inset\(0 0 100% 0\)/);
+    // The clip keeps the rounded corners, so the blur behind doesn't show square at them (spec 0114).
+    expect(rule(picker, ".list")).toMatch(/clip-path:\s*inset\(0 0 100% 0 round 0 0 var\(--pick-r\) var\(--pick-r\)\)/);
+    expect(rule(picker, ".picker[data-opens=\"up\"] .list[data-unroll]")).toMatch(/clip-path:\s*inset\(0 round var\(--pick-r\) var\(--pick-r\) 0 0\)/);
     expect(rule(picker, ".list[data-unroll]")).toMatch(/transition:\s*clip-path 220ms/);
     expect(rule(picker, ".list")).toMatch(/transition:\s*clip-path 150ms/);
     expect(rule(picker, ".list[data-unroll] .option")).toMatch(/calc\(30ms \+ var\(--k, 0\) \* 40ms\)/);
@@ -147,6 +149,17 @@ describe("the picker: one box with its pill, floating (the Player controls desig
 
   it("keeps each row's hover light inside the row, so a short list never scrolls", () => {
     expect(rule(picker, ".option::before")).toMatch(/inset:\s*0;/);
+  });
+
+  it("is never wider than its box: long names end in \"…\", on one line (spec 0114)", () => {
+    expect(rule(picker, ".picker")).toMatch(/min-width:\s*0/);
+    expect(rule(picker, ".pill")).toMatch(/min-width:\s*0/);
+    expect(rule(picker, ".option")).toMatch(/min-width:\s*0/);
+    // The pill's name and each option's share one rule.
+    const r = rule(picker, ".chosen,\n.name");
+    expect(r).toMatch(/min-width:\s*0/);
+    expect(r).toMatch(/text-overflow:\s*ellipsis/);
+    expect(r).toMatch(/white-space:\s*nowrap/);
   });
 });
 

@@ -177,6 +177,8 @@ export function Picker<T extends string>({
     const top = clip ? clip.getBoundingClientRect().top : 0;
     const room = (root.current?.getBoundingClientRect().top ?? 0) - top - 8;
     el.style.maxHeight = room > 0 ? `min(${Math.floor(room)}px, calc(var(--ctl, 38px) * 3.5))` : "";
+    // Upward, it opens at the pill's end: the nearest option whole, the half-shown one at the top (spec 0114).
+    el.scrollTop = el.scrollHeight;
   }, [open, opens]);
 
   // Opened by the keyboard: its first option takes the focus once it's drawn.
@@ -184,7 +186,9 @@ export function Picker<T extends string>({
   useEffect(() => {
     if (!open || !focusFirst.current) return;
     focusFirst.current = false;
-    optionsIn()[0]?.focus();
+    // The option nearest the pill, without scrolling the list away from it (spec 0114).
+    const all = optionsIn();
+    (opens === "up" ? all[all.length - 1] : all[0])?.focus({ preventScroll: true });
   });
 
 
@@ -230,6 +234,8 @@ export function Picker<T extends string>({
         type="button"
         className={styles.pill}
         aria-label={`${label}: ${chosen?.label ?? ""}`}
+        // A long name ends in "…" in the pill; the whole of it here (spec 0114).
+        title={chosen?.label}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         disabled={disabled}
@@ -261,9 +267,10 @@ export function Picker<T extends string>({
               className={styles.option}
               // The nearest to the pill appears first.
               style={{ "--k": opens === "up" ? others.length - 1 - i : i } as CSSProperties}
+              title={o.label}
               onClick={() => pick(o.value)}
             >
-              {o.label}
+              <span className={styles.name}>{o.label}</span>
             </button>
           ))}
         </div>
