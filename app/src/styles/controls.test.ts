@@ -116,3 +116,43 @@ describe("the footer's coffee link (spec 0121, FR-8)", () => {
     expect(coffee).not.toMatch(/--accent/);
   });
 });
+
+describe("the picker: one box with its pill (the Player controls design, decisions 4 and 5)", () => {
+  const picker = sheet("components/ui/Picker.module.css");
+
+  it("opens with no gap: the list sits right on the pill, in the pill's own colour", () => {
+    expect(rule(picker, ".list")).toMatch(/background:\s*var\(--pick-bg\)/);
+    expect(rule(picker, ".picker[data-opens=\"up\"] .list")).toMatch(/bottom:\s*100%/);
+    expect(picker).not.toMatch(/calc\(100% \+ 4px\)/);
+  });
+
+  it("has rows as tall as the pill, and scrolls after three and a half with no scrollbar", () => {
+    expect(rule(picker, ".option")).toMatch(/min-height:\s*var\(--ctl/);
+    const list = rule(picker, ".list");
+    expect(list).toMatch(/max-height:\s*calc\(var\(--ctl, 38px\) \* 3\.5\)/);
+    expect(list).toMatch(/scrollbar-width:\s*none/);
+    expect(rule(picker, ".list::-webkit-scrollbar")).toMatch(/display:\s*none/);
+  });
+
+  it("keeps each row's hover light inside the row, so a short list never scrolls", () => {
+    expect(rule(picker, ".option::before")).toMatch(/inset:\s*0;/);
+  });
+});
+
+describe("the drop-up (the Player controls design, decision 3)", () => {
+  const dropup = sheet("components/ui/DropUp.module.css");
+
+  it("bridges the gap to its button, and slides without animating any blur", () => {
+    expect(rule(dropup, ".dropup::after")).toMatch(/top:\s*100%/);
+    const moving = rule(dropup, ".dropup");
+    expect(moving).toMatch(/transition:[\s\S]*opacity[\s\S]*transform/);
+    expect(moving).not.toMatch(/backdrop-filter|filter/);
+  });
+
+  it("is one frosted pill, like the round buttons", () => {
+    const row = rule(dropup, ".row");
+    expect(row).toMatch(/background:\s*var\(--glass\)/);
+    expect(row).toMatch(/backdrop-filter:\s*blur\(8px\)/);
+    expect(row).toMatch(/0 4px 16px rgba\(0, 0, 0, 0\.35\)/);
+  });
+});

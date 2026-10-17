@@ -104,3 +104,22 @@ export function VolumeOffIcon() {
     </Icon>
   );
 }
+
+/** The window or tab being shared, in the settings. */
+export function WindowIcon() {
+  return (
+    <Icon name="window">
+      <rect x="2.5" y="4" width="11" height="8" rx="1.2" />
+      <path d="M6.5 16h11v-8" />
+    </Icon>
+  );
+}
+
+/** Closes a panel. */
+export function CloseIcon() {
+  return (
+    <Icon name="close">
+      <path d="M5 5l10 10M15 5L5 15" />
+    </Icon>
+  );
+}

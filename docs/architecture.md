@@ -24,10 +24,9 @@ Everything is in `app/src`:
 | `pages/` | One component per route: `HomePage`, `RequestAccessPage`, `RoomPage`, `AdminPage`, and `InstallPage` |
 | `hooks/` | The room's state and the browser's: the seat and the queue (`useRoomSeat`), the streams (`useStreams`), the LiveKit connection (`useLiveKitRoom`), both put together for the room (`useRoomSession`), who's on the stage (`useStagePick`), the layout (`useRoomLayout`), swipes (`useStageSwipe`), the video's shape (`useVideoShape`), the round buttons' row holding the clicked button still (`usePinnedRow`), and small ones (`useElapsed`, `useFullscreenElement`, `useInstalled`) |
 | `media/` | How screens and cameras are sent (`shareSettings.ts`), the ambilight's drawing (`ambilight.ts`), who is big by default (`stagePick.ts`), choices kept in the browser (`preferences.ts`) |
-| `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons (their icons in `icons.tsx`, the ones that come and go in `ButtonSlot`) and their menus, the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
+| `components/stage/` | The player and what's on it: the stage, the ambilight, the round buttons (their icons in `icons.tsx`, the ones that come and go in `ButtonSlot`, the drop-ups on live ones), the settings panel (`SettingsPanel`, and `makeRoom`, which moves the player up for its sheet in the upright full view), the volume, the facecam, the previews, the phone's feed and row, the empty stage, the info row |
 | `components/room/` | The room around the stage: header, footer, people, activity (pill, bell, list), account menu, the waiting screen and the seat offer |
-| `components/share/` | The setup window shown before a share starts |
-| `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage` |
+| `components/ui/` | Shared controls: `Button`, `Range`, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `PersonAvatar`, `LiveDot`, `FullPageMessage`, `Toast` (a short message any component shows with `showToast`) |
 | `components/brand/`, `brand/` | The mark: its geometry and animation timeline (`brand/`), and the components that draw it (`XoveMark`, `XoveIcon`) |
 | `install/` | Phones and tablets: which device it is, and the browser's install prompt |
 | `styles/` | The design tokens (`global.css`) and the tests that check them |
@@ -100,7 +99,8 @@ sequenceDiagram
 | Who is connected, their tracks, my own captures | `useLiveKitRoom` | LiveKit |
 | Who's on my stage | `useStagePick` | This page only |
 | The layout | `useRoomLayout` | This page, from media queries |
-| Quality, volume, the camera picked, the ambilight's settings | `media/preferences.ts` | The browser (`localStorage`, `xove.*`) |
+| How I send (quality, mode, the camera picked), my volume, the ambilight's settings | `media/preferences.ts` | The browser (`localStorage`, `xove.*`) |
+| Whether the settings are open, and the camera's preview | `RoomPage`, `useRoomSession` | This page only |
 
 **Waiting for a seat.** The queue's rules (who's next, how long a place and an offer last) are the API's ([how](https://github.com/Hbrauveres/xove-api/blob/main/docs/architecture.md#seats-and-the-queue)). Without a seat, the waiting screen shows the place in the queue and asks again every 2 seconds; that poll is also how the API knows the page is still there. When a seat is offered, a popup counts down the seconds the API gives ("Enter room" accepts, "Cancel" leaves the queue), and the tab's title says "Your turn". Closing the waiting page sends `POST /api/room/leave` with `keepalive`, so the request survives the tab closing.
 

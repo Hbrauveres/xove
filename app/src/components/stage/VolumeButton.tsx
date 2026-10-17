@@ -14,6 +14,8 @@ type Props = {
   canSetVolume: boolean;
   /** The slider opened or closed: the player keeps its controls shown while it's open. */
   onOpenChange?: (open: boolean) => void;
+  /** Another panel is open over the buttons (the settings): the slider stays closed. */
+  closed?: boolean;
 };
 
 /** How long the slider waits after the pointer leaves, so the pointer can travel to it. */
@@ -23,7 +25,7 @@ const LEAVE_MS = 150;
  * The viewer's volume, as a round button (spec 0101): a click mutes or unmutes; pointing
  * at it or focusing it slides a vertical slider up above it. Only changes this browser.
  */
-export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenChange }: Props) {
+export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenChange, closed = false }: Props) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const control = useRef<HTMLDivElement>(null);
@@ -36,7 +38,7 @@ export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenCh
 
   // No slider while muted, without sound, or where the volume can't be set.
   const canSlide = hasSound && !prefs.muted && canSetVolume;
-  const open = canSlide && (hovered || focused);
+  const open = canSlide && !closed && (hovered || focused);
   // Also when it goes away while open (the stream stops), so the player doesn't stay held.
   useEffect(() => {
     onOpenChange?.(open);

@@ -1,0 +1,480 @@
+/*
+ * The settings panel (the Player controls design). Desktop, tablets and phones held sideways:
+ * a popover over the cog (design decision 9), centred on it like the volume's slider, 10 px
+ * above the round buttons and inside the player; the stage gives it the cog's place
+ * (`--cog-x`) and the row's (`--above-row`). As tall as its tallest tab; a fifth of the
+ * player wide, 280 to 320 px; sideways up to 560 px, in two columns. A phone held upright:
+ * a bottom sheet over the page. Frosted, one control height (`--ctl`): 30 px over the cog,
+ * 44 px in the sheet. Only opacity and transforms move.
+ */
+.panel {
+  --ctl: 30px;
+  --w: clamp(280px, 20cqw, 320px);
+  --room: var(--above-row, 72px);
+  position: absolute;
+  left: clamp(10px, calc(var(--cog-x, 50%) - var(--w) / 2), calc(100% - var(--w) - 10px));
+  bottom: var(--room);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: var(--w);
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - var(--room) - 10px);
+  min-height: min(240px, calc(100% - var(--room) - 10px));
+  border: 1px solid var(--panel-line);
+  border-radius: 16px;
+  background: var(--panel);
+  backdrop-filter: blur(22px);
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.panel[data-open] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Sideways the player is wide and short: the panel uses the width, so no tab scrolls. */
+:global([data-layout="sideways"]) .panel[data-variant="popover"] {
+  --w: min(560px, calc(100% - 20px));
+}
+
+.panel[data-variant="sheet"] {
+  --ctl: 44px;
+  position: fixed;
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  max-width: none;
+  height: var(--sheet-height, 62%);
+  max-height: none;
+  min-height: 0;
+  opacity: 1;
+  border-width: 1px 0 0;
+  border-radius: 20px 20px 0 0;
+  transform: translateY(100%);
+  transition: transform var(--unroll);
+}
+
+.panel[data-variant="sheet"][data-open] {
+  transform: none;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px 6px 14px;
+}
+
+.head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.panel[data-variant="sheet"] .head {
+  padding: 12px 12px 8px 16px;
+}
+
+.panel[data-variant="sheet"] .head h2 {
+  font-size: var(--text-md);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.close svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* The tabs, a red marker sliding under the chosen one. */
+.tabs {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  margin: 0 10px;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.marker {
+  position: absolute;
+  bottom: -1px;
+  z-index: 1;
+  width: calc(100% / var(--n));
+  height: 2px;
+  left: calc(100% / var(--n) * var(--i));
+  background: var(--accent);
+  transition: left 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tab {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
+  margin-bottom: -1px;
+  padding: 6px 2px 5px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tab:hover,
+.tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+/* Can't be used here (a phone can't share a screen): greyed out in its place, not hidden. */
+.tab[aria-disabled="true"],
+.tab[aria-disabled="true"]:hover {
+  color: var(--text-faint);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The keyboard's ring sits inside the tab, rounded, clear of the marker. */
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+
+.panel[data-variant="sheet"] .tabs {
+  margin: 0 12px;
+}
+
+.panel[data-variant="sheet"] .tab {
+  padding-block: 10px 9px;
+  font-size: var(--text-xs);
+}
+
+.panel[data-variant="sheet"] .tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* What's live: a red dot by its tab's icon. */
+.dot {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 9px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/*
+ * The tabs' panes, in one cell over the cog: the panel takes the tallest one's height and the
+ * hidden ones are invisible. It scrolls, when it must, with the app's slim scrollbar: 4 px, no arrows.
+ */
+.panes {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+}
+
+.body {
+  grid-area: 1 / 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 14px 14px;
+  --seg-font: 12px;
+  --pick-font: 12px;
+}
+
+.body[data-off] {
+  visibility: hidden;
+}
+
+.body > * {
+  flex: none;
+}
+
+/* What you pick: in the flow of the tab, or its own column sideways. */
+.lead {
+  display: contents;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-content: start;
+  column-gap: 18px;
+  row-gap: 12px;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .lead {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  grid-column: 1;
+  grid-row: 1 / span 4;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .body > :not(.lead) {
+  grid-column: 2;
+}
+
+:global([data-layout="sideways"]) .panel[data-variant="popover"] .preview {
+  max-width: none;
+}
+
+.panel[data-variant="sheet"] .body {
+  gap: 18px;
+  padding: 14px 16px 16px;
+  --seg-font: var(--text-sm);
+  --pick-font: var(--text-sm);
+  /* Over the near-black feed: a lighter track, a near-black pill in it. */
+  --seg-track: rgba(255, 255, 255, 0.1);
+  --seg-pill: #121214;
+}
+
+.panes::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panes::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.panes::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panes::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.panes:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .panes {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+}
+
+.group {
+  display: grid;
+  gap: 6px;
+}
+
+.panel[data-variant="sheet"] .group {
+  gap: 8px;
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panel[data-variant="sheet"] .heading {
+  font-size: var(--text-xs);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.panel[data-variant="sheet"] .hint {
+  font-size: var(--text-xs);
+}
+
+/* What's shared, and Change: one row as tall as the other controls. */
+.fieldRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  height: var(--ctl);
+  padding: 2px 2px 2px 10px;
+  border-radius: 999px;
+  background: var(--seg-track, rgba(255, 255, 255, 0.05));
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.source span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+/* A button in a row: the dark pill, like a chosen segment. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  height: calc(var(--ctl) - 4px);
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--seg-pill, var(--sel-bg));
+  box-shadow: var(--sel-shadow);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--sel-hover);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.panel[data-variant="sheet"] .source,
+.panel[data-variant="sheet"] .button {
+  font-size: var(--text-sm);
+}
+
+/* My camera, centred: LIVE while it's sent, "Only you see this" while it's only mine. */
+.preview {
+  position: relative;
+  justify-self: center;
+  align-self: center;
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+.panel[data-variant="sheet"] .preview {
+  max-width: 280px;
+}
+
+/* The camera refused or missing: said in the preview's place, so it's clear how to allow it. */
+.preview[data-problem] {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--line);
+}
+
+.problem {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.live {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+}
+
+.badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .marker {
+    transition: none;
+  }
+}

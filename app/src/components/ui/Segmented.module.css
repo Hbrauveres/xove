@@ -1,0 +1,84 @@
+/*
+ * The segmented control (the Player controls design): a light translucent track as tall as
+ * the panel's controls (`--ctl`), and one dark pill that slides under the chosen option.
+ */
+.seg {
+  --p: 3px;
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  height: var(--ctl, 38px);
+  padding: var(--p);
+  border-radius: 999px;
+  background: var(--seg-track, rgba(255, 255, 255, 0.05));
+  overflow: hidden;
+}
+
+.pill {
+  position: absolute;
+  top: var(--p);
+  bottom: var(--p);
+  width: calc((100% - 2 * var(--p) - (var(--n) - 1) * 2px) / var(--n));
+  left: calc(var(--p) + var(--i) * ((100% - 2 * var(--p) - (var(--n) - 1) * 2px) / var(--n) + 2px));
+  border-radius: 999px;
+  background: var(--seg-pill, var(--sel-bg));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), var(--sel-shadow);
+  transition: left 200ms cubic-bezier(0.2, 0.8, 0.2, 1), background 120ms ease;
+}
+
+.seg button {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--seg-font, var(--text-sm));
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+/* A soft light behind the option pointed at, fading only sideways, the track's full height. */
+.seg button::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--p)) 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.seg button:not([aria-checked="true"]):hover {
+  color: var(--text);
+}
+
+.seg button:not([aria-checked="true"]):hover::before {
+  opacity: 1;
+}
+
+/* The chosen option doesn't react: it's already chosen. */
+.seg button[aria-checked="true"] {
+  color: var(--text);
+  font-weight: 600;
+  cursor: default;
+}
+
+.seg button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .seg button,
+  .seg button::before {
+    transition: none;
+  }
+}

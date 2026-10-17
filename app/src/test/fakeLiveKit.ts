@@ -62,11 +62,13 @@ export class FakeMediaStreamTrack {
   stopped = false;
   /** For a camera: which one. */
   readonly deviceId?: string;
+  /** For a picked screen: what was picked ("window", "browser" for a tab, "monitor"). */
+  displaySurface?: string;
   constructor(deviceId?: string) {
     this.deviceId = deviceId;
   }
   getSettings() {
-    return { deviceId: this.deviceId };
+    return { deviceId: this.deviceId, displaySurface: this.displaySurface };
   }
   readonly listeners: (() => void)[] = [];
   addEventListener(event: string, listener: () => void) {
@@ -208,6 +210,8 @@ export class Room {
     nextPicker: "share" as "share" | "cancel" | "no-video",
     /** Tests set this to play something happening while the picker is open. */
     duringPicker: undefined as (() => void) | undefined,
+    /** What the next pick is: a window, a tab ("browser") or the whole screen ("monitor"). */
+    nextSurface: "window" as string,
     /** The browser tracks the last pick gave. */
     lastPicked: [] as FakeMediaStreamTrack[],
     /** The last screen captured (whether it was published or not). */
@@ -237,6 +241,7 @@ export class Room {
       if (local.nextPicker === "cancel") throw new DOMException("Permission denied", "NotAllowedError");
       local.lastCapture = [];
       const video = local.nextPicker === "no-video" ? [] : [new FakeMediaStreamTrack()];
+      for (const v of video) v.displaySurface = local.nextSurface;
       const audio = local.nextPickerAudio ? [new FakeMediaStreamTrack()] : [];
       local.lastPicked = [...video, ...audio];
       local.duringPicker?.();

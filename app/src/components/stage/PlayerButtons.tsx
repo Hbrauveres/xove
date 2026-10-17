@@ -1,99 +1,99 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
+import type { ScreenSurface } from "../../hooks/useLiveKitRoom";
 import { usePinnedRow } from "../../hooks/usePinnedRow";
-import type { SharePrefs } from "../../media/preferences";
-import { CAMERA_QUALITIES, MODES, SHARE_QUALITIES } from "../../media/shareSettings";
 import type { CameraDevice, StreamKind } from "../../types";
+import { DropUp } from "../ui/DropUp";
+import drop from "../ui/DropUp.module.css";
+import { Picker } from "../ui/Picker";
+import { showToast } from "../ui/toast";
 import { ButtonSlot } from "./ButtonSlot";
-import { CameraOffIcon, CameraOnIcon, ScreenOffIcon, ScreenOnIcon, ScreenShareIcon } from "./icons";
-import { MenuGroup, MenuItem, MenuNote, MenuRadio, MenuSeparator, PlayerMenu } from "./PlayerMenu";
+import { CameraOffIcon, CameraOnIcon, CogIcon, ScreenOffIcon, ScreenOnIcon, ScreenShareIcon, WindowIcon } from "./icons";
 import round from "./RoundButton.module.css";
 import styles from "./PlayerButtons.module.css";
 
 export const FULL_ROOM = "6 streams are live, the most at once. You can start yours when one stops.";
+/** Why the screen button and the Screen tab are greyed out on a phone. */
+export const NO_SCREEN = "This browser can't share a screen";
 export const NO_SOUND =
-  "No sound is being shared. Share a tab, or a window with “Share this app's audio too”, from Change window.";
+  "No sound is being shared. Share a tab, or a window with “Share this app's audio too”, with Change.";
 
 type Props = {
   /** Which of my streams are live. */
   mine: Record<StreamKind, boolean>;
   /** Stream places left of the 6. */
   free: number;
-  /** My quality and mode for each of my streams. */
-  prefs: Record<StreamKind, SharePrefs>;
   /** The browser's cameras, and the one in use. */
   cameras: CameraDevice[];
   camera: string | null;
-  /** False where the browser can't share a screen (phones). */
+  /** False where the browser can't share a screen (phones): its button is greyed out, not hidden. */
   canShareScreen: boolean;
   /** I'm sharing my screen, but my browser gave no sound. */
   noSound?: boolean;
+  /** What my screen share shows: a window, a tab or the whole screen. */
+  screenSurface?: ScreenSurface;
   /** A request is on its way: the buttons wait. */
   busy?: boolean;
   onStart: (kind: StreamKind) => void;
   onStop: (kind: StreamKind) => void;
-  onPrefsChange: (kind: StreamKind, prefs: SharePrefs) => void;
   onChangeWindow: () => void;
   onPickCamera: (deviceId: string) => void;
-  /** A menu opened or closed: the player keeps its controls shown while one is open. */
+  /** The settings panel is open; the cog opens and closes it (spec 0107). */
+  settingsOpen: boolean;
+  onSettings: () => void;
+  /** A drop-up's list opened or closed: the player keeps its controls shown while one is open. */
   onMenuChange?: (open: boolean) => void;
-  /** What the viewer watches with, around my buttons (spec 0101): the volume before, the settings after. */
+  /** What the viewer hears, before my buttons (spec 0101): the volume, while watching someone. */
   before?: ReactNode;
-  after?: ReactNode;
 };
 
-/** What the room passes on to my buttons: the stage adds the menu's state and the viewer's part. */
-export type StreamControls = Omit<Props, "onMenuChange" | "before" | "after">;
+/** What the room passes on to my buttons: the stage adds the viewer's part. */
+export type StreamControls = Omit<Props, "onMenuChange" | "before">;
 
-const LABEL: Record<StreamKind, { start: string; stop: string; menuStop: string; options: string }> = {
-  screen: {
-    start: "Share your screen",
-    stop: "Stop sharing your screen",
-    menuStop: "Stop sharing",
-    options: "Screen options",
-  },
-  camera: {
-    start: "Turn on your camera",
-    stop: "Turn off your camera",
-    menuStop: "Turn off your camera",
-    options: "Camera options",
-  },
+const LABEL: Record<StreamKind, { start: string; stop: string; quick: string }> = {
+  screen: { start: "Share your screen", stop: "Stop sharing your screen", quick: "What you share" },
+  camera: { start: "Turn on your camera", stop: "Turn off your camera", quick: "Your camera" },
 };
+
+const SURFACE: Record<ScreenSurface, string> = { window: "A window", browser: "A tab", monitor: "Your whole screen" };
 
 /**
- * The player's centred row of round buttons (specs 0098 and 0101): the volume, my screen
- * and camera, the settings. A click on mine starts or stops; while live, the arrow opens
- * that stream's menu.
+ * The player's centred row of round buttons (specs 0098, 0101, 0106 and 0107): the volume
+ * while watching someone, my screen and camera, and the cog for the settings. A click on mine
+ * starts or stops; while one is live, resting the pointer on it unrolls its quick access.
  */
 export function PlayerButtons(props: Props) {
-  const { mine, canShareScreen, onMenuChange, before, after } = props;
-  const [picked, setPicked] = useState<StreamKind | null>(null);
-  // A stream that stops closes its menu, for good: it doesn't reopen when the stream
-  // comes back (set while rendering, React's way to follow a changed prop).
-  if (picked !== null && !mine[picked]) setPicked(null);
-  const open = picked;
-  const show = (kind: StreamKind | null) => setPicked(kind);
-
-  // The player keeps its controls shown while a menu is open.
-  useEffect(() => {
-    onMenuChange?.(open !== null);
-  }, [open, onMenuChange]);
+  const { before, settingsOpen, onSettings } = props;
 
   // A button that comes or goes never moves the one under the pointer (spec 0106).
   const { ref: rowRef } = usePinnedRow<HTMLDivElement>();
 
-  const kinds: StreamKind[] = canShareScreen ? ["screen", "camera"] : ["camera"];
+  const kinds: StreamKind[] = ["screen", "camera"];
   return (
     <div className={styles.row}>
-      <div className={styles.buttons} ref={rowRef}>
+      <div className={styles.buttons} ref={rowRef} data-buttons>
         <ButtonSlot shown={Boolean(before)} side="start">
           {before}
         </ButtonSlot>
         {kinds.map((kind) => (
-          <StreamButton key={kind} kind={kind} {...props} open={open === kind} onOpen={(o) => show(o ? kind : null)} />
+          <StreamButton key={kind} kind={kind} {...props} />
         ))}
-        <ButtonSlot shown={Boolean(after)} side="end">
-          {after}
-        </ButtonSlot>
+        <div className={styles.control}>
+          <div className={round.pill} data-open={settingsOpen || undefined}>
+            <button
+              type="button"
+              className={round.main}
+              aria-label="Settings"
+              aria-expanded={settingsOpen}
+              aria-haspopup="dialog"
+              onClick={onSettings}
+            >
+              <CogIcon />
+            </button>
+            <span role="tooltip" className={round.tip} aria-hidden="true">
+              Settings
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -103,51 +103,37 @@ function StreamButton({
   kind,
   mine,
   free,
-  prefs,
   cameras,
   camera,
   noSound = false,
+  screenSurface,
   busy = false,
   onStart,
   onStop,
-  onPrefsChange,
   onChangeWindow,
   onPickCamera,
-  open,
-  onOpen,
-}: Props & {
-  kind: StreamKind;
-  open: boolean;
-  onOpen: (open: boolean) => void;
-}) {
+  onMenuChange,
+  canShareScreen,
+}: Props & { kind: StreamKind }) {
   const live = mine[kind];
-  const full = !live && free <= 0;
+  // Unavailable, not hidden: a phone's screen button is greyed out, saying why (design decision 2).
+  const unavailable = kind === "screen" && !canShareScreen;
+  const full = !live && (free <= 0 || unavailable);
   const blocked = full || busy;
   const silent = kind === "screen" && live && noSound;
   const label = live ? LABEL[kind].stop : LABEL[kind].start;
-  const tip = full ? FULL_ROOM : silent ? `${label}. ${NO_SOUND}` : label;
+  const tip = unavailable ? NO_SCREEN : full ? FULL_ROOM : silent ? `${label}. ${NO_SOUND}` : label;
   const tipId = useId();
-  const menuId = useId();
-  const noteId = useId();
-  const control = useRef<HTMLDivElement>(null);
-  const arrow = useRef<HTMLButtonElement>(null);
+  // The camera's list closes when its drop-up is left.
+  const [listClosed, setListClosed] = useState(false);
+  // Counts what's been done from the drop-up (Change, a camera picked): each one closes it.
+  const [done, setDone] = useState(0);
 
-  const close = (returnFocus: boolean) => {
-    onOpen(false);
-    if (returnFocus) arrow.current?.focus();
-  };
-
-  const qualities = kind === "camera" ? CAMERA_QUALITIES : SHARE_QUALITIES;
-  const set = (next: Partial<SharePrefs>) => {
-    if (!busy) onPrefsChange(kind, { ...prefs[kind], ...next });
-  };
-
-  return (
-    <div className={styles.control} ref={control}>
-      <div
-        className={`${round.pill} ${live ? round.live : ""} ${full ? round.disabled : ""}`}
-        data-open={open || undefined}
-      >
+  // A finger has no tooltip: touching a greyed-out button says why in a toast (design decision 10).
+  const pointer = useRef("mouse");
+  const button = (
+    <div className={styles.control}>
+      <div className={`${round.pill} ${live ? round.live : ""} ${full ? round.disabled : ""}`}>
         <button
           type="button"
           className={round.main}
@@ -155,111 +141,78 @@ function StreamButton({
           aria-pressed={live}
           aria-disabled={blocked || undefined}
           aria-describedby={tipId}
+          onPointerDown={(e) => {
+            pointer.current = e.pointerType;
+          }}
           onClick={() => {
+            if (full && (pointer.current === "touch" || pointer.current === "pen")) {
+              showToast(tip, kind === "camera" ? <CameraOffIcon /> : <ScreenOffIcon />);
+            }
             if (blocked) return;
-            onOpen(false);
             if (live) onStop(kind);
             else onStart(kind);
           }}
         >
           <Icon kind={kind} off={!live} />
         </button>
-
-        {live && (
-          <button
-            ref={arrow}
-            type="button"
-            className={round.arrow}
-            aria-label={LABEL[kind].options}
-            aria-haspopup="menu"
-            aria-expanded={open}
-            aria-controls={open ? menuId : undefined}
-            onClick={() => onOpen(!open)}
-          >
-            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-              <path d="M3 7.5 6 4.5l3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </button>
-        )}
-
         <span id={tipId} role="tooltip" className={round.tip}>
           {tip}
         </span>
       </div>
-
-      {open && (
-        <PlayerMenu id={menuId} label={LABEL[kind].options} anchor={control} onClose={close}>
-          <MenuGroup label="Quality">
-            {qualities.map((q) => (
-              <MenuRadio
-                key={q.id}
-                checked={prefs[kind].quality === q.id}
-                busy={busy}
-                onSelect={() => set({ quality: q.id })}
-              >
-                {q.id}
-              </MenuRadio>
-            ))}
-          </MenuGroup>
-          <MenuGroup label="Mode">
-            {MODES.map((m) => (
-              <MenuRadio
-                key={m.id}
-                checked={prefs[kind].mode === m.id}
-                busy={busy}
-                onSelect={() => set({ mode: m.id })}
-              >
-                {m.label}
-              </MenuRadio>
-            ))}
-          </MenuGroup>
-          <MenuSeparator />
-          {kind === "screen" ? (
-            <>
-              {silent && <MenuNote id={noteId}>{NO_SOUND}</MenuNote>}
-              <MenuItem
-                busy={busy}
-                describedBy={silent ? noteId : undefined}
-                onSelect={() => {
-                  onOpen(false);
-                  onChangeWindow();
-                }}
-              >
-                Change window
-              </MenuItem>
-            </>
-          ) : (
-            cameras.length > 0 && (
-              <>
-                <MenuGroup label="Camera">
-                  {cameras.map((c) => (
-                    <MenuRadio
-                      key={c.deviceId}
-                      checked={camera === c.deviceId}
-                      busy={busy}
-                      onSelect={() => onPickCamera(c.deviceId)}
-                    >
-                      {c.label}
-                    </MenuRadio>
-                  ))}
-                </MenuGroup>
-                <MenuSeparator />
-              </>
-            )
-          )}
-          <MenuItem
-            danger
-            busy={busy}
-            onSelect={() => {
-              onOpen(false);
-              onStop(kind);
-            }}
-          >
-            {LABEL[kind].menuStop}
-          </MenuItem>
-        </PlayerMenu>
-      )}
     </div>
+  );
+
+  const quick =
+    kind === "screen" ? (
+      <div className={drop.row}>
+        <span className={styles.source}>
+          <WindowIcon />
+          <span>{screenSurface ? SURFACE[screenSurface] : "Your screen"}</span>
+        </span>
+        <button
+          type="button"
+          className={styles.change}
+          title="Pick another window or tab; viewers keep watching the same stream"
+          disabled={busy}
+          onClick={() => {
+            setDone((n) => n + 1);
+            onChangeWindow();
+          }}
+        >
+          Change
+        </button>
+      </div>
+    ) : (
+      <Picker
+        label="Camera"
+        options={cameras.map((c) => ({ value: c.deviceId, label: c.label || "Camera" }))}
+        value={camera ?? cameras[0]?.deviceId ?? ""}
+        opens="up"
+        look="glass"
+        disabled={busy}
+        closed={listClosed}
+        onOpenChange={(open) => {
+          if (open) setListClosed(false);
+          onMenuChange?.(open);
+        }}
+        onChange={(deviceId) => {
+          setDone((n) => n + 1);
+          onPickCamera(deviceId);
+        }}
+      />
+    );
+
+  return (
+    <DropUp
+      label={LABEL[kind].quick}
+      enabled={live && (kind === "screen" || cameras.length > 0)}
+      width={kind === "screen" ? 228 : 210}
+      onLeave={() => setListClosed(true)}
+      closeSignal={done}
+      trigger={button}
+    >
+      {quick}
+    </DropUp>
   );
 }
 

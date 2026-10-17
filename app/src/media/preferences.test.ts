@@ -59,12 +59,12 @@ describe("the camera picked (spec 0098)", () => {
 
 describe("the viewer's choices", () => {
   it("default to Auto, full volume, not muted", () => {
-    expect(loadWatchPrefs()).toEqual({ quality: "auto", volume: 1, muted: false });
+    expect(loadWatchPrefs()).toEqual({ volume: 1, muted: false });
   });
 
   it("are remembered", () => {
-    saveWatchPrefs({ quality: "480p", volume: 0.35, muted: true });
-    expect(loadWatchPrefs()).toEqual({ quality: "480p", volume: 0.35, muted: true });
+    saveWatchPrefs({ volume: 0.35, muted: true });
+    expect(loadWatchPrefs()).toEqual({ volume: 0.35, muted: true });
   });
 
   it("keep the volume between 0 and 1", () => {
@@ -84,9 +84,9 @@ describe("when the browser's storage fails", () => {
       throw new DOMException("blocked", "SecurityError");
     });
     expect(() => saveSharePrefs({ quality: "480p", mode: "sharp" })).not.toThrow();
-    expect(() => saveWatchPrefs({ quality: "720p", volume: 0.5, muted: false })).not.toThrow();
+    expect(() => saveWatchPrefs({ volume: 0.5, muted: false })).not.toThrow();
     expect(loadSharePrefs()).toEqual({ quality: "1080p", mode: "smooth" });
-    expect(loadWatchPrefs()).toEqual({ quality: "auto", volume: 1, muted: false });
+    expect(loadWatchPrefs()).toEqual({ volume: 1, muted: false });
     vi.restoreAllMocks();
   });
 });

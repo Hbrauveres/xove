@@ -1,0 +1,88 @@
+/*
+ * The drop-up (the Player controls design, decision 3): one frosted pill centred above a live
+ * round button. It fades and slides 6 px; nothing blurred is animated.
+ */
+.wrap {
+  position: relative;
+  display: flex;
+}
+
+.trigger {
+  display: flex;
+  /* A press held on the button opens its drop-up: no text selection or long-press menu. */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.dropup {
+  /* Its controls: 36 px tall, 12 px text, like its row. */
+  --ctl: 36px;
+  --pick-font: 12px;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 5;
+  width: var(--dropup-width, 228px);
+  transform: translate(-50%, 6px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s linear 180ms;
+}
+
+/* A bridge over the gap, so the pointer can travel up into it. */
+.dropup::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+}
+
+.wrap[data-open="true"] .dropup {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s;
+}
+
+/* A row in the drop-up (the window and Change): one frosted pill, like the round buttons. */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 36px;
+  padding: 2px 3px 2px 12px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  font-size: var(--text-xs);
+}
+
+/* Opened by a finger: 44 px controls, the app's height for touch. */
+.wrap[data-touch] .dropup {
+  --ctl: 44px;
+  --pick-font: var(--text-sm);
+}
+
+.wrap[data-touch] .row {
+  height: 44px;
+  font-size: var(--text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropup,
+  .wrap[data-open="true"] .dropup {
+    transition: none;
+  }
+}

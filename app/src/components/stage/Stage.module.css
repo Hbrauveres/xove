@@ -23,7 +23,8 @@
   margin-inline: auto;
   transition:
     width 0.35s ease,
-    height 0.35s ease;
+    height 0.35s ease,
+    translate var(--unroll);
 }
 
 .frame {
@@ -53,7 +54,9 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    translate var(--unroll);
 }
 
 .frame[data-chrome="hidden"] .controls {
@@ -271,4 +274,10 @@
   .stage[data-layout="sideways"] [data-fades] {
     transition: none;
   }
+}
+
+/* The toast sideways: the screen's top centre, over the top bar (design decision 10). */
+.toastTop {
+  --toast-top: calc(10px + env(safe-area-inset-top, 0px));
+  display: contents;
 }

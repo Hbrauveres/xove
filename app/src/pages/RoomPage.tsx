@@ -9,9 +9,9 @@ import { PeopleButton } from "../components/room/PeopleButton";
 import { FooterItems, RoomFooter } from "../components/room/RoomFooter";
 import { RoomHeader } from "../components/room/RoomHeader";
 import { WaitingRoom } from "../components/room/WaitingRoom";
-import { ShareSetup } from "../components/share/ShareSetup";
 import { loadAmbilight } from "../media/preferences";
 import { canShareScreen } from "../media/shareSettings";
+import { SettingsPanel } from "../components/stage/SettingsPanel";
 import { Stage } from "../components/stage/Stage";
 import { useFullscreenElement, useFullscreenHost } from "../hooks/useFullscreenElement";
 import { TOUCH_QUERY, useRoomLayout } from "../hooks/useRoomLayout";
@@ -103,6 +103,35 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   );
   const watching = stage.big && stage.mainKind ? { personId: stage.big.person.id, kind: stage.mainKind } : null;
 
+  // The settings for what I send (spec 0107), from the cog: a popover over it, or a
+  // bottom sheet on a phone held upright (its full-screen view too). A phone shows only Camera.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const toggleSettings = useCallback(() => setSettingsOpen((open) => !open), []);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const sheet = layout === "upright";
+  const settingsPanel = (
+    <SettingsPanel
+      variant={sheet ? "sheet" : "popover"}
+      open={settingsOpen}
+      onClose={closeSettings}
+      screenTab={canShareScreen() && !(touch && layout !== "desktop")}
+      mine={session.mine}
+      prefs={session.prefs}
+      onPrefsChange={session.setPrefs}
+      screenSurface={session.screenSurface}
+      noSound={session.noSound}
+      onChangeWindow={session.changeScreen}
+      cameras={session.cameras}
+      cameraId={session.cameraId}
+      onPickCamera={session.pickCamera}
+      cameraVideo={session.mine.camera ? session.myCamera : session.cameraPreview}
+      onPreviewCamera={session.previewCamera}
+      cameraProblem={session.cameraProblem}
+      busy={session.busy}
+      fullView={sheet && fullView}
+    />
+  );
+
   // The API forgot my seat (it restarted): ask again, with my video connection, which
   // confirms the seat; keep asking until it answers. With a seat free, nothing changes here.
   const { reenter } = seat;
@@ -192,18 +221,21 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
             controls={{
               mine: session.mine,
               free: session.free,
-              prefs: session.prefs,
               cameras: session.cameras,
               camera: session.cameraId,
               canShareScreen: canShareScreen(),
               noSound: session.noSound,
+              screenSurface: session.screenSurface,
               busy: session.busy,
               onStart: session.start,
               onStop: session.stop,
-              onPrefsChange: session.setPrefs,
               onChangeWindow: session.changeScreen,
               onPickCamera: session.pickCamera,
+              settingsOpen,
+              onSettings: toggleSettings,
             }}
+            settingsPanel={sheet ? undefined : settingsPanel}
+            sheetOpen={sheet && settingsOpen}
           />
         </div>
         {/* Over the bottom of the middle: the column is sized exactly, nothing may push it. */}
@@ -224,18 +256,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
           </p>,
           overPage,
         )}
-      {session.pending &&
-        createPortal(
-          <ShareSetup
-            kind={session.pending.kind}
-            preview={session.pending.video}
-            initial={session.prefs[session.pending.kind]}
-            hasSound={session.pending.audio !== undefined}
-            onStart={session.confirm}
-            onCancel={session.cancelPending}
-          />,
-          overPage,
-        )}
+      {sheet && createPortal(settingsPanel, overPage)}
     </div>
   );
 }

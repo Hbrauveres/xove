@@ -6,9 +6,8 @@ import { CAMERA_QUALITIES, DEFAULT_CAMERA, DEFAULT_SHARE, SHARE_QUALITIES, type 
  */
 
 export type SharePrefs = { quality: ShareQuality; mode: ShareMode };
-/** "auto" lets the server send what fits; a quality caps what this viewer receives. */
-export type WatchQuality = "auto" | ShareQuality;
-export type WatchPrefs = { quality: WatchQuality; volume: number; muted: boolean };
+/** How I hear what I watch. There's no quality to pick: watching is always Auto (spec 0107). */
+export type WatchPrefs = { volume: number; muted: boolean };
 
 const KEYS = {
   shareQuality: "xove.share.quality",
@@ -18,7 +17,6 @@ const KEYS = {
   cameraDevice: "xove.camera.device",
   ambilightOn: "xove.ambilight.on",
   ambilightBrightness: "xove.ambilight.brightness",
-  watchQuality: "xove.watch.quality",
   watchVolume: "xove.watch.volume",
   watchMuted: "xove.watch.muted",
 } as const;
@@ -99,17 +97,14 @@ export function saveAmbilight(prefs: AmbilightPrefs) {
 }
 
 export function loadWatchPrefs(): WatchPrefs {
-  const quality = read(KEYS.watchQuality);
   const volume = Number(read(KEYS.watchVolume) ?? 1);
   return {
-    quality: quality === "auto" || (quality && qualities.includes(quality)) ? (quality as WatchQuality) : "auto",
     volume: Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 1,
     muted: read(KEYS.watchMuted) === "true",
   };
 }
 
 export function saveWatchPrefs(prefs: WatchPrefs) {
-  write(KEYS.watchQuality, prefs.quality);
   write(KEYS.watchVolume, String(prefs.volume));
   write(KEYS.watchMuted, String(prefs.muted));
 }

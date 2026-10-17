@@ -74,6 +74,16 @@ async function captureScreen(room: Room, mode: ShareMode): Promise<(LocalVideoTr
 
 export type RoomPerson = { identity: string; name: string };
 
+/** Why the camera can't be used: the browser (or the person) refused it, or there's none. */
+export type CameraProblem = "blocked" | "missing" | null;
+
+/** What a refused camera says: like any app, it asks once, and says how to allow it later. */
+export const CAMERA_BLOCKED =
+  "Your browser didn't allow the camera. Allow it for Xovê in your browser's or phone's settings, then try again.";
+
+/** What a screen share shows, as the browser says (`displaySurface`). */
+export type ScreenSurface = "monitor" | "window" | "browser";
+
 /** A stream that just started: where it comes from, and whether the browser gave its sound. */
 export type StartedStream = SharingConnection & { hasSound: boolean };
 
@@ -107,6 +117,10 @@ export type LiveKitRoom = {
   publishing: Record<StreamKind, boolean>;
   /** This browser's own screen and camera, for the previews. */
   local: Partial<Record<StreamKind, MediaTrack>>;
+  /** What my screen share shows: a window, a tab ("browser") or the whole screen ("monitor"). */
+  screenSurface?: ScreenSurface;
+  /** The last time the camera was asked for, it was refused or missing; cleared when it works. */
+  cameraProblem: CameraProblem;
   /** Joins and leaves seen since this page connected. */
   presence: ActivityEvent[];
   error: string | null;
@@ -196,6 +210,8 @@ export function useLiveKitRoom(): LiveKitRoom {
   const [remote, setRemote] = useState<Record<string, RemoteMedia>>({});
   const [publishing, setPublishing] = useState<Record<StreamKind, boolean>>({ screen: false, camera: false });
   const [local, setLocal] = useState<Partial<Record<StreamKind, MediaTrack>>>({});
+  const [screenSurface, setScreenSurface] = useState<ScreenSurface | undefined>(undefined);
+  const [cameraProblem, setCameraProblem] = useState<CameraProblem>(null);
   const [presence, setPresence] = useState<ActivityEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -230,7 +246,10 @@ export function useLiveKitRoom(): LiveKitRoom {
     const me = room.localParticipant;
     const camera = me.getTrackPublication(Track.Source.Camera)?.track;
     setPublishing({ screen: me.isScreenShareEnabled, camera: Boolean(camera) });
-    setLocal({ screen: me.getTrackPublication(Track.Source.ScreenShare)?.track, camera });
+    const screen = me.getTrackPublication(Track.Source.ScreenShare)?.track;
+    setLocal({ screen, camera });
+    const surface = (screen?.mediaStreamTrack.getSettings?.() as { displaySurface?: string } | undefined)?.displaySurface;
+    setScreenSurface(surface === "monitor" || surface === "window" || surface === "browser" ? surface : undefined);
   }, []);
 
   useEffect(() => {
@@ -315,15 +334,20 @@ export function useLiveKitRoom(): LiveKitRoom {
         setError(failed);
         return null;
       }
+      if (kind === "camera") setCameraProblem(null);
       return { kind, video, audio: kind === "screen" ? audio : undefined };
     } catch (e) {
       if (e instanceof DOMException && e.name === "NotAllowedError") {
         // Closing the browser's picker is a choice, not an error; a blocked camera needs a hint.
-        if (kind === "camera") setError("Your browser didn't allow the camera. Allow it from the address bar and try again.");
+        if (kind === "camera") {
+          setError(CAMERA_BLOCKED);
+          setCameraProblem("blocked");
+        }
         return null;
       }
       if (kind === "camera" && e instanceof DOMException && e.name === "NotFoundError") {
         setError("No camera found.");
+        setCameraProblem("missing");
         return null;
       }
       setError(failed);
@@ -556,6 +580,8 @@ export function useLiveKitRoom(): LiveKitRoom {
     remote,
     publishing,
     local,
+    screenSurface,
+    cameraProblem,
     presence,
     error,
     capture,

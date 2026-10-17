@@ -8,7 +8,6 @@ import {
   cameraPublishOptions,
   capOf,
   contentHintOf,
-  effectiveQuality,
   newCaptureController,
   screenCaptureRequest,
   screenPublishOptions,
@@ -111,11 +110,6 @@ describe("what a viewer can pick", () => {
 
   it("offers only one quality when the sharer sends one layer", () => {
     expect(viewerQualities(1080, 1)).toEqual(["1080p"]);
-  });
-
-  it("treats a remembered quality that isn't offered as Auto", () => {
-    expect(effectiveQuality("1080p", ["720p", "480p"])).toBe("auto");
-    expect(effectiveQuality("720p", ["720p", "480p"])).toBe("720p");
   });
 });
 

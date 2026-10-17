@@ -1,7 +1,6 @@
 /*
- * The player's round buttons (specs 0098 and 0101): screen, camera, volume and settings
- * share this look, so they read as one family. A button sits in a pill; a live stream's
- * pill also holds its arrow.
+ * The player's round buttons (specs 0098, 0101 and 0107): screen, camera, volume and
+ * settings share this look, so they read as one family. A button sits in a pill.
  */
 .pill {
   position: relative;
@@ -14,14 +13,13 @@
   color: var(--text);
 }
 
-/* One ring around the whole pill, its arrow included, whichever part has the focus. */
+/* One ring around the whole pill when its button has the keyboard's focus. */
 .pill:has(:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-.main,
-.arrow {
+.main {
   display: grid;
   place-items: center;
   border: 0;
@@ -46,12 +44,6 @@
 .main {
   width: 48px;
   border-radius: 999px;
-}
-
-.arrow {
-  width: 26px;
-  margin-left: -8px;
-  border-radius: 0 999px 999px 0;
 }
 
 /* Live: the pill lights up. */
@@ -88,7 +80,14 @@
   z-index: 3;
 }
 
-.pill:hover .tip,
+/* Pointed at with a mouse, or reached with the keyboard. A finger leaves the button "hovered"
+   after a tap, so touch screens get the toast instead (design decision 10). */
+@media (hover: hover) {
+  .pill:hover .tip {
+    opacity: 1;
+  }
+}
+
 .pill:has(:focus-visible) .tip {
   opacity: 1;
 }
@@ -138,4 +137,11 @@
 .main:not([aria-disabled="true"]):hover .iconHover,
 .main:not([aria-disabled="true"]):focus-visible .iconHover {
   display: grid;
+}
+
+/* With a mouse, a live button's quick access takes its tooltip's place (spec 0107). */
+@media (hover: hover) {
+  .live .tip {
+    display: none;
+  }
 }

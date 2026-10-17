@@ -1,0 +1,246 @@
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
+import { describe, expect, it, vi } from "vitest";
+import type { SharePrefs } from "../../media/preferences";
+import type { StreamKind } from "../../types";
+import { CAMERA_BLOCKED } from "../../hooks/useLiveKitRoom";
+import { NO_SOUND } from "./PlayerButtons";
+import { SettingsPanel } from "./SettingsPanel";
+import { NO_SCREEN } from "./PlayerButtons";
+import { clearToast, currentToast } from "../ui/toast";
+
+const PREFS: Record<StreamKind, SharePrefs> = {
+  screen: { quality: "1080p", mode: "smooth" },
+  camera: { quality: "720p", mode: "smooth" },
+};
+const CAMERAS = [
+  { deviceId: "cam-1", label: "Logitech C920" },
+  { deviceId: "cam-2", label: "Integrated Webcam" },
+];
+const track = () => ({ attach: vi.fn((el: HTMLMediaElement) => el), detach: vi.fn((el: HTMLMediaElement) => el) });
+
+function setup(props: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
+  const handlers = {
+    onClose: vi.fn(),
+    onPrefsChange: vi.fn(),
+    onChangeWindow: vi.fn(),
+    onPickCamera: vi.fn(),
+    onPreviewCamera: vi.fn(),
+  };
+  const user = userEvent.setup();
+  const all = {
+    variant: "popover" as const,
+    open: true,
+    screenTab: true,
+    mine: { screen: false, camera: false },
+    prefs: PREFS,
+    cameras: CAMERAS,
+    cameraId: "cam-1",
+    ...handlers,
+    ...props,
+  };
+  const view = render(<SettingsPanel {...all} />);
+  return { user, ...handlers, rerender: (next: Partial<typeof all>) => view.rerender(<SettingsPanel {...all} {...next} />) };
+}
+
+const panel = () => screen.getByRole("dialog", { name: "Settings" });
+
+describe("the settings panel: tabs", () => {
+  it("opens on Screen, with Screen and Camera tabs and a red marker under the chosen one", () => {
+    setup();
+    const tabs = within(panel()).getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["Screen", "Camera"]);
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    expect(within(panel()).getByRole("tablist").style.getPropertyValue("--i")).toBe("0");
+  });
+
+  it("greys out Screen where a screen can't be shared (a phone), saying why, and opens on Camera (design decision 2)", async () => {
+    const { user } = setup({ screenTab: false });
+    expect(within(panel()).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Screen", "Camera"]);
+    const screenTab = within(panel()).getByRole("tab", { name: "Screen" });
+    expect(screenTab).toHaveAttribute("aria-disabled", "true");
+    expect(screenTab).toHaveAttribute("title", NO_SCREEN);
+    expect(within(panel()).getByRole("tabpanel", { name: "Camera" })).toBeInTheDocument();
+    await user.click(screenTab);
+    expect(within(panel()).getByRole("tab", { name: "Camera" })).toHaveAttribute("aria-selected", "true");
+    expect(within(panel()).queryByRole("tabpanel", { name: "Screen" })).not.toBeInTheDocument();
+  });
+
+  it("says why in a toast when a finger touches the greyed-out Screen tab (design decision 10)", () => {
+    setup({ screenTab: false });
+    const screenTab = within(panel()).getByRole("tab", { name: "Screen" });
+    fireEvent.pointerDown(screenTab, { pointerType: "touch" });
+    fireEvent.click(screenTab);
+    expect(currentToast()?.text).toBe(NO_SCREEN);
+    act(() => clearToast());
+  });
+
+  it("marks with a red dot the tab of what I'm sending", () => {
+    setup({ mine: { screen: false, camera: true }, cameraVideo: track() });
+    expect(within(panel()).getByRole("tab", { name: /Camera/ }).querySelector("[data-live]")).not.toBeNull();
+    expect(within(panel()).getByRole("tab", { name: /Screen/ }).querySelector("[data-live]")).toBeNull();
+  });
+
+  it("closes from its ✕ and with Escape", async () => {
+    const { user, onClose } = setup();
+    await user.click(within(panel()).getByRole("button", { name: "Close settings" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("over the cog, draws every tab in one cell so it's as tall as the tallest; only the chosen one shows (design decision 9)", async () => {
+    const { user } = setup();
+    const panes = panel().querySelectorAll('[role="tabpanel"]');
+    expect(panes).toHaveLength(2);
+    const hidden = [...panes].filter((p) => p.getAttribute("aria-hidden") === "true");
+    expect(hidden).toHaveLength(1);
+    expect(hidden[0]).toHaveAttribute("inert");
+    expect(within(panel()).getByRole("tabpanel", { name: "Screen" })).toBeInTheDocument();
+    await user.click(within(panel()).getByRole("tab", { name: "Camera" }));
+    expect(within(panel()).getByRole("tabpanel", { name: "Camera" })).not.toHaveAttribute("aria-hidden");
+    expect(panel().querySelector('[role="tabpanel"][aria-hidden="true"]')?.getAttribute("aria-labelledby")).toMatch(/screen$/);
+  });
+
+  it("as a sheet, draws only the chosen tab", () => {
+    setup({ variant: "sheet" });
+    expect(panel().querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
+  });
+
+  it("is drawn over the cog or as a sheet, and leaves once closed", async () => {
+    const { rerender } = setup({ variant: "sheet" });
+    expect(panel()).toHaveAttribute("data-variant", "sheet");
+    rerender({ open: false });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("the settings panel: the Screen tab", () => {
+  it("while not sharing: no preview, a line saying these are used next time, quality and mode", () => {
+    setup();
+    const tab = within(panel()).getByRole("tabpanel", { name: "Screen" });
+    expect(tab.querySelector("video")).toBeNull();
+    expect(within(tab).getByText(/You're not sharing\. These are used the next time you do/)).toBeInTheDocument();
+    expect(within(tab).getByRole("radiogroup", { name: "Screen quality" })).toBeInTheDocument();
+    expect(within(tab).getAllByRole("radio").map((r) => r.textContent)).toEqual(["1080p", "720p", "480p", "Smooth", "Sharp"]);
+    expect(within(tab).queryByRole("button", { name: /change/i })).not.toBeInTheDocument();
+  });
+
+  it("while sharing: what's shared with Change, and no preview", async () => {
+    const { user, onChangeWindow } = setup({ mine: { screen: true, camera: false }, screenSurface: "window" });
+    const tab = within(panel()).getByRole("tabpanel", { name: "Screen" });
+    expect(tab.querySelector("video")).toBeNull();
+    expect(within(tab).getByText("A window")).toBeInTheDocument();
+    await user.click(within(tab).getByRole("button", { name: "Change" }));
+    expect(onChangeWindow).toHaveBeenCalledOnce();
+  });
+
+  it("says how to share sound when my screen has none", () => {
+    setup({ mine: { screen: true, camera: false }, noSound: true });
+    expect(within(panel()).getByText(NO_SOUND)).toBeInTheDocument();
+  });
+
+  it("changes the quality and the mode, with the modes' tooltips", async () => {
+    const { user, onPrefsChange } = setup();
+    const tab = within(panel()).getByRole("tabpanel", { name: "Screen" });
+    await user.click(within(tab).getByRole("radio", { name: "720p" }));
+    expect(onPrefsChange).toHaveBeenLastCalledWith("screen", { quality: "720p", mode: "smooth" });
+    const sharp = within(tab).getByRole("radio", { name: "Sharp" });
+    expect(sharp).toHaveAttribute("title", "Keeps detail sharp when the connection is tight: text, code");
+    await user.click(sharp);
+    expect(onPrefsChange).toHaveBeenLastCalledWith("screen", { quality: "1080p", mode: "sharp" });
+  });
+});
+
+describe("the settings panel: the Camera tab", () => {
+  it("turns the camera on for the preview only while the tab is open, and off when it closes", async () => {
+    const { user, onPreviewCamera, rerender } = setup();
+    expect(onPreviewCamera).not.toHaveBeenCalled();
+    await user.click(within(panel()).getByRole("tab", { name: /Camera/ }));
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(true);
+    await user.click(within(panel()).getByRole("tab", { name: /Screen/ }));
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(false);
+    await user.click(within(panel()).getByRole("tab", { name: /Camera/ }));
+    rerender({ open: false });
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(false);
+  });
+
+  it("shows the preview as only mine while off, and LIVE while sent; no preview capture while live", async () => {
+    const preview = track();
+    const { user, onPreviewCamera, rerender } = setup({ cameraVideo: preview });
+    await user.click(within(panel()).getByRole("tab", { name: /Camera/ }));
+    const tab = within(panel()).getByRole("tabpanel", { name: "Camera" });
+    expect(preview.attach).toHaveBeenCalled();
+    expect(within(tab).getByText("Only you see this")).toBeInTheDocument();
+    onPreviewCamera.mockClear();
+    rerender({ mine: { screen: false, camera: true } });
+    expect(within(tab).getByText("LIVE")).toBeInTheDocument();
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(false);
+  });
+
+  it("says in the preview's place when the camera was refused, and how to allow it", async () => {
+    const { user } = setup({ cameraProblem: "blocked" });
+    await user.click(within(panel()).getByRole("tab", { name: /Camera/ }));
+    expect(within(panel()).getByRole("status")).toHaveTextContent(CAMERA_BLOCKED);
+    expect(within(panel()).queryByText("Only you see this")).not.toBeInTheDocument();
+  });
+
+  it("picks another camera from its picker, opened in place", async () => {
+    const { user, onPickCamera } = setup({ screenTab: false });
+    await user.click(within(panel()).getByRole("button", { name: "Camera: Logitech C920" }));
+    expect(within(panel()).getByRole("button", { name: "Camera: Logitech C920" }).closest("[data-picker]")).toHaveAttribute("data-opens", "in-place");
+    await user.click(within(panel()).getByRole("radio", { name: "Integrated Webcam" }));
+    expect(onPickCamera).toHaveBeenCalledWith("cam-2");
+  });
+
+  it("offers 720p and 480p, and the modes", async () => {
+    const { user, onPrefsChange } = setup({ screenTab: false });
+    const tab = within(panel()).getByRole("tabpanel", { name: "Camera" });
+    expect(within(within(tab).getByRole("radiogroup", { name: "Camera quality" })).getAllByRole("radio").map((r) => r.textContent)).toEqual(["720p", "480p"]);
+    await user.click(within(tab).getByRole("radio", { name: "480p" }));
+    expect(onPrefsChange).toHaveBeenLastCalledWith("camera", { quality: "480p", mode: "smooth" });
+  });
+});
+
+describe("the settings panel: the keyboard", () => {
+  it("takes the focus on its chosen tab, moves between tabs with the arrows, and gives the focus back", async () => {
+    const cog = document.createElement("button");
+    document.body.append(cog);
+    cog.focus();
+    const { user, rerender } = setup();
+    expect(within(panel()).getByRole("tab", { name: /Screen/ })).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(within(panel()).getByRole("tab", { name: /Camera/ })).toHaveFocus();
+    expect(within(panel()).getByRole("tab", { name: /Camera/ })).toHaveAttribute("aria-selected", "true");
+    rerender({ open: false });
+    expect(cog).toHaveFocus();
+    cog.remove();
+  });
+});
+
+describe("the settings panel: React's development double-mount", () => {
+  it("still previews the camera when it mounts open on Camera", () => {
+    const onPreviewCamera = vi.fn();
+    render(
+      <StrictMode>
+        <SettingsPanel variant="sheet" open screenTab={false} mine={{ screen: false, camera: false }} prefs={PREFS} cameras={CAMERAS} cameraId="cam-1"
+          onClose={() => {}} onPrefsChange={() => {}} onChangeWindow={() => {}} onPickCamera={() => {}} onPreviewCamera={onPreviewCamera} />
+      </StrictMode>,
+    );
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe("the settings panel: leaving", () => {
+  it("stops the preview when it unmounts", () => {
+    const onPreviewCamera = vi.fn();
+    const view = render(
+      <SettingsPanel variant="popover" open screenTab={false} mine={{ screen: false, camera: false }} prefs={PREFS} cameras={CAMERAS} cameraId="cam-1"
+        onClose={() => {}} onPrefsChange={() => {}} onChangeWindow={() => {}} onPickCamera={() => {}} onPreviewCamera={onPreviewCamera} />,
+    );
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(true);
+    act(() => view.unmount());
+    expect(onPreviewCamera).toHaveBeenLastCalledWith(false);
+  });
+});

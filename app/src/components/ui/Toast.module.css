@@ -1,0 +1,72 @@
+/*
+ * The toast (design decision 10): the round buttons' glass, a pill up to 360 px wide and two
+ * lines, at the top centre of what holds it. It fades in and drops 6 px, and fades out by
+ * itself. It never takes a click.
+ */
+.toast {
+  position: absolute;
+  top: var(--toast-top, 12px);
+  left: 16px;
+  right: 16px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: min(360px, calc(100% - 32px));
+  min-height: 36px;
+  margin-inline: auto;
+  padding: 8px 14px 8px 11px;
+  border-radius: 18px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 160ms ease,
+    transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Nothing to say: no pill, only the live region. */
+.toast:empty {
+  padding: 0;
+  min-height: 0;
+  box-shadow: none;
+}
+
+.toast[data-show] {
+  opacity: 1;
+  transform: none;
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transform: none;
+    transition: opacity 160ms ease;
+  }
+}
