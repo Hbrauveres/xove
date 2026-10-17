@@ -6,15 +6,12 @@ import type { CameraDevice, MediaTrack, StreamKind } from "../../types";
 import { Picker } from "../ui/Picker";
 import { Segmented } from "../ui/Segmented";
 import { CameraOnIcon, CloseIcon, ScreenShareIcon, WindowIcon } from "./icons";
-import { NO_SOUND } from "./PlayerButtons";
+import { NO_SCREEN, NO_SOUND } from "./PlayerButtons";
 import { FULL_VIEW_SHEET } from "./makeRoom";
 import styles from "./SettingsPanel.module.css";
 
 /** How long it takes to come in or go out; it leaves the page once it's out. */
 const PANEL_MS = 260;
-
-/** Why the Screen tab is greyed out. */
-export const NO_SCREEN = "This browser can't share a screen";
 
 const SURFACE: Record<ScreenSurface, string> = { window: "A window", browser: "A tab", monitor: "Your whole screen" };
 

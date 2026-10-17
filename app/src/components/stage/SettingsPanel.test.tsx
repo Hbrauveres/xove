@@ -6,7 +6,8 @@ import type { SharePrefs } from "../../media/preferences";
 import type { StreamKind } from "../../types";
 import { CAMERA_BLOCKED } from "../../hooks/useLiveKitRoom";
 import { NO_SOUND } from "./PlayerButtons";
-import { SettingsPanel, NO_SCREEN } from "./SettingsPanel";
+import { SettingsPanel } from "./SettingsPanel";
+import { NO_SCREEN } from "./PlayerButtons";
 
 const PREFS: Record<StreamKind, SharePrefs> = {
   screen: { quality: "1080p", mode: "smooth" },

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HOLD_MS, OPEN_DELAY_MS } from "../ui/DropUp";
-import { FULL_ROOM, NO_SOUND, PlayerButtons } from "./PlayerButtons";
+import { FULL_ROOM, NO_SCREEN, NO_SOUND, PlayerButtons } from "./PlayerButtons";
 
 const CAMERAS = [
   { deviceId: "cam-1", label: "Logitech C920" },
@@ -213,10 +213,15 @@ describe("stream buttons: when they can't be used", () => {
     );
   });
 
-  it("has no screen button where the browser can't share a screen", () => {
-    setup({ canShareScreen: false });
-    expect(screen.queryByRole("button", { name: "Share your screen" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Turn on your camera" })).toBeInTheDocument();
+  it("greys out the screen button where the browser can't share a screen, saying why (a phone)", async () => {
+    const { user, onStart } = setup({ canShareScreen: false });
+    const share = screen.getByRole("button", { name: "Share your screen" });
+    expect(share).toHaveAttribute("aria-disabled", "true");
+    expect(share).toHaveAccessibleDescription(NO_SCREEN);
+    expect(share.parentElement?.className).toMatch(/disabled/);
+    await user.click(share);
+    expect(onStart).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Turn on your camera" })).not.toHaveAttribute("aria-disabled");
   });
 });
 

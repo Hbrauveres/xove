@@ -11,6 +11,8 @@ import round from "./RoundButton.module.css";
 import styles from "./PlayerButtons.module.css";
 
 export const FULL_ROOM = "6 streams are live, the most at once. You can start yours when one stops.";
+/** Why the screen button and the Screen tab are greyed out on a phone. */
+export const NO_SCREEN = "This browser can't share a screen";
 export const NO_SOUND =
   "No sound is being shared. Share a tab, or a window with “Share this app's audio too”, with Change.";
 
@@ -22,7 +24,7 @@ type Props = {
   /** The browser's cameras, and the one in use. */
   cameras: CameraDevice[];
   camera: string | null;
-  /** False where the browser can't share a screen (phones). */
+  /** False where the browser can't share a screen (phones): its button is greyed out, not hidden. */
   canShareScreen: boolean;
   /** I'm sharing my screen, but my browser gave no sound. */
   noSound?: boolean;
@@ -59,12 +61,12 @@ const SURFACE: Record<ScreenSurface, string> = { window: "A window", browser: "A
  * starts or stops; while one is live, resting the pointer on it unrolls its quick access.
  */
 export function PlayerButtons(props: Props) {
-  const { canShareScreen, before, settingsOpen, onSettings } = props;
+  const { before, settingsOpen, onSettings } = props;
 
   // A button that comes or goes never moves the one under the pointer (spec 0106).
   const { ref: rowRef } = usePinnedRow<HTMLDivElement>();
 
-  const kinds: StreamKind[] = canShareScreen ? ["screen", "camera"] : ["camera"];
+  const kinds: StreamKind[] = ["screen", "camera"];
   return (
     <div className={styles.row}>
       <div className={styles.buttons} ref={rowRef} data-buttons>
@@ -110,13 +112,16 @@ function StreamButton({
   onChangeWindow,
   onPickCamera,
   onMenuChange,
+  canShareScreen,
 }: Props & { kind: StreamKind }) {
   const live = mine[kind];
-  const full = !live && free <= 0;
+  // Unavailable, not hidden: a phone's screen button is greyed out, saying why (design decision 2).
+  const unavailable = kind === "screen" && !canShareScreen;
+  const full = !live && (free <= 0 || unavailable);
   const blocked = full || busy;
   const silent = kind === "screen" && live && noSound;
   const label = live ? LABEL[kind].stop : LABEL[kind].start;
-  const tip = full ? FULL_ROOM : silent ? `${label}. ${NO_SOUND}` : label;
+  const tip = unavailable ? NO_SCREEN : full ? FULL_ROOM : silent ? `${label}. ${NO_SOUND}` : label;
   const tipId = useId();
   // The camera's list closes when its drop-up is left.
   const [listClosed, setListClosed] = useState(false);
