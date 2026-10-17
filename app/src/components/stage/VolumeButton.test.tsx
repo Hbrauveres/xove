@@ -1,177 +1,157 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
-import type { WatchPrefs } from "../../media/preferences";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { clearToast, currentToast } from "../ui/toast";
 import { VolumeButton } from "./VolumeButton";
+import { MIXER_IDLE_MS, NO_VOICE_YET, type Channel, type ChannelSound } from "./VolumeMixer";
 
-/** The button with its own state, as the stage uses it. */
+/** The button with its own state, as the stage uses it: the screen's sound and the voice greyed. */
 function Harness({
   initial = { volume: 0.6, muted: false },
-  hasSound = true,
+  screenSound = true,
   canSetVolume = true,
-  onChange,
   onOpenChange,
-  closed,
 }: {
-  initial?: WatchPrefs;
-  hasSound?: boolean;
+  initial?: ChannelSound;
+  screenSound?: boolean;
   canSetVolume?: boolean;
-  onChange?: (p: WatchPrefs) => void;
   onOpenChange?: (open: boolean) => void;
-  closed?: boolean;
 }) {
-  const [prefs, setPrefs] = useState<WatchPrefs>(initial);
+  const [sound, setSound] = useState(initial);
+  const [open, setOpen] = useState(false);
+  const channels: Channel[] = [
+    { id: "screen", label: "Screen sound", ...sound, onChange: setSound, unavailable: screenSound ? undefined : "No sound in this stream" },
+    { id: "voice", label: "Voice", volume: 0, muted: true, unavailable: NO_VOICE_YET },
+  ];
   return (
     <VolumeButton
-      prefs={prefs}
-      hasSound={hasSound}
+      channels={channels}
       canSetVolume={canSetVolume}
-      onOpenChange={onOpenChange}
-      closed={closed}
-      onChange={(next) => {
-        setPrefs(next);
-        onChange?.(next);
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        onOpenChange?.(next);
       }}
     />
   );
 }
 
-const slider = () => screen.queryByRole("slider", { name: "Volume" });
-const sliderShown = () => {
-  const s = slider();
-  return s !== null && !s.closest("[inert]");
-};
+const button = () => screen.getByRole("button", { name: /^Volume|No sound/ });
+const mixerOpen = () => screen.queryByRole("group", { name: "Volume" })?.hasAttribute("data-open") ?? false;
+const icon = () => button().querySelector("svg")!.getAttribute("data-icon");
 
-describe("volume button (spec 0101)", () => {
-  it("mutes and unmutes with a click, saying which it does", async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness onChange={onChange} />);
+describe("volume button (specs 0101 and 0108)", () => {
+  afterEach(() => act(() => clearToast()));
 
-    const button = screen.getByRole("button", { name: "Mute" });
-    expect(button).toHaveAccessibleDescription("Mute");
-    await user.click(button);
-    expect(onChange).toHaveBeenLastCalledWith({ volume: 0.6, muted: true });
-    await user.click(screen.getByRole("button", { name: "Unmute" }));
-    expect(onChange).toHaveBeenLastCalledWith({ volume: 0.6, muted: false });
-  });
-
-  it("slides a vertical volume up while pointed at, and away after the pointer leaves", async () => {
-    const onChange = vi.fn();
-    const onOpenChange = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness onChange={onChange} onOpenChange={onOpenChange} />);
-    expect(sliderShown()).toBe(false);
-
-    await user.hover(screen.getByRole("button", { name: "Mute" }));
-    expect(sliderShown()).toBe(true);
-    expect(onOpenChange).toHaveBeenLastCalledWith(true);
-    expect(slider()).toHaveAttribute("aria-orientation", "vertical");
-    expect(slider()).toHaveValue("0.6");
-
-    fireEvent.change(slider()!, { target: { value: "0.3" } });
-    expect(onChange).toHaveBeenLastCalledWith({ volume: 0.3, muted: false });
-
-    await user.unhover(screen.getByRole("button", { name: "Mute" }));
-    await waitFor(() => {
-      expect(sliderShown()).toBe(false);
-      expect(onOpenChange).toHaveBeenLastCalledWith(false);
-    });
-  });
-
-  it("stays closed while the settings are open: one panel over the buttons at a time (spec 0107)", async () => {
-    const user = userEvent.setup();
-    render(<Harness closed />);
-    await user.hover(screen.getByRole("button", { name: "Mute" }));
-    expect(sliderShown()).toBe(false);
-  });
-
-  it("opens on keyboard focus, and the slider is the next stop", async () => {
-    const user = userEvent.setup();
+  it("opens and closes the mixer with a click, and never mutes", () => {
     render(<Harness />);
-
-    await user.tab();
-    expect(screen.getByRole("button", { name: "Mute" })).toHaveFocus();
-    expect(sliderShown()).toBe(true);
-    await user.tab();
-    expect(slider()).toHaveFocus();
-    await user.tab();
-    expect(sliderShown()).toBe(false);
+    expect(button()).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(button());
+    expect(mixerOpen()).toBe(true);
+    expect(button()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Mute Screen sound" })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(button());
+    expect(mixerOpen()).toBe(false);
+    expect(icon()).toBe("volume");
   });
 
-  it("still slides away after a click, once the pointer leaves", async () => {
-    const user = userEvent.setup();
+  it("opens by touch too, and a tap never mutes", () => {
     render(<Harness />);
-    const button = screen.getByRole("button", { name: "Mute" });
-
-    await user.click(button);
-    await user.click(screen.getByRole("button", { name: "Unmute" }));
-    expect(sliderShown()).toBe(true);
-    await user.unhover(button);
-
-    await waitFor(() => expect(sliderShown()).toBe(false));
+    fireEvent.pointerDown(button(), { pointerType: "touch" });
+    fireEvent.click(button());
+    expect(mixerOpen()).toBe(true);
+    expect(icon()).toBe("volume");
   });
 
-  it("lets the player go when it disappears while open", async () => {
+  it("doesn't open on hover or on focus", () => {
+    render(<Harness />);
+    fireEvent.pointerEnter(button().parentElement!, { pointerType: "mouse" });
+    fireEvent.focus(button());
+    expect(mixerOpen()).toBe(false);
+  });
+
+  it("Escape closes it and gives the focus back to the button", () => {
+    render(<Harness />);
+    fireEvent.click(button());
+    const bar = screen.getByRole("slider", { name: "Screen sound volume" });
+    bar.focus();
+    fireEvent.keyDown(bar, { key: "Escape" });
+    expect(mixerOpen()).toBe(false);
+    expect(button()).toHaveFocus();
+  });
+
+  it("closing by itself with the focus inside gives the focus back to the button", () => {
+    vi.useFakeTimers();
+    render(<Harness />);
+    fireEvent.click(button());
+    screen.getByRole("slider", { name: "Screen sound volume" }).focus();
+    act(() => vi.advanceTimersByTime(MIXER_IDLE_MS));
+    expect(mixerOpen()).toBe(false);
+    expect(button()).toHaveFocus();
+    vi.useRealTimers();
+  });
+
+  it("Escape closes it wherever the focus is", () => {
+    render(<Harness />);
+    fireEvent.click(button());
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(mixerOpen()).toBe(false);
+  });
+
+  it("a press outside closes it; a press inside doesn't", () => {
+    render(
+      <>
+        <button>elsewhere</button>
+        <Harness />
+      </>,
+    );
+    fireEvent.click(button());
+    fireEvent.pointerDown(screen.getByRole("slider", { name: "Screen sound volume" }));
+    expect(mixerOpen()).toBe(true);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "elsewhere" }));
+    expect(mixerOpen()).toBe(false);
+  });
+
+  it("is crossed when every sound you can hear is muted: the greyed voice doesn't count", () => {
+    render(<Harness />);
+    fireEvent.click(button());
+    fireEvent.click(screen.getByRole("button", { name: "Mute Screen sound" }));
+    expect(icon()).toBe("volume-off");
+    expect(button()).toHaveAccessibleName("Volume, all muted");
+    // Still open: muting never closes it.
+    expect(mixerOpen()).toBe(true);
+  });
+
+  it("is crossed at zero volume too", () => {
+    render(<Harness initial={{ volume: 0, muted: false }} />);
+    expect(icon()).toBe("volume-off");
+  });
+
+  it("is crossed and locked when there's nothing to hear, saying why, by touch in the toast", () => {
+    render(<Harness screenSound={false} />);
+    expect(button()).toHaveAccessibleName("No sound in this stream");
+    expect(button()).toHaveAttribute("aria-disabled", "true");
+    expect(icon()).toBe("volume-off");
+    fireEvent.pointerDown(button(), { pointerType: "touch" });
+    fireEvent.click(button());
+    expect(mixerOpen()).toBe(false);
+    expect(currentToast()?.text).toBe("No sound in this stream");
+  });
+
+  it("tells the stage when it opens and closes, so the player stays shown", () => {
     const onOpenChange = vi.fn();
-    const user = userEvent.setup();
-    const view = render(<Harness onOpenChange={onOpenChange} />);
-    await user.hover(screen.getByRole("button", { name: "Mute" }));
+    render(<Harness onOpenChange={onOpenChange} />);
+    fireEvent.click(button());
     expect(onOpenChange).toHaveBeenLastCalledWith(true);
-
-    view.unmount();
-
+    fireEvent.click(button());
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
   });
 
-  it("has no slider while muted", async () => {
-    const user = userEvent.setup();
-    render(<Harness initial={{ volume: 0.6, muted: true }} />);
-
-    await user.hover(screen.getByRole("button", { name: "Unmute" }));
-
-    expect(slider()).toBeNull();
-  });
-
-  it("has no slider where the page can't set the volume (iPhones), and still mutes", async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness canSetVolume={false} onChange={onChange} />);
-
-    await user.hover(screen.getByRole("button", { name: "Mute" }));
-    expect(slider()).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Mute" }));
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ muted: true }));
-  });
-
-  it("is crossed and disabled for a stream without sound, saying why, with no slider", async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    render(<Harness hasSound={false} onChange={onChange} />);
-
-    const button = screen.getByRole("button", { name: "No sound in this stream" });
-    expect(button).toHaveAttribute("aria-disabled", "true");
-    expect(button).toHaveAccessibleDescription("No sound in this stream");
-    await user.hover(button);
-    await user.click(button);
-
-    expect(onChange).not.toHaveBeenCalled();
-    expect(slider()).toBeNull();
-  });
-});
-
-describe("the volume button's icon (spec 0106)", () => {
-  const icon = () => document.querySelector("svg[data-icon]")?.getAttribute("data-icon");
-
-  it("is a speaker while the sound plays, and a crossed speaker while it's muted or there's none", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    expect(icon()).toBe("volume");
-
-    await user.click(screen.getByRole("button", { name: "Mute" }));
-
+  it("opens the pill of round on/off buttons where the volume can't be set (iPhones)", () => {
+    render(<Harness canSetVolume={false} />);
+    fireEvent.click(button());
+    expect(screen.queryAllByRole("slider")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Mute Screen sound" }));
     expect(icon()).toBe("volume-off");
   });
 });
-

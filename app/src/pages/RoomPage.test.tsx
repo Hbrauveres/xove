@@ -599,21 +599,61 @@ describe("room: the viewer's quality and volume", () => {
     const sound = lastRoom().remoteParticipants.get("user-7")!.tracks.get("screen_share_audio")!;
     const audio = () => sound.attached[0] as HTMLAudioElement;
 
-    // The slider shows on the volume button (spec 0101).
-    await user.hover(within(stage()).getByRole("button", { name: "Mute" }));
-    expect(screen.getByRole("slider", { name: "Volume" }).closest("[inert]")).toBeNull();
-    fireEvent.change(screen.getByRole("slider", { name: "Volume" }), { target: { value: "0.3" } });
+    // The volume button opens the mixer over it, and never mutes (spec 0108).
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    expect(audio().muted).toBe(false);
+    const bar = () => screen.getByRole("slider", { name: "Screen sound volume" });
+    expect(bar().closest("[inert]")).toBeNull();
+    fireEvent.change(bar(), { target: { value: "0.3" } });
     expect(audio().volume).toBeCloseTo(0.3);
-    await user.click(screen.getByRole("button", { name: "Mute" }));
+    await user.click(screen.getByRole("button", { name: "Mute Screen sound" }));
     expect(audio().muted).toBe(true);
-    // Muted: no slider.
-    expect(screen.queryByRole("slider", { name: "Volume" })).not.toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "Volume, all muted" })).toHaveAttribute("aria-expanded", "true");
 
     view.unmount();
     await watchBruno({ withSound: true });
-    expect(screen.getByRole("button", { name: "Unmute" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Unmute" }));
-    expect(screen.getByRole("slider", { name: "Volume" })).toHaveValue("0.3");
+    await user.click(within(stage()).getByRole("button", { name: "Volume, all muted" }));
+    await user.click(screen.getByRole("button", { name: "Mute Screen sound" }));
+    expect(bar()).toHaveValue("0.3");
+  });
+
+  it("one panel over the buttons at a time: the mixer and the settings close each other (spec 0108)", async () => {
+    await watchBruno({ withSound: true });
+    const user = userEvent.setup();
+    const mixerOpen = () => within(stage()).getByRole("group", { name: "Volume" }).hasAttribute("data-open");
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    expect(mixerOpen()).toBe(true);
+    await user.click(within(stage()).getByRole("button", { name: "Settings" }));
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(mixerOpen()).toBe(false);
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    expect(mixerOpen()).toBe(true);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
+  });
+
+  it("the mixer goes when there's nothing left to hear, and doesn't come back by itself (spec 0108)", async () => {
+    await watchBruno({ withSound: true });
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    act(() => {
+      lastRoom().unpublish("user-7", "screen_share_audio");
+    });
+    await within(stage()).findByRole("button", { name: "No sound in this stream" });
+    act(() => {
+      lastRoom().publishSound("user-7");
+    });
+    const volume = await within(stage()).findByRole("button", { name: "Volume" });
+    expect(volume).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opening the settings any way closes the mixer (spec 0108)", async () => {
+    await watchBruno({ withSound: true });
+    const user = userEvent.setup();
+    await user.click(within(stage()).getByRole("button", { name: "Volume" }));
+    // A click with no press before it: only the settings opening closes the mixer.
+    fireEvent.click(within(stage()).getByRole("button", { name: "Settings" }));
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "Volume" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("gives the sharer's own player no volume; the cog opens the settings for what I send", async () => {
@@ -621,7 +661,7 @@ describe("room: the viewer's quality and volume", () => {
     const user = await readyRoom();
     await startSharing(user);
 
-    expect(within(stage()).queryByRole("button", { name: "Mute" })).not.toBeInTheDocument();
+    expect(within(stage()).queryByRole("button", { name: /^Volume/ })).not.toBeInTheDocument();
     expect(within(stage()).getByRole("button", { name: "Settings" })).toBeInTheDocument();
     expect(within(stage()).queryByLabelText("Send quality")).not.toBeInTheDocument();
     expect(within(stage()).queryByLabelText("Mode")).not.toBeInTheDocument();
@@ -746,6 +786,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
     const row = () =>
       within(stage())
         .getAllByRole("button")
+        .filter((b) => !b.closest("[inert]"))
         .map((b) => b.getAttribute("aria-label"))
         .filter((name) => name !== "Fullscreen" && name !== "Exit fullscreen" && !name?.startsWith("Watch "));
     expect(row()).toEqual(["Share your screen", "Turn on your camera", "Settings"]);
@@ -759,7 +800,7 @@ describe("room: my screen and camera buttons on the player (spec 0098)", () => {
     });
     await screen.findByLabelText("Bruno's shared screen");
 
-    expect(row()).toEqual(["Mute", "Share your screen", "Turn on your camera", "Settings"]);
+    expect(row()).toEqual(["Volume", "Share your screen", "Turn on your camera", "Settings"]);
   });
 
   it("fade with the player's bars over a stream", async () => {
@@ -1775,7 +1816,7 @@ describe("room: whose sound plays", () => {
     await screen.findByLabelText("Ana's shared screen");
 
     expect(within(stage()).getByRole("button", { name: "No sound in this stream" })).toHaveAttribute("aria-disabled", "true");
-    expect(within(stage()).queryByRole("slider", { name: "Volume" })).not.toBeInTheDocument();
+    expect(within(stage()).queryByRole("slider")).not.toBeInTheDocument();
     // A preview without sound has no speaker at all (spec 0104).
     expect(within(thumbnails()).queryByRole("button", { name: /mute bruno/i })).not.toBeInTheDocument();
 
@@ -1783,17 +1824,17 @@ describe("room: whose sound plays", () => {
     act(() => {
       lastRoom().publishSound("user-3");
     });
-    const mute = await within(stage()).findByRole("button", { name: "Mute" });
-    expect(mute).not.toHaveAttribute("aria-disabled");
-    await userEvent.setup().hover(mute);
-    const slider = within(stage()).getByRole("slider", { name: "Volume" });
+    const volume = await within(stage()).findByRole("button", { name: "Volume" });
+    expect(volume).not.toHaveAttribute("aria-disabled");
+    await userEvent.setup().click(volume);
+    const slider = within(stage()).getByRole("slider", { name: "Screen sound volume" });
     expect(slider.closest("[inert]")).toBeNull();
     expect(slider).toHaveValue("0.6");
     expect(within(thumbnails()).queryByRole("button", { name: /mute bruno/i })).not.toBeInTheDocument();
     localStorage.clear();
   });
 
-  it("doesn't lock a camera's volume: a camera never has sound to share", async () => {
+  it("locks a camera's volume: no screen sound, and no voice yet (spec 0108)", async () => {
     const server = installFakeApi({ me: member });
     server.streams = [
       someoneSharing("Ana Souza", 3, "camera", undefined, minutesAgo(10)),
@@ -1807,7 +1848,7 @@ describe("room: whose sound plays", () => {
     });
     await screen.findByLabelText("Ana's camera");
 
-    expect(within(stage()).queryByRole("button", { name: "No sound in this stream" })).not.toBeInTheDocument();
+    expect(within(stage()).getByRole("button", { name: "No sound in this stream" })).toHaveAttribute("aria-disabled", "true");
     expect(within(thumbnails()).queryByRole("button", { name: /mute/i })).not.toBeInTheDocument();
   });
 

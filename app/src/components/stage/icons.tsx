@@ -105,6 +105,35 @@ export function VolumeOffIcon() {
   );
 }
 
+/** In the mixer, the screen's sound playing: the speaker with one wave (spec 0108). */
+export function SoundIcon() {
+  return (
+    <Icon name="sound">
+      <path d="M3.5 8v4h3l4 3.5v-11l-4 3.5z" />
+      <path d="M13.5 7.5a3.5 3.5 0 010 5" />
+    </Icon>
+  );
+}
+
+/** In the mixer, a voice playing: the mic (spec 0108). */
+export function MicIcon() {
+  return (
+    <Icon name="mic">
+      <rect x="7.5" y="2.5" width="5" height="9" rx="2.5" />
+      <path d="M4.5 9.5a5.5 5.5 0 0011 0M10 15v2.5" />
+    </Icon>
+  );
+}
+
+/** A voice muted, or none to hear: the mic, crossed. */
+export function MicOffIcon() {
+  return (
+    <Icon name="mic-off">
+      <path d="M12.5 8.5v-3.5a2.5 2.5 0 00-5 0v4.5a2.5 2.5 0 003.6 2.2M4.5 9.5a5.5 5.5 0 008.6 4.5M15.3 11.2a5.6 5.6 0 00.2-1.7M10 15v2.5M3 3l14 14" />
+    </Icon>
+  );
+}
+
 /** The window or tab being shared, in the settings. */
 export function WindowIcon() {
   return (

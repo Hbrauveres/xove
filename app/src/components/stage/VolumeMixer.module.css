@@ -1,0 +1,141 @@
+/*
+ * The mixer (spec 0108, design decisions 1 to 5): a slim frosted panel over the volume button,
+ * 10 px above it, that unrolls upward; fixed width, its contents at the bottom.
+ */
+.mixer {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 5;
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  background: var(--panel);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  transform: translateX(-50%);
+  clip-path: inset(100% 0 0 0 round 14px);
+  transition: clip-path var(--unroll);
+  pointer-events: none;
+}
+
+.mixer[data-open] {
+  clip-path: inset(0 round 14px);
+  pointer-events: auto;
+}
+
+.inner {
+  display: flex;
+  gap: 2px;
+  padding: 8px 4px 6px;
+}
+
+.channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 34px;
+}
+
+/* The design sheet's Range, turned upright. A turned element keeps its unturned box, so it's placed by its centre. */
+.bar {
+  position: relative;
+  width: 24px;
+  height: 96px;
+}
+
+.range {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 96px;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.channel[data-muted] .range {
+  opacity: 0.35;
+}
+
+/* A sound that can't be heard (round 113): an empty track, nothing to grab. */
+.empty {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 50%;
+  width: 3px;
+  border-radius: 999px;
+  background: rgba(235, 235, 236, 0.22);
+  transform: translateX(-50%);
+}
+
+.mute {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mute svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mute:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+@media (hover: hover) {
+  .mute:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Greyed out, in its place (design decision 5): 45%, the crossed icon, the reason in its tooltip. */
+.channel[data-unavailable] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.channel[data-unavailable] .mute {
+  cursor: not-allowed;
+}
+
+.channel[data-unavailable] .mute:hover {
+  background: transparent;
+}
+
+/* iPhone (design decision 4): a pill of two round on/off buttons; its 4 px padding counts in its height, so they're centred. */
+.mixer[data-pill] {
+  border-radius: 999px;
+  clip-path: inset(100% 0 0 0 round 999px);
+}
+
+.mixer[data-pill][data-open] {
+  clip-path: inset(0 round 999px);
+}
+
+.mixer[data-pill] .inner {
+  padding: 4px;
+}
+
+.mixer[data-pill] .channel {
+  width: auto;
+}
+
+.mixer[data-pill] .mute {
+  width: 36px;
+  height: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mixer {
+    transition: none;
+  }
+}

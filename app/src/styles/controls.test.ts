@@ -54,7 +54,7 @@ describe("the white slider, like a video player's (spec 0121, FR-4)", () => {
 describe("the three sliders use the white slider (spec 0121, FR-4)", () => {
   const uses = [
     ["components/room/AccountButton", "the ambilight's brightness"],
-    ["components/stage/VolumeButton", "the stage's volume"],
+    ["components/stage/VolumeMixer", "the stage's volume"],
     ["components/stage/AlsoLive", "a preview's volume"],
   ] as const;
 
@@ -210,5 +210,34 @@ describe("the cue: how the app points at a control (spec 0115, design decision 2
 
   it("holds still with reduced motion", () => {
     expect(cue).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.cue\s*\{\s*animation:\s*none;/);
+  });
+});
+
+describe("the volume mixer (spec 0108, design decisions 3 to 5)", () => {
+  const mixer = sheet("components/stage/VolumeMixer.module.css");
+
+  it("is a slim frosted panel 10 px over the button, unrolling upward", () => {
+    const panel = rule(mixer, ".mixer");
+    expect(panel).toMatch(/bottom:\s*calc\(100% \+ 10px\)/);
+    expect(panel).toMatch(/background:\s*var\(--panel\)/);
+    expect(panel).toMatch(/clip-path:\s*inset\(100% 0 0 0 round 14px\)/);
+    expect(panel).toMatch(/transition:\s*clip-path var\(--unroll\)/);
+    expect(mixer).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.mixer\s*\{\s*transition:\s*none;/);
+  });
+
+  it("has 34 px columns with a 96 px upright bar and a 32 px round mute", () => {
+    expect(rule(mixer, ".channel")).toMatch(/width:\s*34px/);
+    expect(rule(mixer, ".bar")).toMatch(/height:\s*96px/);
+    expect(rule(mixer, ".mute")).toMatch(/width:\s*32px;\s*height:\s*32px/);
+  });
+
+  it("greys a sound that can't be heard at 45%, in its place", () => {
+    expect(rule(mixer, ".channel[data-unavailable]")).toMatch(/opacity:\s*0\.45/);
+  });
+
+  it("is a pill of 36 px round buttons on an iPhone, its 4 px padding inside its height", () => {
+    expect(rule(mixer, ".mixer[data-pill]")).toMatch(/border-radius:\s*999px/);
+    expect(rule(mixer, ".mixer[data-pill] .inner")).toMatch(/padding:\s*4px/);
+    expect(rule(mixer, ".mixer[data-pill] .mute")).toMatch(/width:\s*36px;\s*height:\s*36px/);
   });
 });
