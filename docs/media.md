@@ -34,13 +34,13 @@ sequenceDiagram
 
 Sound is captured as music: no echo cancellation, no noise suppression, no automatic volume, in stereo, and sent at 128 kbit/s without silence skipping (`dtx: false`, which chops quiet moments). Whether a share has sound depends on the browser and the system: Chrome offers it for a tab, for a window where the system supports it, and for the whole screen on Windows; Firefox and Safari offer none. A screen without sound says so in its button's tooltip (with a mouse, in the settings' Screen tab), and viewers see a crossed, locked volume button.
 
-**While sharing**, the settings panel (from the cog) has what's shared and Change, the camera list, and each stream's quality and mode; with a mouse, resting on a live button unrolls the same quick access (Change; the camera list):
+**While sharing**, the settings panel (from the cog) has what's shared and Change, the camera list, and each stream's quality and mode; with a mouse, resting on a live button unrolls the same quick access (Change; the camera list), and by touch a 500 ms press and hold does:
 
 - **Change** opens the picker again and swaps the new pick into the same LiveKit track (`replaceTrack`): no new stream for the API or the viewers. The sound follows: swapped, added as a new track, or removed.
 - **A camera list** switches the camera being sent (`restartTrack` on the same track).
 - **Stop:** the lit button, or the browser's own "Stop sharing" bar, ends the stream.
 
-**Cameras** are asked for only on that click, or while the settings' Camera tab is open (the browser asks for permission the first time, like any app; refused or missing, the room and the Camera tab say so, and how to allow it) (a preview only the sharer sees, sent as is if the camera button is pressed then, and stopped when the tab closes), never with the microphone, and go up to 720p: enough for a face, and it spares the upload of someone sending a screen too. They're sent like a screen, with a 720p and a 480p layer.
+**Cameras** are asked for only on that click, or while the settings' Camera tab is open (the browser asks for permission the first time, like any app; refused or missing, the room and the Camera tab say so, and how to allow it) (a preview only the sharer sees, sent as is if the camera button is pressed then, kept if the camera is turned off with the tab open, and stopped when the tab closes), never with the microphone, and go up to 720p: enough for a face, and it spares the upload of someone sending a screen too. They're sent like a screen, with a 720p and a 480p layer.
 
 ## Quality and modes
 

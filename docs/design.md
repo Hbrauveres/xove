@@ -207,7 +207,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 
 ### The settings panel
 
-![The settings drawer on the Camera tab, its picker open](images/design/settings-drawer.png) ![The settings sheet on a phone](images/design/settings-sheet.png)
+![The settings drawer on the Camera tab, its picker open](images/design/settings-drawer.png) ![The settings sheet on a phone](images/design/settings-sheet.png) ![The settings drawer on a phone held sideways, on the screen's edge](images/design/settings-sideways.png)
 
 The settings for what you send, from the cog.
 
@@ -313,6 +313,7 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **No header or footer:** the stage fills the height and hugs the picture, black at its sides where the light glows.
 - **A top bar** over a black gradient: who's on the stage on the left; the people button, the bell and my account on the right.
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
+- **The settings drawer** hangs on the screen's right edge, past the black at the player's side, clear of the notch (side panels hang on the outermost wall).
 - Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
 - **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice.
 
@@ -343,6 +344,7 @@ What a phone or tablet sees in a browser tab, on every page: the wordmark, the s
 - **Draft first:** a visual change starts as a clickable HTML draft with these tokens and fonts, approved before the work starts. The approved draft is the reference the code must match.
 - **Check every size:** desktop 1920 × 1080, vertical monitors (1080 × 1920 and 1440 × 2560), a narrow window, phones upright (412 × 915, 360 × 740) and sideways (915 × 412, 667 × 375), tablets (820 × 1180, 1180 × 820), the empty room and the install screen.
 - **Reuse the components:** `RoundButton` styles, `Button`, `Range`, the switch, `Dropdown`, `Segmented`, `Picker`, `DropUp`, `Avatar`, `LiveDot`, `StageNotice`. A new control follows their sizes, motion and focus ring. A choice from a list is a `Picker` (one box, no scrollbar), a few options a `Segmented`, and a quick action over a live button a `DropUp`, everywhere in the app.
+- **Panels that slide in from a side hang on the outermost wall:** the screen's edge in fullscreen and on a phone sideways, the player's edge in a window. **Panels are frosted, never opaque**; nothing over the video hides the round buttons.
 - **Say what effects cost:** blur, canvases and animations run on every frame; keep them to what's here.
 
 ## Keeping this page current
