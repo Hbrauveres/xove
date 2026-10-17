@@ -478,3 +478,9 @@
     transition: none;
   }
 }
+
+/* The camera's picker, cued (spec 0115): the cue follows its rounded corners. */
+.cueBox {
+  display: grid;
+  border-radius: 10px;
+}

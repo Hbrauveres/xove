@@ -108,6 +108,10 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const toggleSettings = useCallback(() => setSettingsOpen((open) => !open), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  // A live button's gesture with the settings open: go to that setting (spec 0115). The counter
+  // makes the same request twice still count.
+  const [goTo, setGoTo] = useState<{ kind: StreamKind; n: number }>();
+  const goToSetting = useCallback((kind: StreamKind) => setGoTo((was) => ({ kind, n: (was?.n ?? 0) + 1 })), []);
   const sheet = layout === "upright";
   const settingsPanel = (
     <SettingsPanel
@@ -129,6 +133,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
       cameraProblem={session.cameraProblem}
       busy={session.busy}
       fullView={sheet && fullView}
+      goTo={goTo}
     />
   );
 
@@ -233,6 +238,7 @@ function Room({ pollMs, seat, onSignOut }: Props & { seat: RoomSeat; onSignOut: 
               onPickCamera: session.pickCamera,
               settingsOpen,
               onSettings: toggleSettings,
+              onGoTo: goToSetting,
             }}
             settingsPanel={sheet ? undefined : settingsPanel}
             sheetOpen={sheet && settingsOpen}

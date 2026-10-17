@@ -40,6 +40,8 @@ type Props = {
   /** The settings panel is open; the cog opens and closes it (spec 0107). */
   settingsOpen: boolean;
   onSettings: () => void;
+  /** With the settings open, a live button's gesture goes to its setting there (spec 0115). */
+  onGoTo?: (kind: StreamKind) => void;
   /** A drop-up's list opened or closed: the player keeps its controls shown while one is open. */
   onMenuChange?: (open: boolean) => void;
   /** What the viewer hears, before my buttons (spec 0101): the volume, while watching someone. */
@@ -114,6 +116,8 @@ function StreamButton({
   onPickCamera,
   onMenuChange,
   canShareScreen,
+  settingsOpen,
+  onGoTo,
 }: Props & { kind: StreamKind }) {
   const live = mine[kind];
   // Unavailable, not hidden: a phone's screen button is greyed out, saying why (design decision 2).
@@ -209,6 +213,8 @@ function StreamButton({
       width={kind === "screen" ? 228 : 210}
       onLeave={() => setListClosed(true)}
       closeSignal={done}
+      // The settings already show these controls: the gesture goes there instead (spec 0115).
+      redirect={settingsOpen && onGoTo ? () => onGoTo(kind) : undefined}
       trigger={button}
     >
       {quick}

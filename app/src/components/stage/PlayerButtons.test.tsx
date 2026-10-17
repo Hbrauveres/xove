@@ -170,6 +170,28 @@ describe("stream buttons: the drop-ups (spec 0107)", () => {
   });
 });
 
+describe("stream buttons: with the settings open (spec 0115)", () => {
+  it("resting on a live button goes to its setting, with no quick access over it", () => {
+    withMouse();
+    const onGoTo = vi.fn();
+    setup({ mine: { screen: true, camera: true }, settingsOpen: true, onGoTo });
+    const stop = screen.getByRole("button", { name: "Turn off your camera" });
+    rest(stop);
+    expect(onGoTo).toHaveBeenCalledWith("camera");
+    expect(dropUp(stop)).toHaveAttribute("data-open", "false");
+  });
+
+  it("with the settings closed, the quick access as before", () => {
+    withMouse();
+    const onGoTo = vi.fn();
+    setup({ mine: { screen: true, camera: false }, settingsOpen: false, onGoTo });
+    const stop = screen.getByRole("button", { name: "Stop sharing your screen" });
+    rest(stop);
+    expect(onGoTo).not.toHaveBeenCalled();
+    expect(dropUp(stop)).toHaveAttribute("data-open", "true");
+  });
+});
+
 describe("stream buttons: when they can't be used", () => {
   it("disables the off buttons of a full room, saying why, and keeps the live ones", async () => {
     const { user, onStart, onStop } = setup({ mine: { screen: true, camera: false }, free: 0 });
