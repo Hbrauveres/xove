@@ -11,7 +11,8 @@ import { ScreenVideo } from "./ScreenVideo";
 import { StageNotice } from "./StageNotice";
 import { StageOverlay } from "./StageOverlay";
 import { PlayerButtons, type StreamControls } from "./PlayerButtons";
-import { VolumeButton } from "./VolumeButton";
+import { NO_SOUND_HERE, VolumeButton } from "./VolumeButton";
+import { NO_VOICE_YET } from "./VolumeMixer";
 import { liftButtons, makeRoom, ROOM_GAP as SHEET_GAP } from "./makeRoom";
 import { AlsoLive } from "./AlsoLive";
 import { Ambilight } from "./Ambilight";
@@ -78,6 +79,9 @@ const nobodyWatching = () => NOBODY;
 
 /** How long the player's labels and bars stay after the mouse stops moving. */
 export const CHROME_IDLE_MS = 2500;
+
+/** Watching a camera: there's no screen to hear. */
+const NO_SCREEN_SOUND = "No screen sound";
 
 /** iPhones and iPads ignore a page's volume (only their buttons change it). */
 const canSetVolume = () =>
@@ -250,7 +254,6 @@ export function Stage({
     [showChrome],
   );
   const onMenuChange = useCallback((open: boolean) => hold("menu", open), [hold]);
-  const onVolumeOpen = useCallback((open: boolean) => hold("volume", open), [hold]);
   // The settings panel keeps the controls shown while it's open: held from the cog's click,
   // let go however it closes (the cog, its ✕, Escape).
   const { settingsOpen, onSettings } = controls;
@@ -258,6 +261,26 @@ export function Stage({
     hold("settings", !settingsOpen);
     onSettings();
   }, [hold, settingsOpen, onSettings]);
+  // The volume's mixer (spec 0108): one panel over the buttons at a time, so the settings
+  // and the mixer close each other; the controls stay shown while it's open.
+  const [mixerOpen, setMixerOpen] = useState(false);
+  const [settingsWere, setSettingsWere] = useState(settingsOpen);
+  if (settingsOpen !== settingsWere) {
+    setSettingsWere(settingsOpen);
+    if (settingsOpen && mixerOpen) setMixerOpen(false);
+  }
+  const onMixer = useCallback(
+    (open: boolean) => {
+      setMixerOpen(open);
+      hold("volume", open);
+      if (open && settingsOpen) toggleSettings();
+    },
+    [hold, settingsOpen, toggleSettings],
+  );
+  // Let go however it closes (its button, 4 s idle, the settings, the stream ending).
+  useEffect(() => {
+    if (!mixerOpen) held.current.delete("volume");
+  }, [mixerOpen]);
   useEffect(() => {
     if (!settingsOpen) held.current.delete("settings");
   }, [settingsOpen]);
@@ -327,6 +350,8 @@ export function Stage({
   // sharer's cap changes: Auto never asks for more than the cap, so LiveKit stops sending
   // the layers above it.
   const remote = big?.isMe ? undefined : main?.remote;
+  // Nobody else's stream to hear: the mixer goes with its button.
+  if (mixerOpen && !(remote && big)) setMixerOpen(false);
   // A new function arrives with every LiveKit update; the video it's about is what matters.
   const setQuality = useRef(remote?.setQuality);
   useEffect(() => {
@@ -503,14 +528,20 @@ export function Stage({
             remote &&
             big && (
               <VolumeButton
-                prefs={watch}
-                onChange={changeWatch}
+                // The mixer's fixed places (round 113): the screen's sound, then the voice (#101).
+                channels={[
+                  {
+                    id: "screen",
+                    label: "Screen sound",
+                    ...watch,
+                    onChange: changeWatch,
+                    unavailable: !big.screen ? NO_SCREEN_SOUND : big.hasSound ? undefined : NO_SOUND_HERE,
+                  },
+                  { id: "voice", label: "Voice", volume: 0, muted: true, unavailable: NO_VOICE_YET },
+                ]}
                 canSetVolume={canSetVolume()}
-                // Only a screen can be shared without sound; a camera never has any to lock.
-                hasSound={!big.screen || Boolean(big.hasSound)}
-                onOpenChange={onVolumeOpen}
-                // One panel over the buttons at a time: the slider waits while the settings are open.
-                closed={settingsOpen}
+                open={mixerOpen}
+                onOpenChange={onMixer}
               />
             )
           }

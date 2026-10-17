@@ -1,87 +1,74 @@
-import { useEffect, useId, useRef, useState } from "react";
-import type { WatchPrefs } from "../../media/preferences";
-import { Range } from "../ui/Range";
+import { useEffect, useId, useRef, type KeyboardEvent } from "react";
+import { showToast } from "../ui/toast";
 import { VolumeIcon, VolumeOffIcon } from "./icons";
 import round from "./RoundButton.module.css";
 import styles from "./VolumeButton.module.css";
+import { VolumeMixer, type Channel } from "./VolumeMixer";
 
 type Props = {
-  prefs: WatchPrefs;
-  onChange: (prefs: WatchPrefs) => void;
-  /** False for a stream without sound: crossed, disabled, no slider (spec 0098 FR-15). */
-  hasSound: boolean;
-  /** False where the page can't set the volume (iPhones and iPads): mute only. */
+  /** The sounds of the stream watched, in the mixer's fixed order (spec 0108). */
+  channels: Channel[];
+  /** False where the page can't set the volume (iPhones and iPads): on/off only. */
   canSetVolume: boolean;
-  /** The slider opened or closed: the player keeps its controls shown while it's open. */
-  onOpenChange?: (open: boolean) => void;
-  /** Another panel is open over the buttons (the settings): the slider stays closed. */
-  closed?: boolean;
+  /** The mixer, open over the button; the stage owns it, so the settings can close it. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
-/** How long the slider waits after the pointer leaves, so the pointer can travel to it. */
-const LEAVE_MS = 150;
+/** When none of the stream's sounds can be heard (spec 0098 FR-15). */
+export const NO_SOUND_HERE = "No sound in this stream";
 
 /**
- * The viewer's volume, as a round button (spec 0101): a click mutes or unmutes; pointing
- * at it or focusing it slides a vertical slider up above it. Only changes this browser.
+ * The viewer's volume, as a round button (specs 0101 and 0108): a click, tap or Enter opens
+ * the mixer over it, and closes it; it never mutes. Crossed when every sound you can hear is
+ * muted; crossed and locked when there's none. Only changes this browser.
  */
-export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenChange, closed = false }: Props) {
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
+export function VolumeButton({ channels, canSetVolume, open, onOpenChange }: Props) {
   const control = useRef<HTMLDivElement>(null);
-  const leaveTimer = useRef<number | undefined>(undefined);
-  // A click focuses the button too: only keyboard focus opens the slider, so after a
-  // click it still goes when the pointer leaves.
-  const pressing = useRef(false);
+  const button = useRef<HTMLButtonElement>(null);
   const tipId = useId();
-  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
+  const heard = channels.filter((c) => !c.unavailable);
+  const locked = heard.length === 0;
+  const shown = open && !locked;
 
-  // No slider while muted, without sound, or where the volume can't be set.
-  const canSlide = hasSound && !prefs.muted && canSetVolume;
-  const open = canSlide && !closed && (hovered || focused);
-  // Also when it goes away while open (the stream stops), so the player doesn't stay held.
+  // A press anywhere else closes it (the button's own press toggles it).
   useEffect(() => {
-    onOpenChange?.(open);
-    return () => onOpenChange?.(false);
-  }, [open, onOpenChange]);
+    if (!shown) return;
+    const outside = (e: PointerEvent) => {
+      if (!control.current?.contains(e.target as Node)) onOpenChange(false);
+    };
+    document.addEventListener("pointerdown", outside, true);
+    return () => document.removeEventListener("pointerdown", outside, true);
+  }, [shown, onOpenChange]);
 
-  const silent = !hasSound || prefs.muted || prefs.volume === 0;
-  const label = !hasSound ? "No sound in this stream" : prefs.muted ? "Unmute" : "Mute";
+  const silent = locked || heard.every((c) => c.muted || c.volume === 0);
+  const label = locked ? NO_SOUND_HERE : silent ? "Volume, all muted" : "Volume";
+  const pointer = useRef("");
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape" || !shown) return;
+    e.stopPropagation();
+    onOpenChange(false);
+    button.current?.focus();
+  };
 
   return (
-    <div
-      ref={control}
-      className={styles.control}
-      onPointerEnter={() => {
-        window.clearTimeout(leaveTimer.current);
-        setHovered(true);
-      }}
-      onPointerLeave={() => {
-        window.clearTimeout(leaveTimer.current);
-        leaveTimer.current = window.setTimeout(() => setHovered(false), LEAVE_MS);
-      }}
-      onPointerDown={() => {
-        pressing.current = true;
-      }}
-      onPointerUp={() => {
-        pressing.current = false;
-      }}
-      onFocus={() => {
-        if (!pressing.current) setFocused(true);
-      }}
-      onBlur={(e) => {
-        if (!control.current?.contains(e.relatedTarget as Node | null)) setFocused(false);
-      }}
-    >
-      <div className={`${round.pill} ${hasSound ? "" : round.disabled}`} data-open={open || undefined}>
+    <div ref={control} className={styles.control} onKeyDown={onKeyDown}>
+      <div className={`${round.pill} ${locked ? round.disabled : ""}`} data-open={shown || undefined}>
         <button
+          ref={button}
           type="button"
           className={round.main}
           aria-label={label}
-          aria-disabled={!hasSound || undefined}
+          aria-disabled={locked || undefined}
+          aria-expanded={locked ? undefined : shown}
           aria-describedby={tipId}
+          onPointerDown={(e) => {
+            pointer.current = e.pointerType;
+          }}
           onClick={() => {
-            if (hasSound) onChange({ ...prefs, muted: !prefs.muted });
+            if (!locked) onOpenChange(!shown);
+            else if (pointer.current === "touch" || pointer.current === "pen") showToast(NO_SOUND_HERE, <VolumeOffIcon />);
           }}
         >
           {silent ? <VolumeOffIcon /> : <VolumeIcon />}
@@ -90,23 +77,8 @@ export function VolumeButton({ prefs, onChange, hasSound, canSetVolume, onOpenCh
           {label}
         </span>
       </div>
-
-      {/* After the button, so Tab goes button, then slider. */}
-      {canSlide && (
-        <div className={styles.popup} data-open={open || undefined} inert={!open}>
-          <Range
-            className={styles.slider}
-            min={0}
-            max={1}
-            step={0.05}
-            aria-label="Volume"
-            aria-orientation="vertical"
-            value={prefs.volume}
-            // Moving the slider means "I want to hear it": it also unmutes.
-            onChange={(e) => onChange({ ...prefs, volume: Number(e.target.value), muted: false })}
-          />
-        </div>
-      )}
+      {/* After the button, so Tab goes button, then the mixer. */}
+      {!locked && <VolumeMixer channels={channels} canSetVolume={canSetVolume} open={shown} onClose={() => onOpenChange(false)} />}
     </div>
   );
 }

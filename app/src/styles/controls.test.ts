@@ -54,7 +54,7 @@ describe("the white slider, like a video player's (spec 0121, FR-4)", () => {
 describe("the three sliders use the white slider (spec 0121, FR-4)", () => {
   const uses = [
     ["components/room/AccountButton", "the ambilight's brightness"],
-    ["components/stage/VolumeButton", "the stage's volume"],
+    ["components/stage/VolumeMixer", "the stage's volume"],
     ["components/stage/AlsoLive", "a preview's volume"],
   ] as const;
 
