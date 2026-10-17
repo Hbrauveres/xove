@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Picker } from "./Picker";
@@ -65,7 +65,12 @@ describe("Picker, the app's one-box picker", () => {
     expect(screen.getByRole("radio", { name: "OBS Virtual Camera" })).toHaveFocus();
   });
 
-  it("opens in place in a panel, or upward over the video", async () => {
+  it("opens down, floating, in a panel, or upward over the video", async () => {
+    const down = setup();
+    expect(down.pill.closest("[data-picker]")).toHaveAttribute("data-opens", "down");
+  });
+
+  it("opens upward over the video", async () => {
     const { user, pill } = setup({ opens: "up", look: "glass" });
     await user.click(pill);
     const picker = pill.closest("[data-picker]")!;
@@ -92,5 +97,68 @@ describe("Picker, the app's one-box picker", () => {
     await user.click(screen.getByRole("button", { name: "Camera: Webcam C920" }));
     view.unmount();
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
+  });
+});
+
+describe("Picker: floating over its panel (spec 0111)", () => {
+  /** A panel holding the picker and two controls: one right under its list, one far below. */
+  function panel() {
+    const user = userEvent.setup();
+    render(
+      <div data-list-host>
+        <Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} />
+        <div data-testid="under">Quality</div>
+        <div data-testid="far">Mode</div>
+      </div>,
+    );
+    const at: Record<string, [number, number]> = { list: [40, 140], under: [80, 120], far: [300, 340] };
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const key = this.getAttribute("role") === "radiogroup" ? "list" : this.dataset.testid ?? "";
+      const [top, bottom] = at[key] ?? [0, 0];
+      return { top, bottom, left: 0, right: 300, width: 300, height: bottom - top, x: 0, y: top } as DOMRect;
+    });
+    return { user, pill: screen.getByRole("button", { name: "Camera: Webcam C920" }) };
+  }
+
+  it("hides only what's right behind its list, fading back in under it, and nothing else; all back on closing", async () => {
+    const { user, pill } = panel();
+    await user.click(pill);
+    const under = screen.getByTestId("under");
+    expect(under.style.maskImage).toMatch(/transparent/);
+    expect(screen.getByTestId("far").style.maskImage).toBe("");
+    await user.keyboard("{Escape}");
+    expect(under.style.maskImage).toBe("");
+    vi.restoreAllMocks();
+  });
+
+  it("rolls back before it goes: closing, it stays drawn but out of reach, then leaves", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} />);
+    const pill = screen.getByRole("button", { name: "Camera: Webcam C920" });
+    await user.click(pill);
+    const list = document.querySelector("[data-picker] [role=radiogroup]")!;
+    await user.click(pill);
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(list.isConnected).toBe(true);
+    expect(list).toHaveAttribute("aria-hidden", "true");
+    expect(screen.queryByRole("radio")).toBeNull();
+    act(() => vi.advanceTimersByTime(200));
+    expect(list.isConnected).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("unrolls its options in order, the nearest to the pill first", async () => {
+    const { user, pill } = setup();
+    await user.click(pill);
+    const order = screen.getAllByRole("radio").map((r) => (r as HTMLElement).style.getPropertyValue("--k"));
+    expect(order).toEqual(["0", "1"]);
+  });
+
+  it("upward, the nearest is the last one", async () => {
+    const { user, pill } = setup({ opens: "up", look: "glass" });
+    await user.click(pill);
+    const order = screen.getAllByRole("radio").map((r) => (r as HTMLElement).style.getPropertyValue("--k"));
+    expect(order).toEqual(["1", "0"]);
   });
 });

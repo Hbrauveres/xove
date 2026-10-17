@@ -189,7 +189,7 @@ describe("the settings panel: the Camera tab", () => {
   it("picks another camera from its picker, opened in place", async () => {
     const { user, onPickCamera } = setup({ screenTab: false });
     await user.click(within(panel()).getByRole("button", { name: "Camera: Logitech C920" }));
-    expect(within(panel()).getByRole("button", { name: "Camera: Logitech C920" }).closest("[data-picker]")).toHaveAttribute("data-opens", "in-place");
+    expect(within(panel()).getByRole("button", { name: "Camera: Logitech C920" }).closest("[data-picker]")).toHaveAttribute("data-opens", "down");
     await user.click(within(panel()).getByRole("radio", { name: "Integrated Webcam" }));
     expect(onPickCamera).toHaveBeenCalledWith("cam-2");
   });

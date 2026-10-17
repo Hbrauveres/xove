@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import styles from "./Picker.module.css";
 
 export type PickerOption<T extends string> = { value: T; label: string };
@@ -10,10 +10,10 @@ type Props<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   /**
-   * In a panel the list opens in place, pushing what's under it down, in the pill's own
-   * colour; over the video it grows upward, floating, in the pill's glass.
+   * Down, floating over its panel in the pill's own see-through colour (spec 0111), or upward
+   * over the video, in the pill's glass. Either way nothing moves when it opens.
    */
-  opens?: "in-place" | "up";
+  opens?: "down" | "up";
   look?: "panel" | "glass";
   disabled?: boolean;
   /** Told when the list opens or closes. */
@@ -22,24 +22,41 @@ type Props<T extends string> = {
   closed?: boolean;
 };
 
+/** How long the list takes to roll back before it leaves (spec 0111, design decision 9). */
+export const CLOSE_MS = 150;
+/** The fade under the list, back to fully there (design decision 8). */
+const FADE_GAP = 4;
+const FADE_PX = 30;
+
 /**
- * The app's picker (the Player controls design, decisions 4 and 5): a pill showing the
- * chosen option that grows into one box with the other options, no gap and no separate
- * floating box. The chosen option stays in the pill and isn't repeated. Rows are as tall as
- * the pill; after three and a half the list scrolls, with no scrollbar.
+ * The app's picker: a pill showing the chosen option that grows into one box with the other
+ * options, no gap. The chosen option stays in the pill and isn't repeated. Rows are as tall as
+ * the pill; after three and a half the list scrolls with the app's slim scrollbar (spec 0111).
+ * The list floats: in a panel (the nearest `[data-list-host]`), what's right behind it is
+ * hidden while it's open and what's just under it fades back in, so it reads as one box with
+ * its pill and nothing moves. It unrolls from the pill and rolls back.
  */
 export function Picker<T extends string>({
   label,
   options,
   value,
   onChange,
-  opens = "in-place",
+  opens = "down",
   look = "panel",
   disabled = false,
   onOpenChange,
   closed = false,
 }: Props<T>) {
   const [open, setOpenState] = useState(false);
+  // Drawn while open, and while it rolls back after.
+  const [drawn, setDrawn] = useState(false);
+  if (open && !drawn) setDrawn(true);
+  useEffect(() => {
+    if (open || !drawn) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const gone = window.setTimeout(() => setDrawn(false), reduce ? 0 : CLOSE_MS);
+    return () => window.clearTimeout(gone);
+  }, [open, drawn]);
   const root = useRef<HTMLDivElement>(null);
   const pill = useRef<HTMLButtonElement>(null);
   const listId = useId();
@@ -90,6 +107,45 @@ export function Picker<T extends string>({
   // Opened upward: no taller than the room above it, up to whatever clips it (a short stage
   // on a phone); the rest scrolls, as always.
   const list = useRef<HTMLDivElement>(null);
+  // Unrolls a frame after it's drawn, so the browser has the rolled-up state to move from.
+  const [unrolled, setUnrolled] = useState(false);
+  if (!open && unrolled) setUnrolled(false);
+  useEffect(() => {
+    if (!open) return;
+    const next = requestAnimationFrame(() => setUnrolled(true));
+    return () => cancelAnimationFrame(next);
+  }, [open]);
+  // Over its panel: what's right behind the list is masked away while it's open, and what's
+  // just under it comes back over 30 px, nearly invisible near the list (design decisions 7, 8).
+  useLayoutEffect(() => {
+    const el = list.current;
+    const host = root.current?.closest("[data-list-host]");
+    if (!open || opens !== "down" || !el || !host || !root.current) return;
+    const l = el.getBoundingClientRect();
+    const masked: HTMLElement[] = [];
+    const walk = (parent: Element) =>
+      [...parent.children].forEach((child) => {
+        const node = child as HTMLElement;
+        if (node.contains(root.current)) {
+          if (node !== root.current) walk(node);
+          return;
+        }
+        const r = node.getBoundingClientRect();
+        if (!(r.right > l.left && r.left < l.right && r.bottom > l.top && r.top < l.bottom + FADE_GAP + FADE_PX)) return;
+        const top = l.top - r.top;
+        const bottom = l.bottom - r.top + FADE_GAP;
+        const mask = `linear-gradient(to bottom, #000 ${top}px, transparent ${top}px, transparent ${bottom}px, rgba(0, 0, 0, 0.08) ${bottom + FADE_PX * 0.5}px, rgba(0, 0, 0, 0.35) ${bottom + FADE_PX * 0.75}px, #000 ${bottom + FADE_PX}px)`;
+        node.style.maskImage = mask;
+        node.style.setProperty("-webkit-mask-image", mask);
+        masked.push(node);
+      });
+    walk(host);
+    return () =>
+      masked.forEach((node) => {
+        node.style.maskImage = "";
+        node.style.removeProperty("-webkit-mask-image");
+      });
+  }, [open, opens]);
   useLayoutEffect(() => {
     const el = list.current;
     if (!open || opens !== "up" || !el) return;
@@ -143,7 +199,7 @@ export function Picker<T extends string>({
       data-picker
       data-opens={opens}
       data-look={look}
-      data-open={open || undefined}
+      data-open={drawn || undefined}
       onKeyDown={onKeyDown}
     >
       <button
@@ -161,10 +217,29 @@ export function Picker<T extends string>({
           <path d="M3 4.5L6 7.5L9 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      {open && (
-        <div ref={list} id={listId} role="radiogroup" aria-label={label} className={styles.list}>
-          {others.map((o) => (
-            <button key={o.value} type="button" role="radio" aria-checked="false" className={styles.option} onClick={() => pick(o.value)}>
+      {drawn && (
+        <div
+          ref={list}
+          id={listId}
+          role="radiogroup"
+          aria-label={label}
+          className={styles.list}
+          data-unroll={(open && unrolled) || undefined}
+          // Rolling back: still drawn, out of reach.
+          aria-hidden={!open || undefined}
+          inert={!open || undefined}
+        >
+          {others.map((o, i) => (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked="false"
+              className={styles.option}
+              // The nearest to the pill appears first.
+              style={{ "--k": opens === "up" ? others.length - 1 - i : i } as CSSProperties}
+              onClick={() => pick(o.value)}
+            >
               {o.label}
             </button>
           ))}

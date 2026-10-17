@@ -192,6 +192,8 @@ export function SettingsPanel(props: Props) {
             role="tabpanel"
             aria-labelledby={tabId(t)}
             className={styles.body}
+            // A list opening here floats over the tab's controls, masking what's behind it (spec 0111).
+            data-list-host
             data-off={t !== tab || undefined}
             aria-hidden={t !== tab || undefined}
             inert={t !== tab || undefined}
