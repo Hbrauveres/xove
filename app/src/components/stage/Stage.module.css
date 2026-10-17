@@ -82,10 +82,10 @@
  */
 .screenChrome {
   position: absolute;
-  inset: 0;
+  /* Clear of the iPhone's home indicator, like the streams row's arrow. */
+  inset: 0 0 env(safe-area-inset-bottom, 0px);
   z-index: 4;
   pointer-events: none;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   transition: translate var(--unroll);
 }
 

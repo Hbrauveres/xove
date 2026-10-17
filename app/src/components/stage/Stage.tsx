@@ -143,6 +143,9 @@ export function Stage({
   const boxRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const screenChromeRef = useRef<HTMLDivElement>(null);
+  // The fullscreen button and the round buttons. In the upright full view they're the
+  // screen's, at its bottom, not the player band's (spec 0112); elsewhere, the player's.
+  const onScreen = sideways && Boolean(fullView?.on && !fullView.hidden);
 
   // The upright full view with the settings sheet open (spec 0107, design decision 6; spec 0112):
   // the round buttons and the fullscreen button, at the bottom of the screen, move up together
@@ -161,8 +164,8 @@ export function Stage({
       if (!makingRoom) return;
       const sheet = document.querySelector<HTMLElement>('[role="dialog"][data-variant="sheet"]');
       if (!sheet) return;
-      // Fixed to the bottom of the visible screen; its height doesn't change while it slides in.
-      const sheetTop = window.innerHeight - sheet.offsetHeight;
+      // Fixed to the screen: its layout top, which its slide-in (a transform) doesn't change.
+      const sheetTop = sheet.offsetTop;
       const s = section.getBoundingClientRect();
       const top = topRef.current;
       const bar = top
@@ -170,9 +173,13 @@ export function Stage({
         : 0;
       const lift = makeRoom({ height: s.height, bar, sheet: s.bottom - sheetTop, band: { top: box.offsetTop, height: box.offsetHeight } });
       if (lift) box.style.translate = `0 ${-lift}px`;
-      const row = buttons?.querySelector("[data-buttons]");
+      const row = buttons?.querySelector<HTMLElement>("[data-buttons]");
       if (!buttons || !row) return;
-      const up = liftButtons({ rowBottom: row.getBoundingClientRect().bottom, sheetTop });
+      // Where the row sits without any lift (layout, not the screen: a lift still sliding would
+      // otherwise be measured as already done).
+      let y = row.offsetHeight;
+      for (let n: HTMLElement | null = row; n && n !== section; n = n.offsetParent as HTMLElement | null) y += n.offsetTop;
+      const up = liftButtons({ rowBottom: s.top + y, sheetTop });
       if (up) buttons.style.translate = `0 ${-up}px`;
     };
     place();
@@ -190,6 +197,7 @@ export function Stage({
     held.current.size > 0 ||
     (frameRef.current?.contains(document.activeElement) ?? false) ||
     (topRef.current?.contains(document.activeElement) ?? false) ||
+    (screenChromeRef.current?.contains(document.activeElement) ?? false) ||
     Boolean(topRef.current?.querySelector('[aria-expanded="true"]'));
   const showChrome = useCallback(() => {
     setChromeShown(true);
@@ -241,29 +249,39 @@ export function Stage({
   // buttons. The panel reads where they are from two variables on what holds it.
   useLayoutEffect(() => {
     const host = sideways ? stageRef.current : frameRef.current;
-    const controls = controlsRef.current;
-    if (!settingsOpen || !host || !controls) return;
+    if (!settingsOpen || !host || !controlsRef.current) return;
     const place = () => {
+      // Read each time: turning the phone in the full view moves the buttons to another layer.
+      const controls = controlsRef.current;
+      if (!controls) return;
       const cog = controls.querySelector('button[aria-label="Settings"]');
       const row = controls.querySelector("[data-buttons]");
       const h = host.getBoundingClientRect();
       if (!cog || !row || !h.width) return;
+      // The panel goes where the buttons end up: if the player is still sliding back (turning
+      // the phone in the full view with the settings open), take its slide out.
+      const box = boxRef.current;
+      const sliding = box && host !== frameRef.current && box.contains(row) ? box.getBoundingClientRect().top - h.top - box.offsetTop : 0;
       const c = cog.getBoundingClientRect();
       host.style.setProperty("--cog-x", `${c.left + c.width / 2 - h.left}px`);
-      host.style.setProperty("--above-row", `${h.bottom - row.getBoundingClientRect().top + ROW_GAP}px`);
+      host.style.setProperty("--above-row", `${h.bottom - (row.getBoundingClientRect().top - sliding) + ROW_GAP}px`);
     };
     place();
     window.addEventListener("resize", place);
     // The row changes too (the volume comes and goes with who's on the stage).
     const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
     watch?.observe(host);
-    const row = controls.querySelector("[data-buttons]");
+    const row = controlsRef.current.querySelector("[data-buttons]");
     if (row) watch?.observe(row);
+    // And once the player has finished sliding (a slide doesn't resize anything).
+    const box = boxRef.current;
+    box?.addEventListener("transitionend", place);
     return () => {
       window.removeEventListener("resize", place);
       watch?.disconnect();
+      box?.removeEventListener("transitionend", place);
     };
-  }, [settingsOpen, sideways]);
+  }, [settingsOpen, sideways, onScreen]);
   const playing = Boolean(main && (big?.isMe ? main.local : main.remote));
   useEffect(() => () => window.clearTimeout(idleTimer.current), []);
 
@@ -439,9 +457,6 @@ export function Stage({
     );
   };
 
-  // The fullscreen button and the round buttons. In the upright full view they're the
-  // screen's, at its bottom, not the player band's (spec 0112); elsewhere, the player's.
-  const onScreen = sideways && Boolean(fullView?.on && !fullView.hidden);
   const chromeLayer = (
     <>
       {/* Over a stream and over the empty stage alike, so stopping the only stream in

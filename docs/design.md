@@ -326,7 +326,9 @@ Turning switches layouts at once, and the stage keeps its place in the page, so 
 - **The round buttons** at the bottom; a round arrow button at the bottom left opens the **streams row** (small silent pictures with names, over a black gradient), as does a swipe up.
 - **The settings** open over the cog in two columns, so they fit the short screen without scrolling: on Camera, the preview alone on the left, the camera's picker, Quality and Mode on the right.
 - Everything fades about 2.5 s after the last touch while a stream plays, and an open streams row closes with it.
-- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice. There the round buttons and the fullscreen button are the **screen's**, at its bottom (12 px up), not the player band's, so they're where the thumb is whatever the shape of the share.
+- **The full-screen view:** upright, the fullscreen button shows this same layout without turning the phone; turning doesn't change the choice. There the round buttons and the fullscreen button are the **screen's**, at its bottom (12 px up, above the iPhone's home indicator), not the player band's, so they're where the thumb is whatever the shape of the share; an open streams row covers them, as held sideways.
+
+![The full view with the settings open: the buttons above the sheet, the vertical share under it](images/design/full-view-sheet.png)
 
 ### Tablet, upright
 
