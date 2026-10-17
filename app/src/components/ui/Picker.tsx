@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import styles from "./Picker.module.css";
 
 export type PickerOption<T extends string> = { value: T; label: string };
@@ -87,6 +87,19 @@ export function Picker<T extends string>({
 
   const optionsIn = () => [...(root.current?.querySelectorAll<HTMLButtonElement>("[role=radio]") ?? [])];
 
+  // Opened upward: no taller than the room above it, up to whatever clips it (a short stage
+  // on a phone); the rest scrolls, as always.
+  const list = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!open || opens !== "up" || !el) return;
+    let clip: Element | null = root.current?.parentElement ?? null;
+    while (clip && getComputedStyle(clip).overflow === "visible" && getComputedStyle(clip).overflowY === "visible") clip = clip.parentElement;
+    const top = clip ? clip.getBoundingClientRect().top : 0;
+    const room = (root.current?.getBoundingClientRect().top ?? 0) - top - 8;
+    el.style.maxHeight = room > 0 ? `min(${Math.floor(room)}px, calc(var(--ctl, 38px) * 3.5))` : "";
+  }, [open, opens]);
+
   // Opened by the keyboard: its first option takes the focus once it's drawn.
   const focusFirst = useRef(false);
   useEffect(() => {
@@ -149,7 +162,7 @@ export function Picker<T extends string>({
         </svg>
       </button>
       {open && (
-        <div id={listId} role="radiogroup" aria-label={label} className={styles.list}>
+        <div ref={list} id={listId} role="radiogroup" aria-label={label} className={styles.list}>
           {others.map((o) => (
             <button key={o.value} type="button" role="radio" aria-checked="false" className={styles.option} onClick={() => pick(o.value)}>
               {o.label}

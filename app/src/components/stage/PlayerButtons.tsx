@@ -120,6 +120,8 @@ function StreamButton({
   const tipId = useId();
   // The camera's list closes when its drop-up is left.
   const [listClosed, setListClosed] = useState(false);
+  // Counts what's been done from the drop-up (Change, a camera picked): each one closes it.
+  const [done, setDone] = useState(0);
 
   const button = (
     <div className={styles.control}>
@@ -158,7 +160,10 @@ function StreamButton({
           className={styles.change}
           title="Pick another window or tab; viewers keep watching the same stream"
           disabled={busy}
-          onClick={onChangeWindow}
+          onClick={() => {
+            setDone((n) => n + 1);
+            onChangeWindow();
+          }}
         >
           Change
         </button>
@@ -176,7 +181,10 @@ function StreamButton({
           if (open) setListClosed(false);
           onMenuChange?.(open);
         }}
-        onChange={onPickCamera}
+        onChange={(deviceId) => {
+          setDone((n) => n + 1);
+          onPickCamera(deviceId);
+        }}
       />
     );
 
@@ -186,6 +194,7 @@ function StreamButton({
       enabled={live && (kind === "screen" || cameras.length > 0)}
       width={kind === "screen" ? 228 : 210}
       onLeave={() => setListClosed(true)}
+      closeSignal={done}
       trigger={button}
     >
       {quick}

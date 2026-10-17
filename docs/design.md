@@ -191,7 +191,7 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 
 - **Closed:** a pill as tall as the other controls, the chosen option and a small chevron.
 - **Open, it's one box with its pill:** the pill grows into the list with **no gap and no separate floating box**, in the pill's own colour. **The chosen option stays in the pill and isn't repeated**; the others follow in rows as tall as the pill, their text lined up with the pill's.
-- **In a panel, it opens in place** and pushes what's under it down: a see-through panel takes its colour from what's behind it, so a floating list could never match the pill. **Over the video, it grows upward** in the pill's glass, floating.
+- **In a panel, it opens in place** and pushes what's under it down: a see-through panel takes its colour from what's behind it, so a floating list could never match the pill. **Over the video, it grows upward** in the pill's glass, floating, never taller than the room above it (on a short phone stage it shows fewer rows and scrolls).
 - **No scrollbar in a list:** after three and a half options it scrolls by wheel, swipe or keys, and the half-shown option says there's more. A row's hover light (white at 5%) stays inside its row, so a short list never scrolls.
 - The arrow keys move through it; Escape or a click outside closes it.
 
@@ -201,7 +201,8 @@ Body line height is 1.5; headings balance their lines (`text-wrap: balance`). Fo
 
 - **Resting the mouse on a live round button** unrolls one frosted pill above it, centred, after **120 ms**: the round buttons' glass, blur and shadow, **with no box around it**. It fades and slides 6 px; nothing blurred is animated.
 - **Moving up into it keeps it open** (the gap is bridged), and on into an open list inside it. It closes when the pointer leaves, its list with it, **also right after a click**; a slip outside shorter than **300 ms** doesn't close it. Keyboard focus opens it; a click's focus doesn't keep it open.
-- **The button's own click still does what it always does** (stop the stream). **Never on a touch screen:** there, the settings panel has the same controls.
+- **By touch, press and hold the live button for 500 ms** (a long press, as on any phone): it opens and **stays open** after the finger lifts, until a tap outside it, its action done (a camera picked, Change), or the button pressed again. A finger that moves is scrolling, not holding. The button offers no text selection or long-press menu, and by touch the drop-up's controls are 44 px.
+- **The button's own click or short tap still does what it always does** (stop the stream).
 - **Screen:** what's shared ("A window", "A tab" or "Your whole screen") and **Change**. **Camera:** the camera's picker, growing upward. Their controls are 36 px tall, with 12 px text.
 
 ### The settings panel

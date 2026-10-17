@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OPEN_DELAY_MS } from "../ui/DropUp";
+import { HOLD_MS, OPEN_DELAY_MS } from "../ui/DropUp";
 import { FULL_ROOM, NO_SOUND, PlayerButtons } from "./PlayerButtons";
 
 const CAMERAS = [
@@ -107,7 +107,7 @@ describe("player buttons: the row (specs 0101 and 0107)", () => {
 });
 
 describe("stream buttons: the drop-ups (spec 0107)", () => {
-  it("are there only while the stream is live, and only with a mouse", () => {
+  it("are there only while the stream is live", () => {
     withMouse();
     const { rerender } = setup();
     expect(dropUp(screen.getByRole("button", { name: "Share your screen" }))).toBeNull();
@@ -116,9 +116,24 @@ describe("stream buttons: the drop-ups (spec 0107)", () => {
     expect(dropUp(screen.getByRole("button", { name: "Turn off your camera" }))).not.toBeNull();
   });
 
-  it("aren't there on a touch screen: the settings have the same controls", () => {
-    setup({ mine: { screen: true, camera: true } });
-    expect(dropUp(screen.getByRole("button", { name: "Stop sharing your screen" }))).toBeNull();
+  it("open by touch with a press and hold, and close once a camera is picked", async () => {
+    vi.useFakeTimers();
+    const { onPickCamera, onStop } = setup({ mine: { screen: false, camera: true } });
+    const stop = screen.getByRole("button", { name: "Turn off your camera" });
+    const touch = { pointerType: "touch", clientX: 5, clientY: 5 };
+    fireEvent.pointerDown(stop, touch);
+    act(() => vi.advanceTimersByTime(HOLD_MS));
+    fireEvent.pointerUp(stop, touch);
+    fireEvent.click(stop);
+    expect(onStop).not.toHaveBeenCalled();
+    expect(dropUp(stop)).toHaveAttribute("data-open", "true");
+    expect(dropUp(stop)).toHaveAttribute("data-touch");
+    vi.useRealTimers();
+    const quick = within(dropUp(stop)!).getByRole("group", { name: "Your camera" });
+    fireEvent.click(within(quick).getByRole("button", { name: "Camera: Logitech C920" }));
+    fireEvent.click(within(quick).getByRole("radio", { name: "Integrated Webcam" }));
+    expect(onPickCamera).toHaveBeenCalledWith("cam-2");
+    expect(dropUp(stop)).toHaveAttribute("data-open", "false");
   });
 
   it("the screen's: what's shared, and Change", async () => {
