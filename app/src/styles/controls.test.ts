@@ -152,6 +152,7 @@ describe("the picker: one box with its pill, floating (the Player controls desig
   it("is never wider than its box: long names end in \"…\", on one line (spec 0114)", () => {
     expect(rule(picker, ".picker")).toMatch(/min-width:\s*0/);
     expect(rule(picker, ".pill")).toMatch(/min-width:\s*0/);
+    expect(rule(picker, ".option")).toMatch(/min-width:\s*0/);
     // The pill's name and each option's share one rule.
     const r = rule(picker, ".chosen,\n.name");
     expect(r).toMatch(/min-width:\s*0/);

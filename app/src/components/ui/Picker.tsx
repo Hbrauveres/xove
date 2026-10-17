@@ -186,7 +186,9 @@ export function Picker<T extends string>({
   useEffect(() => {
     if (!open || !focusFirst.current) return;
     focusFirst.current = false;
-    optionsIn()[0]?.focus();
+    // The option nearest the pill, without scrolling the list away from it (spec 0114).
+    const all = optionsIn();
+    (opens === "up" ? all[all.length - 1] : all[0])?.focus({ preventScroll: true });
   });
 
 

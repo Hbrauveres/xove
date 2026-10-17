@@ -157,6 +157,8 @@
 
 .option {
   position: relative;
+  /* It may shrink to the list's width, so its name can end in "…" (spec 0114). */
+  min-width: 0;
   isolation: isolate;
   display: flex;
   align-items: center;

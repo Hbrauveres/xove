@@ -225,6 +225,17 @@ describe("Picker: long names and an upward list (spec 0114)", () => {
     height.mockRestore();
   });
 
+  it("opened upward by the keyboard, focuses the option nearest the pill and stays at that end", async () => {
+    const user = userEvent.setup();
+    const height = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(300);
+    render(<Picker label="Camera" options={CAMERAS} value="c920" onChange={() => {}} opens="up" look="glass" />);
+    screen.getByRole("button", { name: "Camera: Webcam C920" }).focus();
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("radio", { name: "OBS Virtual Camera" })).toHaveFocus();
+    expect(screen.getByRole("radiogroup", { name: "Camera" }).scrollTop).toBe(300);
+    height.mockRestore();
+  });
+
   it("opens a downward list at its top", async () => {
     const user = userEvent.setup();
     const height = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(300);
