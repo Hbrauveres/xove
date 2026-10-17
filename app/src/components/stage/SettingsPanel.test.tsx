@@ -6,7 +6,7 @@ import type { SharePrefs } from "../../media/preferences";
 import type { StreamKind } from "../../types";
 import { CAMERA_BLOCKED } from "../../hooks/useLiveKitRoom";
 import { NO_SOUND } from "./PlayerButtons";
-import { SettingsPanel } from "./SettingsPanel";
+import { SettingsPanel, NO_SCREEN } from "./SettingsPanel";
 
 const PREFS: Record<StreamKind, SharePrefs> = {
   screen: { quality: "1080p", mode: "smooth" },
@@ -53,10 +53,16 @@ describe("the settings panel: tabs", () => {
     expect(within(panel()).getByRole("tablist").style.getPropertyValue("--i")).toBe("0");
   });
 
-  it("has only Camera where a screen can't be shared (a phone)", () => {
-    setup({ screenTab: false });
-    expect(within(panel()).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Camera"]);
+  it("greys out Screen where a screen can't be shared (a phone), saying why, and opens on Camera (design decision 2)", async () => {
+    const { user } = setup({ screenTab: false });
+    expect(within(panel()).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Screen", "Camera"]);
+    const screenTab = within(panel()).getByRole("tab", { name: "Screen" });
+    expect(screenTab).toHaveAttribute("aria-disabled", "true");
+    expect(screenTab).toHaveAttribute("title", NO_SCREEN);
     expect(within(panel()).getByRole("tabpanel", { name: "Camera" })).toBeInTheDocument();
+    await user.click(screenTab);
+    expect(within(panel()).getByRole("tab", { name: "Camera" })).toHaveAttribute("aria-selected", "true");
+    expect(within(panel()).queryByRole("tabpanel", { name: "Screen" })).not.toBeInTheDocument();
   });
 
   it("marks with a red dot the tab of what I'm sending", () => {

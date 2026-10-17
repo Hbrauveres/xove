@@ -160,6 +160,14 @@
   color: var(--text);
 }
 
+/* Can't be used here (a phone can't share a screen): greyed out in its place, not hidden. */
+.tab[aria-disabled="true"],
+.tab[aria-disabled="true"]:hover {
+  color: var(--text-faint);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* The keyboard's ring sits inside the tab, rounded, clear of the marker. */
 .tab:focus-visible {
   outline: 2px solid var(--accent);

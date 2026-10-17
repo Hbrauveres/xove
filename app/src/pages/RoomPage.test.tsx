@@ -2042,7 +2042,7 @@ describe("room: on a phone held upright (spec 0158)", () => {
   });
 
   // Spec 0107: the settings as a bottom sheet, with only the Camera tab.
-  it("opens the settings from the cog as a bottom sheet over the page, with only Camera", async () => {
+  it("opens the settings from the cog as a bottom sheet over the page, Screen greyed out", async () => {
     // A real phone: touch first, small, upright (a narrow desktop window keeps its Screen tab).
     const real = window.matchMedia;
     window.matchMedia = ((query: string) => ({
@@ -2062,7 +2062,9 @@ describe("room: on a phone held upright (spec 0158)", () => {
     const sheet = screen.getByRole("dialog", { name: "Settings" });
     expect(sheet).toHaveAttribute("data-variant", "sheet");
     expect(stage()).not.toContainElement(sheet);
-    expect(within(sheet).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Camera"]);
+    expect(within(sheet).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Screen", "Camera"]);
+    expect(within(sheet).getByRole("tab", { name: "Screen" })).toHaveAttribute("aria-disabled", "true");
+    expect(within(sheet).getByRole("tab", { name: "Camera" })).toHaveAttribute("aria-selected", "true");
     await user.click(within(sheet).getByRole("button", { name: "Close settings" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
   });

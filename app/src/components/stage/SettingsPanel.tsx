@@ -13,6 +13,9 @@ import styles from "./SettingsPanel.module.css";
 /** How long it takes to come in or go out; it leaves the page once it's out. */
 const PANEL_MS = 260;
 
+/** Why the Screen tab is greyed out. */
+export const NO_SCREEN = "This browser can't share a screen";
+
 const SURFACE: Record<ScreenSurface, string> = { window: "A window", browser: "A tab", monitor: "Your whole screen" };
 
 type Tab = "screen" | "camera";
@@ -22,7 +25,7 @@ type Props = {
   variant: "popover" | "sheet";
   open: boolean;
   onClose: () => void;
-  /** False on a phone, or where the browser can't share a screen: only Camera. */
+  /** False on a phone, or where the browser can't share a screen: the Screen tab is greyed out. */
   screenTab: boolean;
   /** Which of my streams are live. */
   mine: Record<StreamKind, boolean>;
@@ -54,9 +57,11 @@ type Props = {
  */
 export function SettingsPanel(props: Props) {
   const { variant, open, onClose, screenTab, mine, onPreviewCamera } = props;
-  const tabs: Tab[] = screenTab ? ["screen", "camera"] : ["camera"];
-  const [chosen, setTab] = useState<Tab>(tabs[0]);
-  const tab = tabs.includes(chosen) ? chosen : tabs[0];
+  // Both tabs always show; one that can't be used here is greyed out, not hidden (design decision 2).
+  const tabs: Tab[] = ["screen", "camera"];
+  const usable: Tab[] = screenTab ? tabs : ["camera"];
+  const [chosen, setTab] = useState<Tab>(usable[0]);
+  const tab = usable.includes(chosen) ? chosen : usable[0];
   const ids = useId();
 
   // In the page while open, and for its slide out after.
@@ -142,9 +147,9 @@ export function SettingsPanel(props: Props) {
         role="tablist"
         onKeyDown={(e) => {
           const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-          if (!step || tabs.length < 2) return;
+          if (!step || usable.length < 2) return;
           e.preventDefault();
-          const next = tabs[(tabs.indexOf(tab) + step + tabs.length) % tabs.length];
+          const next = usable[(usable.indexOf(tab) + step + usable.length) % usable.length];
           setTab(next);
           root.current?.querySelector<HTMLElement>(`#${CSS.escape(tabId(next))}`)?.focus();
         }}
@@ -160,8 +165,12 @@ export function SettingsPanel(props: Props) {
             className={styles.tab}
             aria-selected={t === tab}
             aria-controls={t === tab ? `${tabId(t)}-panel` : undefined}
+            aria-disabled={!usable.includes(t) || undefined}
+            title={usable.includes(t) ? undefined : NO_SCREEN}
             tabIndex={t === tab ? 0 : -1}
-            onClick={() => setTab(t)}
+            onClick={() => {
+              if (usable.includes(t)) setTab(t);
+            }}
           >
             {t === "screen" ? <ScreenShareIcon /> : <CameraOnIcon />}
             {t === "screen" ? "Screen" : "Camera"}
@@ -172,7 +181,7 @@ export function SettingsPanel(props: Props) {
       {/* Over the cog every tab is drawn in one cell, the hidden ones invisible, so the panel is as
           tall as its tallest tab and switching never moves the tabs (design decision 9). */}
       <div className={styles.panes}>
-        {(variant === "popover" ? tabs : [tab]).map((t) => (
+        {(variant === "popover" ? usable : [tab]).map((t) => (
           <div
             key={t}
             id={`${tabId(t)}-panel`}
